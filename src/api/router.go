@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v4"
 )
@@ -25,5 +26,9 @@ func (r *router) SetupRoutes() {
 }
 
 func (r *router) Start() {
-  r.echo.Logger.Fatal(r.echo.Start(":5000"))
+  port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+  r.echo.Logger.Fatal(r.echo.Start(":" + port))
 }
