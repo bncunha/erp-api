@@ -1,0 +1,29 @@
+package router
+
+import (
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+)
+
+type router struct{
+  echo *echo.Echo
+}
+
+func NewRouter() *router {
+  e := echo.New()
+	router := &router{
+    echo: e,
+  }
+	return router
+}
+
+func (r *router) SetupRoutes() {
+	r.echo.GET("/health", func (c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
+}
+
+func (r *router) Start() {
+  r.echo.Logger.Fatal(r.echo.Start(":5000"))
+}

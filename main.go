@@ -1,5 +1,9 @@
 package main
 
+import router "github.com/bncunha/erp-api/src/api"
+
 func main() {
-	print("oiiii")
+	r := router.NewRouter()
+	r.SetupRoutes()
+	r.Start()
 }
