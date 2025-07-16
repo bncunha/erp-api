@@ -4,22 +4,28 @@ import (
 	"net/http"
 	"os"
 
+	controller "github.com/bncunha/erp-api/src/api/controllers"
 	"github.com/labstack/echo/v4"
 )
 
 type router struct{
+  controller *controller.Controller
   echo *echo.Echo
 }
 
-func NewRouter() *router {
+func NewRouter(controller *controller.Controller) *router {
   e := echo.New()
 	router := &router{
     echo: e,
+    controller: controller,
   }
 	return router
 }
 
 func (r *router) SetupRoutes() {
+  productGroup := r.echo.Group("/products")
+  productGroup.POST("/", r.controller.ProductController.Create)
+
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
