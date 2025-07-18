@@ -13,6 +13,8 @@ type SkuService interface {
 	Create(ctx context.Context, request request.CreateSkuRequest, productId int64) (error)
 	Update(ctx context.Context, request request.EditSkuRequest, skuId int64) (error)
 	GetById(ctx context.Context, skuId int64) (domain.Sku, error)
+	GetAll(ctx context.Context) ([]domain.Sku, error)
+	Inactivate(ctx context.Context, id int64) error
 }
 
 type skuService struct {
@@ -78,4 +80,16 @@ func (s *skuService) GetById(ctx context.Context, skuId int64) (domain.Sku, erro
 		return domain.Sku{}, err
 	}
 	return sku, nil
+}
+
+func (s *skuService) GetAll(ctx context.Context) ([]domain.Sku, error) {
+	skus, err := s.skuRepository.GetAll(ctx)
+	if err != nil {
+		return skus, err
+	}
+	return skus, nil
+}
+
+func (s *skuService) Inactivate(ctx context.Context, id int64) error {
+	return s.skuRepository.Inactivate(ctx, id)
 }
