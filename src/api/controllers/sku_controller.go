@@ -32,3 +32,19 @@ func (c *SkuController) Create(context echo.Context) error {
 
 	return context.JSON(_http.StatusCreated, nil)
 }
+
+func (c *SkuController) Edit(context echo.Context) error {
+	skuId := helper.ParseInt64(context.Param("id"))
+	var skuRequest request.EditSkuRequest
+
+	if err := context.Bind(&skuRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	err := c.skuService.Update(context.Request().Context(), skuRequest, skuId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
+}

@@ -14,6 +14,7 @@ type SkuRepository interface {
 	Create(ctx context.Context, sku domain.Sku, productId int64) (int64, error)
 	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
 	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
+	Update(ctx context.Context, sku domain.Sku) error
 }
 
 type skuRepository struct {
@@ -87,4 +88,11 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 		skus = append(skus, sku)
 	}
 	return skus, err
+}
+
+func (r *skuRepository) Update(ctx context.Context, sku domain.Sku) error {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	query := `UPDATE skus SET code = $1, color = $2, size = $3, cost = $4, price = $5 WHERE id = $6 AND tenant_id = $7 AND deleted_at IS NULL`
+	_, err := r.db.ExecContext(ctx, query, sku.Code, sku.Color, sku.Size, sku.Cost, sku.Price, sku.Id, tenantId)
+	return err
 }

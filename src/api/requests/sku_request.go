@@ -23,3 +23,7 @@ func (r *CreateSkuRequest) Validate() error {
 	}
 	return nil
 }
+
+type EditSkuRequest struct {
+	CreateSkuRequest
+}

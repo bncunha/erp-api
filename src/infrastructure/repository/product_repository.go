@@ -48,10 +48,10 @@ func (r *productRepository) Edit(ctx context.Context, product domain.Product, id
 	var args []any
 
 	if product.Category.Id == 0 {
-		query = `UPDATE products SET name = $1, description = $2 WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL RETURNING id`
+		query = `UPDATE products SET name = $1, description = $2 WHERE id = $3 AND tenant_id = $4 AND deleted_at IS NULL RETURNING id`
 		args = []any{product.Name, product.Description, id, tenantId}
 	} else {
-		query = `UPDATE products SET name = $1, description = $2, category_id = $4 WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL RETURNING id`
+		query = `UPDATE products SET name = $1, description = $2, category_id = $3 WHERE id = $4 AND tenant_id = $5 AND deleted_at IS NULL RETURNING id`
 		args = []any{product.Name, product.Description, product.Category.Id, id, tenantId}
 	}
 

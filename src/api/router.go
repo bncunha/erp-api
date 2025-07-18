@@ -32,7 +32,10 @@ func (r *router) SetupRoutes() {
   productGroup.PUT("/:id", r.controller.ProductController.Edit)
   productGroup.DELETE("/:id", r.controller.ProductController.Inactivate)
   productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
-  productGroup.POST("/:id/skus", r.controller.SkuController.Create) 
+  productGroup.POST("/:id/skus", r.controller.SkuController.Create)
+
+  skuGroup := r.echo.Group("/skus")
+  skuGroup.PUT("/:id", r.controller.SkuController.Edit)
   
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")

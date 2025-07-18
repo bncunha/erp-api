@@ -11,6 +11,7 @@ import (
 
 type SkuService interface {
 	Create(ctx context.Context, request request.CreateSkuRequest, productId int64) (error)
+	Update(ctx context.Context, request request.EditSkuRequest, skuId int64) (error)
 }
 
 type skuService struct {
@@ -36,6 +37,31 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 	}
 
 	_, err = s.skuRepository.Create(ctx, sku, productId)
+	if err != nil {
+		if errors.IsDuplicated(err) {
+			return errors.New("Código já existe no banco de dados")
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *skuService) Update(ctx context.Context, request request.EditSkuRequest, skuId int64) (error) {
+	err := request.Validate()
+	if err != nil {
+		return err
+	}
+
+	sku := domain.Sku{
+		Id:     skuId,
+		Code:    request.Code,
+		Color:   request.Color,
+		Size:    request.Size,
+		Cost:    request.Cost,
+		Price:   request.Price,
+	}
+
+	err = s.skuRepository.Update(ctx, sku)
 	if err != nil {
 		if errors.IsDuplicated(err) {
 			return errors.New("Código já existe no banco de dados")
