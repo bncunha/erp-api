@@ -1,12 +1,9 @@
 package service
 
-import (
-	product_service "github.com/bncunha/erp-api/src/application/service/product"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
-)
+import "github.com/bncunha/erp-api/src/infrastructure/repository"
 
 type ApplicationService struct {
-	ProductService product_service.ProductService
+	ProductService ProductService
 	repositories *repository.Repository
 }
 
@@ -15,5 +12,5 @@ func NewApplicationService(repositories *repository.Repository) *ApplicationServ
 }
 
 func (s *ApplicationService) SetupServices() {
-	s.ProductService = product_service.NewProductService(s.repositories.ProductRepository)
+	s.ProductService = NewProductService(s.repositories.ProductRepository, s.repositories.CategoryRepository, s.repositories.SkuRepository)
 }

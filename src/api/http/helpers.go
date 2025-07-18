@@ -5,6 +5,7 @@ import (
 )
 
 func HandleError(err error) *response.ErrorResponse {
+	
 	return &response.ErrorResponse{
 		Message: err.Error(),
 	}
