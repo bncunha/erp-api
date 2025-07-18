@@ -29,7 +29,8 @@ func (r *router) SetupRoutes() {
   productGroup.GET("/:id", r.controller.ProductController.GetById)
   productGroup.PUT("/:id", r.controller.ProductController.Edit)
   productGroup.DELETE("/:id", r.controller.ProductController.Inactivate)
-
+  productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
+  
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})

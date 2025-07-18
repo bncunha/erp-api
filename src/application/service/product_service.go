@@ -15,6 +15,7 @@ type ProductService interface {
 	GetById(ctx context.Context, id int64) (domain.Product, error)
 	GetAll(ctx context.Context) ([]domain.Product, error)
 	Inactivate(ctx context.Context, id int64) error
+	GetSkus(ctx context.Context, id int64) ([]domain.Sku, error)
 }
 
 type productService struct{
@@ -103,6 +104,14 @@ func (s *productService) GetAll(ctx context.Context) ([]domain.Product, error) {
 
 func (s *productService) Inactivate(ctx context.Context, id int64) error {
 	return s.productRepository.Inactivate(ctx, id)
+}
+
+func (s *productService) GetSkus(ctx context.Context, id int64) ([]domain.Sku, error) {
+	skus, err := s.skuRepository.GetByProductId(ctx, id)
+	if err != nil {
+		return skus, err
+	}
+	return skus, nil
 }
 
 func (s *productService) insertSkus(ctx context.Context, skus []request.CreateProductSkuRequest, productId int64) ([]domain.Sku, error) {

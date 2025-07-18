@@ -86,3 +86,19 @@ func (c *ProductController) Inactivate(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, nil)
 }
+
+func (c *ProductController) GetSkus(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	skus, err := c.productService.GetSkus(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	var skuViewModels []viewmodel.SkuViewModel = make([]viewmodel.SkuViewModel, 0)
+	for _, sku := range skus {
+		skuViewModels = append(skuViewModels, viewmodel.ToSkuViewModel(sku))
+	}
+
+	return context.JSON(_http.StatusOK, skuViewModels)
+}

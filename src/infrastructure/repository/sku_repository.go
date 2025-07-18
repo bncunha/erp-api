@@ -56,7 +56,7 @@ func (r *skuRepository) CreateMany(ctx context.Context, skus []domain.Sku, produ
 }
 
 func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error) {
-	var skus []domain.Sku
+	var skus []domain.Sku = make([]domain.Sku, 0)
 
 	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1`
 	rows, err := r.db.QueryContext(ctx, query, productId)
