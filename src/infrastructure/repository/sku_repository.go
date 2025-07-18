@@ -11,6 +11,7 @@ import (
 
 type SkuRepository interface {
 	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
+	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
 }
 
 type skuRepository struct {
@@ -52,4 +53,25 @@ func (r *skuRepository) CreateMany(ctx context.Context, skus []domain.Sku, produ
 		insertedIDs = append(insertedIDs, insertedID)
 	}
 	return insertedIDs, err
+}
+
+func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error) {
+	var skus []domain.Sku
+
+	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, productId)
+	if err != nil {
+		return skus, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sku domain.Sku
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+		if err != nil {
+			return skus, err
+		}
+		skus = append(skus, sku)
+	}
+	return skus, err
 }

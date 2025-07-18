@@ -63,11 +63,16 @@ func (r *productRepository) Edit(ctx context.Context, product domain.Product, id
 
 func (r *productRepository) GetById(ctx context.Context, id int64) (domain.Product, error) {
 	var product domain.Product
+	var categoryID sql.NullInt64
 
 	query := `SELECT id, name, description, category_id FROM products WHERE id = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&product.Id, &product.Name, &product.Description, &product.Category.Id)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&product.Id, &product.Name, &product.Description, &categoryID)
 	if err != nil {
 		return product, err
+	}
+
+	if categoryID.Valid {
+		product.Category.Id = categoryID.Int64
 	}
 	return product, nil
 }

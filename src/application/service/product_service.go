@@ -12,6 +12,7 @@ import (
 type ProductService interface {
 	Create(ctx context.Context, input request.CreateProductRequest) error
 	Edit(ctx context.Context, input request.EditProductRequest) error
+	GetById(ctx context.Context, id int64) (domain.Product, error)
 }
 
 type productService struct{
@@ -74,7 +75,20 @@ func (s *productService) Edit(ctx context.Context, input request.EditProductRequ
 	}
 
 	return nil
+}
 
+func (s *productService) GetById(ctx context.Context, id int64) (domain.Product, error) {
+	product, err := s.productRepository.GetById(ctx, id)
+	if err != nil {
+		return product, err
+	}
+
+	product.Skus, err = s.skuRepository.GetByProductId(ctx, id)
+	if err != nil {
+		return product, err
+	}
+
+	return product, nil
 }
 
 func (s *productService) insertSkus(ctx context.Context, skus []request.CreateProductSkuRequest, productId int64) ([]domain.Sku, error) {
