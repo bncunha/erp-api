@@ -20,7 +20,7 @@ func NewPersistence(cfg *config.Config) *Persistence {
 }
 
 func (p *Persistence) ConnectDb() (*sql.DB, error) {
-	connStr := fmt.Sprintf("postgresql://postgres:%s@db.%s.supabase.co:%s/postgres", p.cfg.DB_PASS, p.cfg.DB_HOST, p.cfg.DB_PORT)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.cfg.DB_USER, p.cfg.DB_PASS, p.cfg.DB_HOST, p.cfg.DB_NAME) 
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
