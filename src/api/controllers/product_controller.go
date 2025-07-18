@@ -75,3 +75,14 @@ func (c *ProductController) GetAll(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, productViewModels)
 }
+
+func (c *ProductController) Inactivate(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	err := c.productService.Inactivate(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
+}
