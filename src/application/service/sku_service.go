@@ -12,6 +12,7 @@ import (
 type SkuService interface {
 	Create(ctx context.Context, request request.CreateSkuRequest, productId int64) (error)
 	Update(ctx context.Context, request request.EditSkuRequest, skuId int64) (error)
+	GetById(ctx context.Context, skuId int64) (domain.Sku, error)
 }
 
 type skuService struct {
@@ -69,4 +70,12 @@ func (s *skuService) Update(ctx context.Context, request request.EditSkuRequest,
 		return err
 	}
 	return nil
+}
+
+func (s *skuService) GetById(ctx context.Context, skuId int64) (domain.Sku, error) {
+	sku, err := s.skuRepository.GetById(ctx, skuId)
+	if err != nil {
+		return domain.Sku{}, err
+	}
+	return sku, nil
 }

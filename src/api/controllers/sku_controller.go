@@ -5,6 +5,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/api/http"
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/api/viewmodel"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/labstack/echo/v4"
@@ -47,4 +48,15 @@ func (c *SkuController) Edit(context echo.Context) error {
 	}
 
 	return context.JSON(_http.StatusOK, nil)
+}
+
+func (c *SkuController) GetById(context echo.Context) error {
+	skuId := helper.ParseInt64(context.Param("id"))
+
+	sku, err := c.skuService.GetById(context.Request().Context(), skuId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, viewmodel.ToSkuViewModel(sku))
 }

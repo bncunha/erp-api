@@ -36,6 +36,7 @@ func (r *router) SetupRoutes() {
 
   skuGroup := r.echo.Group("/skus")
   skuGroup.PUT("/:id", r.controller.SkuController.Edit)
+  skuGroup.GET("/:id", r.controller.SkuController.GetById)
   
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")

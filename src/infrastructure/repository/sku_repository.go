@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bncunha/erp-api/src/application/constants"
+	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -15,6 +16,7 @@ type SkuRepository interface {
 	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
 	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
 	Update(ctx context.Context, sku domain.Sku) error
+	GetById(ctx context.Context, id int64) (domain.Sku, error)
 }
 
 type skuRepository struct {
@@ -95,4 +97,19 @@ func (r *skuRepository) Update(ctx context.Context, sku domain.Sku) error {
 	query := `UPDATE skus SET code = $1, color = $2, size = $3, cost = $4, price = $5 WHERE id = $6 AND tenant_id = $7 AND deleted_at IS NULL`
 	_, err := r.db.ExecContext(ctx, query, sku.Code, sku.Color, sku.Size, sku.Cost, sku.Price, sku.Id, tenantId)
 	return err
+}
+
+func (r *skuRepository) GetById(ctx context.Context, id int64) (domain.Sku, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var sku domain.Sku
+
+	query := `SELECT id, code, color, size, cost, price FROM skus WHERE id = $1 AND tenant_id = $2`
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return sku, errors.New("SKU não encontrada")
+		}
+		return sku, err
+	}
+	return sku, nil
 }
