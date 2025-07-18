@@ -21,3 +21,7 @@ func IsUniqueViolation(err error) bool {
 func IsNoRowsFinded(err error) bool {
 	return strings.Contains(err.Error(), "no rows in result set")
 }
+
+func IsDuplicated(err error) bool {
+	return strings.Contains(err.Error(), "duplicate key value violates unique constraint")
+}

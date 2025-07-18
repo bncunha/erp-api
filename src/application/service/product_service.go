@@ -114,7 +114,7 @@ func (s *productService) GetSkus(ctx context.Context, id int64) ([]domain.Sku, e
 	return skus, nil
 }
 
-func (s *productService) insertSkus(ctx context.Context, skus []request.CreateProductSkuRequest, productId int64) ([]domain.Sku, error) {
+func (s *productService) insertSkus(ctx context.Context, skus []request.CreateSkuRequest, productId int64) ([]domain.Sku, error) {
 	var skusDomain []domain.Sku
 	for _, sku := range skus {
 		skusDomain = append(skusDomain, domain.Sku{

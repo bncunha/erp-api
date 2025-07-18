@@ -6,8 +6,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var COMPANY_TEST_ID = 1
-
 type Config struct {
 	DB_PASS string
 	DB_HOST string

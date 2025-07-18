@@ -4,6 +4,7 @@ import "github.com/bncunha/erp-api/src/infrastructure/repository"
 
 type ApplicationService struct {
 	ProductService ProductService
+	SkuService SkuService
 	repositories *repository.Repository
 }
 
@@ -13,4 +14,5 @@ func NewApplicationService(repositories *repository.Repository) *ApplicationServ
 
 func (s *ApplicationService) SetupServices() {
 	s.ProductService = NewProductService(s.repositories.ProductRepository, s.repositories.CategoryRepository, s.repositories.SkuRepository)
+	s.SkuService = NewSkuService(s.repositories.SkuRepository)
 }

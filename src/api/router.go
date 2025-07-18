@@ -5,6 +5,7 @@ import (
 	"os"
 
 	controller "github.com/bncunha/erp-api/src/api/controllers"
+	"github.com/bncunha/erp-api/src/api/middleware"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,6 +24,7 @@ func NewRouter(controller *controller.Controller) *router {
 }
 
 func (r *router) SetupRoutes() {
+  r.echo.Use(middleware.TenantMiddleware)
   productGroup := r.echo.Group("/products")
   productGroup.POST("/", r.controller.ProductController.Create)
   productGroup.GET("/", r.controller.ProductController.GetAll) 
@@ -30,6 +32,7 @@ func (r *router) SetupRoutes() {
   productGroup.PUT("/:id", r.controller.ProductController.Edit)
   productGroup.DELETE("/:id", r.controller.ProductController.Inactivate)
   productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
+  productGroup.POST("/:id/skus", r.controller.SkuController.Create) 
   
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
