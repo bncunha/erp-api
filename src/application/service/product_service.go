@@ -4,12 +4,14 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/validator"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type ProductService interface {
 	Create(ctx context.Context, input request.CreateProductRequest) error
+	Edit(ctx context.Context, input request.EditProductRequest) error
 }
 
 type productService struct{
@@ -49,6 +51,30 @@ func (s *productService) Create(ctx context.Context, input request.CreateProduct
 	}
 
 	return nil
+}
+
+func (s *productService) Edit(ctx context.Context, input request.EditProductRequest) error {
+	err := validator.Validate(input)
+	if err != nil {
+		return err
+	}
+
+	category, err := s.getCategory(ctx, input.CategoryID, input.CategoryName)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.productRepository.Edit(ctx, domain.Product{
+		Name: input.Name,
+		Description: input.Description,
+		Category: category,
+	}, input.Id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (s *productService) insertSkus(ctx context.Context, skus []request.CreateProductSkuRequest, productId int64) ([]domain.Sku, error) {

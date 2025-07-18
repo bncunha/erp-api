@@ -25,6 +25,7 @@ func NewRouter(controller *controller.Controller) *router {
 func (r *router) SetupRoutes() {
   productGroup := r.echo.Group("/products")
   productGroup.POST("/", r.controller.ProductController.Create)
+  productGroup.PUT("/:id", r.controller.ProductController.Edit)
 
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")

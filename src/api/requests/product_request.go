@@ -45,3 +45,11 @@ func (r *CreateProductSkuRequest) Validate() error {
 	}
 	return nil
 }
+
+type EditProductRequest struct {
+	Id int64 `json:"id" validate:"required"`
+	Name         string                 `json:"name" validate:"required,max=200"`
+	Description  string                 `json:"description" validate:"max=500"`
+	CategoryID   int64                 	`json:"categoryId"`
+	CategoryName string                 `json:"categoryName" validate:"max=200"`
+}
