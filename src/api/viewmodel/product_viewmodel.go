@@ -7,7 +7,7 @@ type GetProductViewModel struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	CategoryId  int64 `json:"categoryId,omitempty"`
-	Skus        []SkuViewModel `json:"skus"`
+	Skus        []SkuViewModel `json:"skus,omitempty"`
 }
 
 func ToGetProductViewModel(product domain.Product) GetProductViewModel {

@@ -13,6 +13,7 @@ type ProductRepository interface {
 	Create(ctx context.Context, product domain.Product) (int64, error)
 	Edit(ctx context.Context, product domain.Product, id int64) (int64, error)
 	GetById(ctx context.Context, id int64) (domain.Product, error)
+	GetAll(ctx context.Context) ([]domain.Product, error)
 }
 
 type productRepository struct {
@@ -75,4 +76,25 @@ func (r *productRepository) GetById(ctx context.Context, id int64) (domain.Produ
 		product.Category.Id = categoryID.Int64
 	}
 	return product, nil
+}
+
+func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error) {
+	var products []domain.Product
+
+	query := `SELECT id, name, description FROM products`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return products, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var product domain.Product
+		err = rows.Scan(&product.Id, &product.Name, &product.Description)
+		if err != nil {
+			return products, err
+		}
+		products = append(products, product)
+	}
+	return products, err
 }

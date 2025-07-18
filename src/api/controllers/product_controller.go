@@ -61,3 +61,17 @@ func (c *ProductController) GetById(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, viewmodel.ToGetProductViewModel(product))
 }
+
+func (c *ProductController) GetAll(context echo.Context) error {
+	products, err := c.productService.GetAll(context.Request().Context())
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	var productViewModels []viewmodel.GetProductViewModel
+	for _, product := range products {
+		productViewModels = append(productViewModels, viewmodel.ToGetProductViewModel(product))
+	}
+
+	return context.JSON(_http.StatusOK, productViewModels)
+}
