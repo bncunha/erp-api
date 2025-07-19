@@ -35,8 +35,8 @@ func (r *router) SetupCors(env string) {
 func (r *router) SetupRoutes() {
   r.echo.Use(middleware.TenantMiddleware)
   productGroup := r.echo.Group("/products")
-  productGroup.POST("/", r.controller.ProductController.Create)
-  productGroup.GET("/", r.controller.ProductController.GetAll) 
+  productGroup.POST("", r.controller.ProductController.Create)
+  productGroup.GET("", r.controller.ProductController.GetAll) 
   productGroup.GET("/:id", r.controller.ProductController.GetById)
   productGroup.PUT("/:id", r.controller.ProductController.Edit)
   productGroup.DELETE("/:id", r.controller.ProductController.Inactivate)
@@ -44,14 +44,14 @@ func (r *router) SetupRoutes() {
   productGroup.POST("/:id/skus", r.controller.SkuController.Create)
 
   skuGroup := r.echo.Group("/skus")
-  skuGroup.GET("/", r.controller.SkuController.GetAll)
+  skuGroup.GET("", r.controller.SkuController.GetAll)
   skuGroup.PUT("/:id", r.controller.SkuController.Edit)
   skuGroup.GET("/:id", r.controller.SkuController.GetById)
   skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate)
 
   categoryGroup := r.echo.Group("/categories")
-  categoryGroup.POST("/", r.controller.CategoryController.Create)
-  categoryGroup.GET("/", r.controller.CategoryController.GetAll) 
+  categoryGroup.POST("", r.controller.CategoryController.Create)
+  categoryGroup.GET("", r.controller.CategoryController.GetAll) 
   categoryGroup.GET("/:id", r.controller.CategoryController.GetById)
   categoryGroup.PUT("/:id", r.controller.CategoryController.Edit)
   categoryGroup.DELETE("/:id", r.controller.CategoryController.Inactivate)
