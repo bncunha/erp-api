@@ -39,6 +39,13 @@ func (r *router) SetupRoutes() {
   skuGroup.PUT("/:id", r.controller.SkuController.Edit)
   skuGroup.GET("/:id", r.controller.SkuController.GetById)
   skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate)
+
+  categoryGroup := r.echo.Group("/categories")
+  categoryGroup.POST("/", r.controller.CategoryController.Create)
+  categoryGroup.GET("/", r.controller.CategoryController.GetAll) 
+  categoryGroup.GET("/:id", r.controller.CategoryController.GetById)
+  categoryGroup.PUT("/:id", r.controller.CategoryController.Edit)
+  categoryGroup.DELETE("/:id", r.controller.CategoryController.Inactivate)
   
 	r.echo.GET("/health", func (c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")

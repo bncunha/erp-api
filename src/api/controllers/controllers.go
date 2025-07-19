@@ -6,6 +6,7 @@ type Controller struct {
 	services *service.ApplicationService
 	ProductController *ProductController
 	SkuController *SkuController
+	CategoryController *CategoryController
 }
 
 func NewController(services *service.ApplicationService) *Controller {
@@ -17,4 +18,5 @@ func NewController(services *service.ApplicationService) *Controller {
 func (c *Controller) SetupControllers() {
 	c.ProductController = NewProductController(c.services.ProductService)
 	c.SkuController = NewSkuController(c.services.SkuService)
+	c.CategoryController = NewCategoryController(c.services.CategoryService)
 }

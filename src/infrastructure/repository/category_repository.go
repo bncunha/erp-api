@@ -13,6 +13,9 @@ type CategoryRepository interface {
 	Create(ctx context.Context, category domain.Category) (int64, error)
 	GetById(ctx context.Context, id int64) (domain.Category, error)
 	GetByName(ctx context.Context, name string) (domain.Category, error)
+	Update(ctx context.Context, category domain.Category) error
+	Delete(ctx context.Context, id int64) error
+	GetAll(ctx context.Context) ([]domain.Category, error)
 }
 
 type categoryRepository struct {
@@ -63,4 +66,40 @@ func (r *categoryRepository) GetByName(ctx context.Context, name string) (domain
 		return category, err
 	}
 	return category, nil
+}
+
+func (r *categoryRepository) Update(ctx context.Context, category domain.Category) error {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	query := `UPDATE categories SET name = $1 WHERE id = $2 AND tenant_id = $3`
+	_, err := r.db.ExecContext(ctx, query, category.Name, category.Id, tenantId)
+	return err
+}
+
+func (r *categoryRepository) Delete(ctx context.Context, id int64) error {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	query := `UPDATE categories SET deleted_at = now() WHERE id = $1 AND tenant_id = $2`
+	_, err := r.db.ExecContext(ctx, query, id, tenantId)
+	return err
+}
+
+func (r *categoryRepository) GetAll(ctx context.Context) ([]domain.Category, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var categories []domain.Category
+
+	query := `SELECT id, name FROM categories WHERE tenant_id = $1 AND deleted_at IS NULL`
+	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	if err != nil {
+		return categories, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var category domain.Category
+		err = rows.Scan(&category.Id, &category.Name)
+		if err != nil {
+			return categories, err
+		}
+		categories = append(categories, category)
+	}
+	return categories, err
 }
