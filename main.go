@@ -35,6 +35,7 @@ func main() {
 	controller.SetupControllers()
 
 	r := router.NewRouter(controller)
+	r.SetupCors(config.APP_ENV)
 	r.SetupRoutes()
 	r.Start()
 }

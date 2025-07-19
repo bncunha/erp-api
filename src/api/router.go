@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"os"
 
+	_middleware "github.com/labstack/echo/v4/middleware"
+
 	controller "github.com/bncunha/erp-api/src/api/controllers"
 	"github.com/bncunha/erp-api/src/api/middleware"
 	"github.com/labstack/echo/v4"
@@ -21,6 +23,13 @@ func NewRouter(controller *controller.Controller) *router {
     controller: controller,
   }
 	return router
+}
+
+func (r *router) SetupCors(env string) {
+  r.echo.Use(_middleware.CORSWithConfig(_middleware.CORSConfig{
+    AllowOrigins: []string{"http://localhost:4200", "https://erp-front-0pem.onrender.com"},
+    AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
+  }))
 }
 
 func (r *router) SetupRoutes() {
