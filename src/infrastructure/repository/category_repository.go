@@ -33,7 +33,7 @@ func (r *categoryRepository) Create(ctx context.Context, category domain.Categor
 	err := r.db.QueryRowContext(ctx, query, category.Name, ctx.Value(constants.TENANT_KEY)).Scan(&insertedID)
 	if err != nil {
 		if errors.IsUniqueViolation(err) {
-			return insertedID, errors.New("Categoria já existe no banco de dados")
+			return insertedID, errors.New("Categoria já cadastrada!")
 		}
 		return insertedID, err
 	}

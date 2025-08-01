@@ -42,7 +42,7 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 	_, err = s.skuRepository.Create(ctx, sku, productId)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.New("Código já existe no banco de dados")
+			return errors.New("Código já cadastrado!")
 		}
 		return err
 	}
@@ -67,7 +67,7 @@ func (s *skuService) Update(ctx context.Context, request request.EditSkuRequest,
 	err = s.skuRepository.Update(ctx, sku)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.New("Código já existe no banco de dados")
+			return errors.New("Código já cadastrado!")
 		}
 		return err
 	}
