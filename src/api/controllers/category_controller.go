@@ -34,11 +34,14 @@ func (c *CategoryController) Create(context echo.Context) error {
 }
 
 func (c *CategoryController) Edit(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
 	var categoryRequest request.EditCategoryRequest
 	if err := context.Bind(&categoryRequest); err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
 
+	categoryRequest.Id = id
 	err := c.categoryService.Edit(context.Request().Context(), categoryRequest)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))

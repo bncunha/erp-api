@@ -11,5 +11,10 @@ func (r *CreateCategoryRequest) Validate() error {
 }
 
 type EditCategoryRequest struct {
+	Id   int64  `json:"id" validate:"required"`
 	CreateCategoryRequest
+}
+
+func (r *EditCategoryRequest) Validate() error {
+	return validator.Validate(r)
 }

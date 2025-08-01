@@ -46,7 +46,8 @@ func (s *categoryService) Edit(ctx context.Context, input request.EditCategoryRe
 		return err
 	}
 
-	_, err = s.categoryRepository.Create(ctx, domain.Category{
+	err = s.categoryRepository.Update(ctx, domain.Category{
+		Id: input.Id,
 		Name: input.Name,
 	})
 	if err != nil {
