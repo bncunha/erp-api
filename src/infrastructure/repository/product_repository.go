@@ -86,7 +86,7 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var products []domain.Product
 
-	query := `SELECT id, name, description FROM products WHERE tenant_id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, name, description FROM products WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return products, err

@@ -76,7 +76,7 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku = make([]domain.Sku, 0)
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1 AND tenant_id = $2 AND deleted_at IS NULL ORDER BY id ASC`
 	rows, err := r.db.QueryContext(ctx, query, productId, tenantId)
 	if err != nil {
 		return skus, err
@@ -120,7 +120,7 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE tenant_id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, code, color, size, cost, price FROM skus WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return skus, err
