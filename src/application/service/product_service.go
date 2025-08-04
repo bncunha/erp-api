@@ -99,6 +99,14 @@ func (s *productService) GetAll(ctx context.Context) ([]domain.Product, error) {
 	if err != nil {
 		return products, err
 	}
+
+	for i := range products {
+		skus, err := s.skuRepository.GetByProductId(ctx, products[i].Id)
+		products[i].Skus = skus
+		if err != nil {
+			return products, err
+		}
+	}
 	return products, nil
 }
 
