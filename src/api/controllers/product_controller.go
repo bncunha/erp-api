@@ -28,12 +28,12 @@ func (c *ProductController) Create(context echo.Context) error {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(errors.New("parametros invalidos")))
 	}
 
-	err := c.productService.Create(context.Request().Context(), productRequest)
+	productId, err := c.productService.Create(context.Request().Context(), productRequest)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
 
-	return context.JSON(_http.StatusCreated, nil)
+	return context.JSON(_http.StatusCreated, productId)
 }
 
 func (c *ProductController) Edit(context echo.Context) error {

@@ -10,7 +10,7 @@ import (
 )
 
 type ProductService interface {
-	Create(ctx context.Context, input request.CreateProductRequest) error
+	Create(ctx context.Context, input request.CreateProductRequest) (int64, error)
 	Edit(ctx context.Context, input request.EditProductRequest) error
 	GetById(ctx context.Context, id int64) (domain.Product, error)
 	GetAll(ctx context.Context) ([]domain.Product, error)
@@ -28,15 +28,15 @@ func NewProductService(productRepository repository.ProductRepository, categoryR
 	return &productService{productRepository, categoryRepository, skuRepositoy}
 }
 
-func (s *productService) Create(ctx context.Context, input request.CreateProductRequest) error {
+func (s *productService) Create(ctx context.Context, input request.CreateProductRequest) (int64, error) {
 	err := input.Validate()	
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	category, err := s.getCategory(ctx, input.CategoryID, input.CategoryName)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	productId, err := s.productRepository.Create(ctx, domain.Product{
@@ -45,16 +45,16 @@ func (s *productService) Create(ctx context.Context, input request.CreateProduct
 		Category: category,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}	
 
 
 	_, err = s.insertSkus(ctx, input.Skus, productId) 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return productId, nil
 }
 
 func (s *productService) Edit(ctx context.Context, input request.EditProductRequest) error {
