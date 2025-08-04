@@ -88,7 +88,7 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 
 	query := `
 		SELECT p.id, p.name, p.description, c.name AS category_name, c.id AS category_id 
-		FROM products p INNER JOIN categories c ON p.category_id = c.id
+		FROM products p LEFT JOIN categories c ON p.category_id = c.id
 		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL ORDER BY p.id ASC` 
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
@@ -98,9 +98,18 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 
 	for rows.Next() {
 		var product domain.Product
-		err = rows.Scan(&product.Id, &product.Name, &product.Description, &product.Category.Name, &product.Category.Id)
+		var categoryName sql.NullString
+		var categoryId sql.NullInt64
+
+		err = rows.Scan(&product.Id, &product.Name, &product.Description, &categoryName, &categoryId)
 		if err != nil {
 			return products, err
+		}
+		if categoryId.Valid {
+			product.Category.Id = categoryId.Int64
+		}
+		if categoryName.Valid {
+			product.Category.Name = categoryName.String
 		}
 		products = append(products, product)
 	}
