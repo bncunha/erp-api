@@ -42,6 +42,6 @@ func (s *authService) Login(ctx context.Context, input request.LoginRequest) (ou
 		return out, err
 	}
 
-	return output.LoginOutput{Token: token}, nil
+	return output.LoginOutput{Token: token, Name: user.Name}, nil
 
 }
