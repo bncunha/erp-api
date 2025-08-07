@@ -58,13 +58,13 @@ func (r *router) setupPrivateRoutes() {
   productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
   productGroup.POST("/:id/skus", r.controller.SkuController.Create)
 
-  skuGroup := r.echo.Group("/skus")
+  skuGroup := private.Group("/skus")
   skuGroup.GET("", r.controller.SkuController.GetAll)
   skuGroup.PUT("/:id", r.controller.SkuController.Edit)
   skuGroup.GET("/:id", r.controller.SkuController.GetById)
   skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate)
 
-  categoryGroup := r.echo.Group("/categories")
+  categoryGroup := private.Group("/categories")
   categoryGroup.POST("", r.controller.CategoryController.Create)
   categoryGroup.GET("", r.controller.CategoryController.GetAll) 
   categoryGroup.GET("/:id", r.controller.CategoryController.GetById)
