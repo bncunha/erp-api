@@ -33,8 +33,23 @@ func (r *router) SetupCors(env string) {
 }
 
 func (r *router) SetupRoutes() {
-  r.echo.Use(middleware.TenantMiddleware)
-  productGroup := r.echo.Group("/products")
+  r.setupPublicRoutes()
+  r.setupPrivateRoutes()
+}
+
+func (r *router) setupPublicRoutes() {
+  r.echo.POST("/login", r.controller.AuthController.Login)
+	r.echo.GET("/health", func (c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
+}
+
+func (r *router) setupPrivateRoutes() {
+  private := r.echo.Group("")
+
+  private.Use(middleware.AuthMiddleware)
+
+  productGroup := private.Group("/products")
   productGroup.POST("", r.controller.ProductController.Create)
   productGroup.GET("", r.controller.ProductController.GetAll) 
   productGroup.GET("/:id", r.controller.ProductController.GetById)
@@ -55,10 +70,6 @@ func (r *router) SetupRoutes() {
   categoryGroup.GET("/:id", r.controller.CategoryController.GetById)
   categoryGroup.PUT("/:id", r.controller.CategoryController.Edit)
   categoryGroup.DELETE("/:id", r.controller.CategoryController.Inactivate)
-  
-	r.echo.GET("/health", func (c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
 }
 
 func (r *router) Start() {

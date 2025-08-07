@@ -7,6 +7,7 @@ type Repository struct {
 	ProductRepository ProductRepository
 	CategoryRepository CategoryRepository
 	SkuRepository SkuRepository
+	UserRepository UserRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -17,4 +18,5 @@ func (r *Repository) SetupRepositories() {
 	r.ProductRepository = NewProductRepository(r.db)
 	r.CategoryRepository = NewCategoryRepository(r.db)
 	r.SkuRepository = NewSkuRepository(r.db)
+	r.UserRepository = NewUserRepository(r.db)
 }
