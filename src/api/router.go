@@ -26,10 +26,17 @@ func NewRouter(controller *controller.Controller) *router {
 }
 
 func (r *router) SetupCors(env string) {
+  if env != "production" {
   r.echo.Use(_middleware.CORSWithConfig(_middleware.CORSConfig{
     AllowOrigins: []string{"http://localhost:4200", "https://erp-front-0pem.onrender.com"},
     AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
   }))
+} else {
+  r.echo.Use(_middleware.CORSWithConfig(_middleware.CORSConfig{
+    AllowOrigins: []string{"https://erp-front-production.onrender.com"},
+    AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
+  }))
+}
 }
 
 func (r *router) SetupRoutes() {
