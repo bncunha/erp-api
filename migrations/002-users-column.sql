@@ -8,3 +8,5 @@ CREATE TABLE inventories (
   CONSTRAINT Inventories_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT Inventories_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES companies(id)
 );
+
+ALTER TABLE inventories ADD COLUMN created_at TIMESTAMP DEFAULT NOW() NOT NULL;

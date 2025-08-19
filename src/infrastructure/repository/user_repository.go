@@ -28,10 +28,8 @@ func NewUserRepository(db *sql.DB) UserRepository {
 
 func (r *userRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
 	var user domain.User
-	tenantId := ctx.Value(constants.TENANT_KEY)
-
-	query := `SELECT id, username, name, phone_number, password, role, tenant_id FROM users WHERE username = $1 AND tenant_id = $2 AND deleted_at IS NULL`
-	err := r.db.QueryRowContext(ctx, query, username, tenantId).Scan(
+	query := `SELECT id, username, name, phone_number, password, role, tenant_id FROM users WHERE username = $1 AND deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, username).Scan(
 		&user.Id,
 		&user.Username,
 		&user.Name,
@@ -62,8 +60,17 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) (int64, e
 
 func (r *userRepository) Update(ctx context.Context, user domain.User) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `UPDATE users SET name = $1, phone_number = $2, password = $3, role = $4 WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL`
-	_, err := r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Password, user.Role, user.Id, tenantId)
+	var err error
+	query := `UPDATE users SET name = $1, phone_number = $2, role = $3, username = $4 WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL`
+	if user.Password != "" {
+		query = `UPDATE users SET name = $1, phone_number = $2, password = $3, role = $4, username = $5 WHERE id = $6 AND tenant_id = $7 AND deleted_at IS NULL`
+	}
+
+	if user.Password == "" {
+		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Role, user.Username, user.Id, tenantId)
+	} else {
+		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Password, user.Role, user.Username, user.Id, tenantId)
+	}
 	if err != nil {
 		return err
 	}
@@ -72,7 +79,7 @@ func (r *userRepository) Update(ctx context.Context, user domain.User) error {
 
 func (r *userRepository) Inactivate(ctx context.Context, id int64) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `UPDATE users SET deleted_at = false WHERE id = $1 and tenant_id = $2`
+	query := `UPDATE users SET deleted_at = NOW() WHERE id = $1 and tenant_id = $2`
 	_, err := r.db.ExecContext(ctx, query, id, tenantId)
 	if err != nil {
 		return err
@@ -110,7 +117,7 @@ func (r *userRepository) GetById(ctx context.Context, id int64) (domain.User, er
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Password, &user.Role, &user.TenantId)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return user, errors.New("User não encontrada")
+			return user, errors.New("Usuário não encontrado")
 		}
 		return user, err
 	}

@@ -48,13 +48,15 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 		return err
 	}
 
-	inventory := domain.Inventory{
-		UserId: userId,
-		Type:   "RESELLER",
-	}
-	_, err = s.inventoryRepository.Create(ctx, inventory)
-	if err != nil {
-		return err
+	if *request.HasInventory {
+		inventory := domain.Inventory{
+			UserId: userId,
+			Type:   "RESELLER",
+		}
+		_, err = s.inventoryRepository.Create(ctx, inventory)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

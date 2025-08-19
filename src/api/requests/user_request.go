@@ -5,11 +5,12 @@ import (
 )
 
 type CreateUserRequest struct {
-	Username 		string `json:"username" validate:"required,max=30"`
-	Name     		string `json:"name" validate:"required,max=100"`
-	PhoneNumber 	string `json:"phone_number" validate:"required,max=20"`
-	Password 		string `json:"password" validate:"required,max=20"`
-	Role 			string `json:"role" validate:"required,max=100"`
+	Username     string `json:"username" validate:"required,max=30"`
+	Name         string `json:"name" validate:"required,max=100"`
+	PhoneNumber  string `json:"phone_number" validate:"required,max=20"`
+	Password     string `json:"password" validate:"required,max=20"`
+	Role         string `json:"role" validate:"required,max=100"`
+	HasInventory *bool  `json:"has_inventory" validate:"required"`
 }
 
 func (r *CreateUserRequest) Validate() error {
@@ -21,5 +22,17 @@ func (r *CreateUserRequest) Validate() error {
 }
 
 type EditUserRequest struct {
-	CreateUserRequest
+	Username    string `json:"username" validate:"required,max=30"`
+	Name        string `json:"name" validate:"required,max=100"`
+	PhoneNumber string `json:"phone_number" validate:"required,max=20"`
+	Role        string `json:"role" validate:"required,max=100"`
+	Password    string `json:"password" validate:"required,max=20"`
+}
+
+func (r *EditUserRequest) Validate() error {
+	err := validator.Validate(r)
+	if err != nil {
+		return err
+	}
+	return nil
 }
