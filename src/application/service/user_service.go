@@ -18,11 +18,12 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepository repository.UserRepository
+	userRepository      repository.UserRepository
+	inventoryRepository repository.InventoryRepository
 }
 
-func NewUserService(userRepository repository.UserRepository) UserService {
-	return &userService{userRepository}
+func NewUserService(userRepository repository.UserRepository, inventoryRepository repository.InventoryRepository) UserService {
+	return &userService{userRepository, inventoryRepository}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -39,11 +40,20 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 		Role:        request.Role,
 	}
 
-	_, err = s.userRepository.Create(ctx, user)
+	userId, err := s.userRepository.Create(ctx, user)
 	if err != nil {
 		if errors.IsDuplicated(err) {
 			return errors.New("Usuário já cadastrado!")
 		}
+		return err
+	}
+
+	inventory := domain.Inventory{
+		UserId: userId,
+		Type:   "RESELLER",
+	}
+	_, err = s.inventoryRepository.Create(ctx, inventory)
+	if err != nil {
 		return err
 	}
 	return nil

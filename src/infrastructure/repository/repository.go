@@ -3,11 +3,12 @@ package repository
 import "database/sql"
 
 type Repository struct {
-	db                 *sql.DB
-	ProductRepository  ProductRepository
-	CategoryRepository CategoryRepository
-	SkuRepository      SkuRepository
-	UserRepository     UserRepository
+	db                  *sql.DB
+	ProductRepository   ProductRepository
+	CategoryRepository  CategoryRepository
+	SkuRepository       SkuRepository
+	UserRepository      UserRepository
+	InventoryRepository InventoryRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -19,4 +20,5 @@ func (r *Repository) SetupRepositories() {
 	r.CategoryRepository = NewCategoryRepository(r.db)
 	r.SkuRepository = NewSkuRepository(r.db)
 	r.UserRepository = NewUserRepository(r.db)
+	r.InventoryRepository = NewInventoryRepository(r.db)
 }

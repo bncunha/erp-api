@@ -20,5 +20,5 @@ func (s *ApplicationService) SetupServices() {
 	s.SkuService = NewSkuService(s.repositories.SkuRepository)
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
-	s.UserService = NewUserService(s.repositories.UserRepository)
+	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)
 }
