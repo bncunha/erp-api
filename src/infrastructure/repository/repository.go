@@ -3,11 +3,11 @@ package repository
 import "database/sql"
 
 type Repository struct {
-	db                *sql.DB
-	ProductRepository ProductRepository
+	db                 *sql.DB
+	ProductRepository  ProductRepository
 	CategoryRepository CategoryRepository
-	SkuRepository SkuRepository
-	UserRepository UserRepository
+	SkuRepository      SkuRepository
+	UserRepository     UserRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
