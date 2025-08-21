@@ -22,7 +22,7 @@ func NewApplicationService(repositories *repository.Repository, useCases *usecas
 
 func (s *ApplicationService) SetupServices() {
 	s.ProductService = NewProductService(s.repositories.ProductRepository, s.repositories.CategoryRepository, s.repositories.SkuRepository)
-	s.SkuService = NewSkuService(s.repositories.SkuRepository)
+	s.SkuService = NewSkuService(s.repositories.SkuRepository, s.useCases.InventoryUseCase)
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)

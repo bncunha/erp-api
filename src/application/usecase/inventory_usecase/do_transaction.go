@@ -173,11 +173,6 @@ func (s *inventoryUseCase) validateInventoryTransaction(ctx context.Context, inv
 			return ErrQuantityInsufficient
 		}
 	}
-	if inventoryType == domain.InventoryTransactionTypeIn {
-		if inventoryItemIn.Id == 0 {
-			return ErrEnventoryItemDestinationNotFound
-		}
-	}
 	if inventoryType == domain.InventoryTransactionTypeTransfer {
 		if inventoryItemIn.Id == inventoryItemOut.Id {
 			return ErrInventoryesTransferEquais
