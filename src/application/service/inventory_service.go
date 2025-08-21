@@ -1,0 +1,225 @@
+package service
+
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/domain"
+	"github.com/bncunha/erp-api/src/infrastructure/repository"
+)
+
+var (
+	ErrEnventoryItemDestinationNotFound = errors.New("Item de estoque não encontrado no destino")
+	ErrInventoryItemOriginNotFound      = errors.New("Item de estoque não encontrado na origem")
+	ErrQuantityInsufficient             = errors.New("Quantidade insuficiente")
+	ErrInventoryesTransferEquais        = errors.New("Inventários de origem e de destino precisam ser diferentes")
+)
+
+type InventoryService interface {
+	DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error
+}
+
+type inventoryService struct {
+	repository               *repository.Repository
+	inventoryRepository      repository.InventoryRepository
+	inventoryItemRepository  repository.InventoryItemRepository
+	inventoryTransactionRepo repository.InventoryTransactionRepository
+	skuRepository            repository.SkuRepository
+}
+
+func NewInventoryService(repository *repository.Repository, inventoryRepository repository.InventoryRepository, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, skuRepository repository.SkuRepository) InventoryService {
+	return &inventoryService{repository, inventoryRepository, inventoryItemRepository, inventoryTransactionRepo, skuRepository}
+}
+
+func (s *inventoryService) DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error {
+	err := request.Validate()
+	if err != nil {
+		return err
+	}
+
+	var inventoryOut domain.Inventory
+	var inventoryIn domain.Inventory
+	var inventoryItemOut domain.InventoryItem
+	var inventoryItemIn domain.InventoryItem
+
+	if request.InventoryDestinationId != 0 {
+		inventoryIn, err = s.inventoryRepository.GetById(ctx, request.InventoryDestinationId)
+		if err != nil {
+			return err
+		}
+	}
+	if request.InventoryOriginId != 0 {
+		inventoryOut, err = s.inventoryRepository.GetById(ctx, request.InventoryOriginId)
+		if err != nil {
+			return err
+		}
+	}
+
+	sku, err := s.skuRepository.GetById(ctx, request.SkuId)
+	if err != nil {
+		return err
+	}
+
+	inventoryItemOut, err = s.inventoryItemRepository.GetBySkuIdAndInventoryId(ctx, sku.Id, inventoryOut.Id)
+	if err != nil && !errors.Is(err, repository.ErrInventoryItemNotFound) {
+		return err
+	}
+
+	inventoryItemIn, err = s.inventoryItemRepository.GetBySkuIdAndInventoryId(ctx, sku.Id, inventoryIn.Id)
+	if err != nil && !errors.Is(err, repository.ErrInventoryItemNotFound) {
+		return err
+	}
+
+	err = s.validateInventoryTransaction(ctx, inventoryItemOut, inventoryItemIn, request.Quantity, request.Type)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.repository.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	inventoryItemIn, err = s.createInventoryItemInIfNotExists(ctx, tx, sku, request.Quantity, inventoryItemIn, domain.InventoryTransactionType(request.Type), inventoryIn)
+	if err != nil {
+		return err
+	}
+
+	err = s.createTransactions(ctx, tx, inventoryItemOut, inventoryItemIn, domain.InventoryTransaction{
+		Quantity:      request.Quantity,
+		Date:          time.Now(),
+		InventoryOut:  inventoryOut,
+		InventoryIn:   inventoryIn,
+		Justification: request.Justification,
+	}, request.Type)
+	if err != nil {
+		return err
+	}
+
+	switch request.Type {
+	case domain.InventoryTransactionTypeTransfer:
+		err = s.transferQuantity(ctx, tx, inventoryItemOut, inventoryItemIn, request.Quantity)
+		if err != nil {
+			return err
+		}
+	case domain.InventoryTransactionTypeIn:
+		err = s.addQuantity(ctx, tx, inventoryItemIn, request.Quantity)
+		if err != nil {
+			return err
+		}
+	case domain.InventoryTransactionTypeOut:
+		err = s.subQuantity(ctx, tx, inventoryItemOut, request.Quantity)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (s *inventoryService) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, transaction domain.InventoryTransaction, transactionType domain.InventoryTransactionType) error {
+	if transactionType == domain.InventoryTransactionTypeIn || transactionType == domain.InventoryTransactionTypeTransfer {
+		transaction.InventoryItem = inventoryItemIn
+		transaction.Type = domain.InventoryTransactionTypeIn
+		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
+		if err != nil {
+			return err
+		}
+	}
+
+	if transactionType == domain.InventoryTransactionTypeOut || transactionType == domain.InventoryTransactionTypeTransfer {
+		transaction.InventoryItem = inventoryItemOut
+		transaction.Type = domain.InventoryTransactionTypeOut
+		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *inventoryService) createInventoryItemInIfNotExists(ctx context.Context, tx *sql.Tx, sku domain.Sku, quantity float64, inventoryItemIn domain.InventoryItem, transactionType domain.InventoryTransactionType, inventoryIn domain.Inventory) (domain.InventoryItem, error) {
+	if inventoryItemIn.Id != 0 {
+		return inventoryItemIn, nil
+	}
+	if transactionType == domain.InventoryTransactionTypeIn && inventoryItemIn.Id == 0 {
+		insertInventoryItem := domain.InventoryItem{
+			InventoryId: inventoryIn.Id,
+			SkuId:       sku.Id,
+			Quantity:    0,
+		}
+		inventoryItemId, err := s.inventoryItemRepository.Create(ctx, tx, insertInventoryItem)
+		if err != nil {
+			return domain.InventoryItem{}, err
+		}
+		inventoryItemIn, err = s.inventoryItemRepository.GetByIdWithTransaction(ctx, tx, inventoryItemId)
+		if err != nil {
+			return domain.InventoryItem{}, err
+		}
+	}
+	return inventoryItemIn, nil
+}
+
+func (s *inventoryService) validateInventoryTransaction(ctx context.Context, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, quantity float64, inventoryType domain.InventoryTransactionType) error {
+	if inventoryType == domain.InventoryTransactionTypeTransfer || inventoryType == domain.InventoryTransactionTypeOut {
+		if inventoryItemOut.Id == 0 {
+			return ErrInventoryItemOriginNotFound
+		}
+
+		if inventoryItemOut.Quantity < quantity {
+			return ErrQuantityInsufficient
+		}
+	}
+	if inventoryType == domain.InventoryTransactionTypeIn {
+		if inventoryItemIn.Id == 0 {
+			return ErrEnventoryItemDestinationNotFound
+		}
+	}
+	if inventoryType == domain.InventoryTransactionTypeTransfer {
+		if inventoryItemIn.Id == inventoryItemOut.Id {
+			return ErrInventoryesTransferEquais
+		}
+	}
+	return nil
+}
+
+func (s *inventoryService) transferQuantity(ctx context.Context, tx *sql.Tx, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, quantity float64) error {
+	err := s.subQuantity(ctx, tx, inventoryItemOut, quantity)
+	if err != nil {
+		return err
+	}
+	err = s.addQuantity(ctx, tx, inventoryItemIn, quantity)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *inventoryService) addQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem, quantity float64) error {
+	inventoryItem.Quantity = inventoryItem.Quantity + quantity
+	err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, inventoryItem)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *inventoryService) subQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem, quantity float64) error {
+	inventoryItem.Quantity = inventoryItem.Quantity - quantity
+	if inventoryItem.Quantity < 0 {
+		return ErrQuantityInsufficient
+	}
+	err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, inventoryItem)
+	if err != nil {
+		return err
+	}
+	return nil
+}

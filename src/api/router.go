@@ -84,6 +84,9 @@ func (r *router) setupPrivateRoutes() {
 	userGroup.GET("/:id", r.controller.UserController.GetById)
 	userGroup.PUT("/:id", r.controller.UserController.Edit)
 	userGroup.DELETE("/:id", r.controller.UserController.Inactivate)
+
+	inventoryGroup := private.Group("/inventory")
+	inventoryGroup.POST("/transaction", r.controller.InventoryController.DoTransaction)
 }
 
 func (r *router) Start() {

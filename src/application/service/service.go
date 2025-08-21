@@ -3,12 +3,13 @@ package service
 import "github.com/bncunha/erp-api/src/infrastructure/repository"
 
 type ApplicationService struct {
-	ProductService  ProductService
-	SkuService      SkuService
-	CategoryService CategoryService
-	AuthService     AuthService
-	UserService     UserService
-	repositories    *repository.Repository
+	ProductService   ProductService
+	SkuService       SkuService
+	CategoryService  CategoryService
+	AuthService      AuthService
+	UserService      UserService
+	InventoryService InventoryService
+	repositories     *repository.Repository
 }
 
 func NewApplicationService(repositories *repository.Repository) *ApplicationService {
@@ -21,4 +22,5 @@ func (s *ApplicationService) SetupServices() {
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)
+	s.InventoryService = NewInventoryService(s.repositories, s.repositories.InventoryRepository, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.SkuRepository)
 }

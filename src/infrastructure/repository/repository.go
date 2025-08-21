@@ -1,14 +1,19 @@
 package repository
 
-import "database/sql"
+import (
+	"context"
+	"database/sql"
+)
 
 type Repository struct {
-	db                  *sql.DB
-	ProductRepository   ProductRepository
-	CategoryRepository  CategoryRepository
-	SkuRepository       SkuRepository
-	UserRepository      UserRepository
-	InventoryRepository InventoryRepository
+	db                             *sql.DB
+	ProductRepository              ProductRepository
+	CategoryRepository             CategoryRepository
+	SkuRepository                  SkuRepository
+	UserRepository                 UserRepository
+	InventoryRepository            InventoryRepository
+	InventoryItemRepository        InventoryItemRepository
+	InventoryTransactionRepository InventoryTransactionRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -21,4 +26,10 @@ func (r *Repository) SetupRepositories() {
 	r.SkuRepository = NewSkuRepository(r.db)
 	r.UserRepository = NewUserRepository(r.db)
 	r.InventoryRepository = NewInventoryRepository(r.db)
+	r.InventoryItemRepository = NewInventoryItemRepository(r.db)
+	r.InventoryTransactionRepository = NewInventoryTransactionRepository(r.db, r.InventoryItemRepository)
+}
+
+func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
 }
