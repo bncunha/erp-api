@@ -13,15 +13,17 @@ import (
 type InventoryService interface {
 	DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error
 	GetAllInventory(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
+	GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error)
 }
 
 type inventoryService struct {
-	inventoryUseCase        inventory_usecase.InventoryUseCase
-	inventoryItemRepository repository.InventoryItemRepository
+	inventoryUseCase         inventory_usecase.InventoryUseCase
+	inventoryItemRepository  repository.InventoryItemRepository
+	inventoryTransactionRepo repository.InventoryTransactionRepository
 }
 
-func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository) InventoryService {
-	return &inventoryService{inventoryUseCase, inventoryItemRepository}
+func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository) InventoryService {
+	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo}
 }
 
 func (s *inventoryService) DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error {
@@ -42,4 +44,8 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 
 func (s *inventoryService) GetAllInventory(ctx context.Context) ([]output.GetInventoryItemsOutput, error) {
 	return s.inventoryItemRepository.GetAll(ctx)
+}
+
+func (s *inventoryService) GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
+	return s.inventoryTransactionRepo.GetAll(ctx)
 }

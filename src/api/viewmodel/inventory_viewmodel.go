@@ -19,6 +19,12 @@ var inventoryTypeMap = map[domain.InventoryType]string{
 	domain.InventoryTypeReseller: "Revendedor",
 }
 
+var inventoryTransactionTypeMap = map[domain.InventoryTransactionType]string{
+	domain.InventoryTransactionTypeTransfer: "Transferência",
+	domain.InventoryTransactionTypeIn:       "Entrada",
+	domain.InventoryTransactionTypeOut:      "Saída",
+}
+
 func ToGetInventoryItemsViewModel(inventoryItem output.GetInventoryItemsOutput) GetInventoryItemsViewModel {
 	productName := ""
 	inventoryType := ""
@@ -49,5 +55,69 @@ func ToGetInventoryItemsViewModel(inventoryItem output.GetInventoryItemsOutput) 
 		InventoryType:   inventoryType,
 		UserName:        inventoryItem.UserName,
 		Quantity:        inventoryItem.Quantity,
+	}
+}
+
+type GetInventoryTransactionsViewModel struct {
+	Id          int64   `json:"id"`
+	Date        string  `json:"date"`
+	Type        string  `json:"type"`
+	Quantity    float64 `json:"quantity"`
+	SkuCode     string  `json:"sku_code"`
+	ProductName string  `json:"product_name"`
+	Origin      *string `json:"origin"`
+	Destination *string `json:"destination"`
+}
+
+func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventoryTransactionsOutput) GetInventoryTransactionsViewModel {
+	productName := ""
+	transactionType := "Outro"
+
+	var origin *string
+	var destionation *string
+
+	if inventoryTransaction.ProductName != "" {
+		productName = inventoryTransaction.ProductName
+	}
+
+	if inventoryTransaction.SkuSize != nil {
+		productName = productName + " - " + *inventoryTransaction.SkuSize
+	}
+
+	if inventoryTransaction.SkuColor != nil {
+		productName = productName + " - " + *inventoryTransaction.SkuColor
+	}
+
+	if inventoryTransaction.InventoryOriginType != nil {
+		origin = new(string)
+		*origin = inventoryTypeMap[*inventoryTransaction.InventoryOriginType]
+
+		if inventoryTransaction.UserOriginName != nil {
+			*origin = *inventoryTransaction.UserOriginName + " - " + *origin
+		}
+	}
+
+	if inventoryTransaction.InventoryDestinationType != nil {
+		destionation = new(string)
+		*destionation = inventoryTypeMap[*inventoryTransaction.InventoryDestinationType]
+
+		if inventoryTransaction.UserDestinationName != nil {
+			*destionation = *inventoryTransaction.UserDestinationName + " - " + *destionation
+		}
+	}
+
+	if inventoryTransactionTypeMap[inventoryTransaction.Type] != "" {
+		transactionType = inventoryTransactionTypeMap[inventoryTransaction.Type]
+	}
+
+	return GetInventoryTransactionsViewModel{
+		Id:          inventoryTransaction.Id,
+		Date:        inventoryTransaction.Date.Format("02/01/2006 15:04"),
+		Type:        transactionType,
+		Quantity:    inventoryTransaction.Quantity,
+		ProductName: productName,
+		Origin:      origin,
+		Destination: destionation,
+		SkuCode:     inventoryTransaction.SkuCode,
 	}
 }
