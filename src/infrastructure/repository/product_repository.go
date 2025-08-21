@@ -89,7 +89,7 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 	query := `
 		SELECT p.id, p.name, p.description, c.name AS category_name, c.id AS category_id 
 		FROM products p LEFT JOIN categories c ON p.category_id = c.id
-		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL ORDER BY p.id ASC` 
+		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL ORDER BY p.id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return products, err

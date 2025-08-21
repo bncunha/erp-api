@@ -5,6 +5,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/api/http"
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/api/viewmodel"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/labstack/echo/v4"
 )
@@ -29,4 +30,18 @@ func (c *InventoryController) DoTransaction(context echo.Context) error {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
 	return context.JSON(_http.StatusOK, nil)
+}
+
+func (c *InventoryController) GetAllInventory(context echo.Context) error {
+	inventoryItems, err := c.inventoryService.GetAllInventory(context.Request().Context())
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	var inventoryItemViewModels []viewmodel.GetInventoryItemsViewModel
+	for _, inventoryItem := range inventoryItems {
+		inventoryItemViewModels = append(inventoryItemViewModels, viewmodel.ToGetInventoryItemsViewModel(inventoryItem))
+	}
+
+	return context.JSON(_http.StatusOK, inventoryItemViewModels)
 }
