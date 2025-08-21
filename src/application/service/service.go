@@ -1,6 +1,9 @@
 package service
 
-import "github.com/bncunha/erp-api/src/infrastructure/repository"
+import (
+	"github.com/bncunha/erp-api/src/application/usecase"
+	"github.com/bncunha/erp-api/src/infrastructure/repository"
+)
 
 type ApplicationService struct {
 	ProductService   ProductService
@@ -10,10 +13,11 @@ type ApplicationService struct {
 	UserService      UserService
 	InventoryService InventoryService
 	repositories     *repository.Repository
+	useCases         *usecase.ApplicationUseCase
 }
 
-func NewApplicationService(repositories *repository.Repository) *ApplicationService {
-	return &ApplicationService{repositories: repositories}
+func NewApplicationService(repositories *repository.Repository, useCases *usecase.ApplicationUseCase) *ApplicationService {
+	return &ApplicationService{repositories: repositories, useCases: useCases}
 }
 
 func (s *ApplicationService) SetupServices() {
@@ -22,5 +26,5 @@ func (s *ApplicationService) SetupServices() {
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)
-	s.InventoryService = NewInventoryService(s.repositories, s.repositories.InventoryRepository, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.SkuRepository)
+	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase)
 }
