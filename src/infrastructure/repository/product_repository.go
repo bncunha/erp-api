@@ -6,6 +6,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -13,7 +14,7 @@ type ProductRepository interface {
 	Create(ctx context.Context, product domain.Product) (int64, error)
 	Edit(ctx context.Context, product domain.Product, id int64) (int64, error)
 	GetById(ctx context.Context, id int64) (domain.Product, error)
-	GetAll(ctx context.Context) ([]domain.Product, error)
+	GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error)
 	Inactivate(ctx context.Context, id int64) error
 }
 
@@ -82,14 +83,20 @@ func (r *productRepository) GetById(ctx context.Context, id int64) (domain.Produ
 	return product, nil
 }
 
-func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error) {
+func (r *productRepository) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var products []domain.Product
+	var products []output.GetAllProductsOutput
 
 	query := `
-		SELECT p.id, p.name, p.description, c.name AS category_name, c.id AS category_id 
-		FROM products p LEFT JOIN categories c ON p.category_id = c.id
-		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL ORDER BY p.id ASC`
+		SELECT p.id, p.name, p.description, c.name AS category_name, c.id AS category_id, sum(inv_item.quantity) 
+		FROM products p 
+		LEFT JOIN skus sku ON sku.product_id = p.id 
+		LEFT JOIN categories c ON p.category_id = c.id
+		LEFT JOIN inventory_items inv_item ON sku.id = inv_item.sku_id
+		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL 
+		GROUP BY p.id, c.id
+		ORDER BY p.id ASC`
+
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return products, err
@@ -100,8 +107,9 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 		var product domain.Product
 		var categoryName sql.NullString
 		var categoryId sql.NullInt64
+		var quantity sql.NullFloat64
 
-		err = rows.Scan(&product.Id, &product.Name, &product.Description, &categoryName, &categoryId)
+		err = rows.Scan(&product.Id, &product.Name, &product.Description, &categoryName, &categoryId, &quantity)
 		if err != nil {
 			return products, err
 		}
@@ -111,7 +119,10 @@ func (r *productRepository) GetAll(ctx context.Context) ([]domain.Product, error
 		if categoryName.Valid {
 			product.Category.Name = categoryName.String
 		}
-		products = append(products, product)
+		products = append(products, output.GetAllProductsOutput{
+			Product:  product,
+			Quantity: quantity.Float64,
+		})
 	}
 	return products, err
 }

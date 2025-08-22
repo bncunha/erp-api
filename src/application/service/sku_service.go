@@ -19,12 +19,13 @@ type SkuService interface {
 }
 
 type skuService struct {
-	skuRepository    repository.SkuRepository
-	inventoryUseCase inventory_usecase.InventoryUseCase
+	skuRepository     repository.SkuRepository
+	inventoryUseCase  inventory_usecase.InventoryUseCase
+	productRepository repository.ProductRepository
 }
 
-func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase) SkuService {
-	return &skuService{skuRepository, inventoryUseCase}
+func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository) SkuService {
+	return &skuService{skuRepository, inventoryUseCase, productRepository}
 }
 
 func (s *skuService) Create(ctx context.Context, request request.CreateSkuRequest, productId int64) error {
@@ -41,7 +42,12 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 		Price: request.Price,
 	}
 
-	skuId, err := s.skuRepository.Create(ctx, sku, productId)
+	product, err := s.productRepository.GetById(ctx, productId)
+	if err != nil {
+		return err
+	}
+
+	skuId, err := s.skuRepository.Create(ctx, sku, product.Id)
 	if err != nil {
 		if errors.IsDuplicated(err) {
 			return errors.New("Código já cadastrado!")
