@@ -77,10 +77,11 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 	var skus []domain.Sku = make([]domain.Sku, 0)
 
 	query := `
-		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, inv_item.quantity 
+		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, sum(inv_item.quantity)
 		FROM skus s
 		LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
 		WHERE s.product_id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL
+		GROUP BY s.id
 		ORDER BY id ASC`
 
 	rows, err := r.db.QueryContext(ctx, query, productId, tenantId)
