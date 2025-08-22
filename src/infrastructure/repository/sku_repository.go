@@ -8,13 +8,14 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
 type SkuRepository interface {
 	Create(ctx context.Context, sku domain.Sku, productId int64) (int64, error)
 	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
-	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
+	GetByProductId(ctx context.Context, productId int64) ([]output.GetAllSkusByProductOutput, error)
 	Update(ctx context.Context, sku domain.Sku) error
 	GetById(ctx context.Context, id int64) (domain.Sku, error)
 	GetAll(ctx context.Context) ([]domain.Sku, error)
@@ -72,11 +73,17 @@ func (r *skuRepository) CreateMany(ctx context.Context, skus []domain.Sku, produ
 	return insertedIDs, err
 }
 
-func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error) {
+func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]output.GetAllSkusByProductOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var skus []domain.Sku = make([]domain.Sku, 0)
+	var skus []output.GetAllSkusByProductOutput = make([]output.GetAllSkusByProductOutput, 0)
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1 AND tenant_id = $2 AND deleted_at IS NULL ORDER BY id ASC`
+	query := `
+		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, inv_item.quantity 
+		FROM skus s
+		LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
+		WHERE s.product_id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL
+		ORDER BY id ASC`
+
 	rows, err := r.db.QueryContext(ctx, query, productId, tenantId)
 	if err != nil {
 		return skus, err
@@ -85,11 +92,15 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 
 	for rows.Next() {
 		var sku domain.Sku
-		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+		var quantity sql.NullFloat64
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &quantity)
 		if err != nil {
 			return skus, err
 		}
-		skus = append(skus, sku)
+		skus = append(skus, output.GetAllSkusByProductOutput{
+			Sku:      sku,
+			Quantity: quantity.Float64,
+		})
 	}
 	return skus, err
 }

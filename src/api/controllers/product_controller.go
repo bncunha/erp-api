@@ -97,7 +97,7 @@ func (c *ProductController) GetSkus(context echo.Context) error {
 
 	var skuViewModels []viewmodel.SkuViewModel = make([]viewmodel.SkuViewModel, 0)
 	for _, sku := range skus {
-		skuViewModels = append(skuViewModels, viewmodel.ToSkuViewModel(sku))
+		skuViewModels = append(skuViewModels, viewmodel.ToGetSkusByProductViewModel(sku))
 	}
 
 	return context.JSON(_http.StatusOK, skuViewModels)
