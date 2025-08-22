@@ -121,3 +121,20 @@ func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventor
 		SkuCode:     inventoryTransaction.SkuCode,
 	}
 }
+
+type GetInventoriesViewModel struct {
+	Id   int64  `json:"id"`
+	Type string `json:"type"`
+}
+
+func ToGetInventoriesViewModel(inventory domain.Inventory) GetInventoriesViewModel {
+	inventoryType := inventoryTypeMap[inventory.Type]
+	if inventory.User.Name != "" {
+		inventoryType = inventory.User.Name + " - " + inventoryType
+	}
+
+	return GetInventoriesViewModel{
+		Id:   inventory.Id,
+		Type: inventoryType,
+	}
+}

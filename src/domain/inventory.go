@@ -1,6 +1,8 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 type InventoryType string
 
@@ -19,8 +21,8 @@ const (
 
 type Inventory struct {
 	Id       int64
-	UserId   int64
 	TenantId int64
+	User     User
 	Type     InventoryType
 	Items    []InventoryItem
 }

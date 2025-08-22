@@ -32,8 +32,8 @@ func (c *InventoryController) DoTransaction(context echo.Context) error {
 	return context.JSON(_http.StatusOK, nil)
 }
 
-func (c *InventoryController) GetAllInventory(context echo.Context) error {
-	inventoryItems, err := c.inventoryService.GetAllInventory(context.Request().Context())
+func (c *InventoryController) GetAllInventoryItems(context echo.Context) error {
+	inventoryItems, err := c.inventoryService.GetAllInventoryItems(context.Request().Context())
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
@@ -58,4 +58,18 @@ func (c *InventoryController) GetAllInventoryTransactions(context echo.Context) 
 	}
 
 	return context.JSON(_http.StatusOK, inventoryTransactionViewModels)
+}
+
+func (c *InventoryController) GetAllInventories(context echo.Context) error {
+	inventories, err := c.inventoryService.GetAllInventories(context.Request().Context())
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	var inventoryViewModels []viewmodel.GetInventoriesViewModel
+	for _, inventory := range inventories {
+		inventoryViewModels = append(inventoryViewModels, viewmodel.ToGetInventoriesViewModel(inventory))
+	}
+
+	return context.JSON(_http.StatusOK, inventoryViewModels)
 }
