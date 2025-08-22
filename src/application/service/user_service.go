@@ -48,7 +48,7 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 		return err
 	}
 
-	if *request.HasInventory {
+	if request.Role == string(domain.InventoryTypeReseller) {
 		inventory := domain.Inventory{
 			User: domain.User{Id: userId},
 			Type: domain.InventoryTypeReseller,
