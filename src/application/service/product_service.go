@@ -16,7 +16,7 @@ type ProductService interface {
 	GetById(ctx context.Context, id int64) (domain.Product, error)
 	GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error)
 	Inactivate(ctx context.Context, id int64) error
-	GetSkus(ctx context.Context, id int64) ([]output.GetAllSkusByProductOutput, error)
+	GetSkus(ctx context.Context, id int64) ([]domain.Sku, error)
 }
 
 type productService struct {
@@ -86,16 +86,11 @@ func (s *productService) GetById(ctx context.Context, id int64) (domain.Product,
 		return product, err
 	}
 
-	skusOutput, err := s.skuRepository.GetByProductId(ctx, id)
+	product.Skus, err = s.skuRepository.GetByProductId(ctx, id)
 	if err != nil {
 		return product, err
 	}
 
-	skus := make([]domain.Sku, 0)
-	for _, skuOutput := range skusOutput {
-		skus = append(skus, skuOutput.Sku)
-	}
-	product.Skus = skus
 	return product, nil
 }
 
@@ -111,7 +106,7 @@ func (s *productService) Inactivate(ctx context.Context, id int64) error {
 	return s.productRepository.Inactivate(ctx, id)
 }
 
-func (s *productService) GetSkus(ctx context.Context, id int64) ([]output.GetAllSkusByProductOutput, error) {
+func (s *productService) GetSkus(ctx context.Context, id int64) ([]domain.Sku, error) {
 	skus, err := s.skuRepository.GetByProductId(ctx, id)
 	if err != nil {
 		return skus, err

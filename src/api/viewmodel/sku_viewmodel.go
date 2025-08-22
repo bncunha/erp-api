@@ -1,7 +1,6 @@
 package viewmodel
 
 import (
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -15,8 +14,7 @@ type SkuViewModel struct {
 	Quantity float64  `json:"quantity"`
 }
 
-func ToGetSkusByProductViewModel(output output.GetAllSkusByProductOutput) SkuViewModel {
-	sku := ToSkuViewModel(output.Sku)
+func ToSkuViewModel(sku domain.Sku) SkuViewModel {
 	return SkuViewModel{
 		Id:       sku.Id,
 		Code:     sku.Code,
@@ -24,17 +22,6 @@ func ToGetSkusByProductViewModel(output output.GetAllSkusByProductOutput) SkuVie
 		Size:     sku.Size,
 		Cost:     sku.Cost,
 		Price:    sku.Price,
-		Quantity: output.Quantity,
-	}
-}
-
-func ToSkuViewModel(sku domain.Sku) SkuViewModel {
-	return SkuViewModel{
-		Id:    sku.Id,
-		Code:  sku.Code,
-		Color: sku.Color,
-		Size:  sku.Size,
-		Cost:  sku.Cost,
-		Price: sku.Price,
+		Quantity: sku.Quantity,
 	}
 }

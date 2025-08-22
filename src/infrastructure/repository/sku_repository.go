@@ -8,14 +8,13 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
 type SkuRepository interface {
 	Create(ctx context.Context, sku domain.Sku, productId int64) (int64, error)
 	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
-	GetByProductId(ctx context.Context, productId int64) ([]output.GetAllSkusByProductOutput, error)
+	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
 	Update(ctx context.Context, sku domain.Sku) error
 	GetById(ctx context.Context, id int64) (domain.Sku, error)
 	GetAll(ctx context.Context) ([]domain.Sku, error)
@@ -73,9 +72,9 @@ func (r *skuRepository) CreateMany(ctx context.Context, skus []domain.Sku, produ
 	return insertedIDs, err
 }
 
-func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]output.GetAllSkusByProductOutput, error) {
+func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var skus []output.GetAllSkusByProductOutput = make([]output.GetAllSkusByProductOutput, 0)
+	var skus []domain.Sku = make([]domain.Sku, 0)
 
 	query := `
 		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, inv_item.quantity 
@@ -97,10 +96,10 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 		if err != nil {
 			return skus, err
 		}
-		skus = append(skus, output.GetAllSkusByProductOutput{
-			Sku:      sku,
-			Quantity: quantity.Float64,
-		})
+		if quantity.Valid {
+			sku.Quantity = quantity.Float64
+		}
+		skus = append(skus, sku)
 	}
 	return skus, err
 }
