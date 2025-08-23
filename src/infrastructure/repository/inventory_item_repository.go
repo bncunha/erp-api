@@ -96,7 +96,7 @@ func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInven
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventoryItems []output.GetInventoryItemsOutput
 
-	query := ` SELECT inv_items.id, sku.code, sku.color, sku.size, p.name, inv.type, u.name, inv_items.quantity
+	query := ` SELECT inv_items.id, sku.code, sku.color, sku.size, p.name, inv.type, u.name, inv_items.quantity, sku.id
 	FROM inventory_items inv_items 
 	INNER JOIN inventories inv ON inv.id = inv_items.inventory_id
 	INNER JOIN skus sku ON sku.id = inv_items.sku_id
@@ -112,7 +112,7 @@ func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInven
 	for rows.Next() {
 		var inventoryItem output.GetInventoryItemsOutput
 
-		err = rows.Scan(&inventoryItem.InventoryItemId, &inventoryItem.SkuCode, &inventoryItem.SkuColor, &inventoryItem.SkuSize, &inventoryItem.ProductName, &inventoryItem.InventoryType, &inventoryItem.UserName, &inventoryItem.Quantity)
+		err = rows.Scan(&inventoryItem.InventoryItemId, &inventoryItem.SkuCode, &inventoryItem.SkuColor, &inventoryItem.SkuSize, &inventoryItem.ProductName, &inventoryItem.InventoryType, &inventoryItem.UserName, &inventoryItem.Quantity, &inventoryItem.SkuId)
 		if err != nil {
 			return inventoryItems, err
 		}

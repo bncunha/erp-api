@@ -8,6 +8,7 @@ import (
 
 type GetInventoryItemsOutput struct {
 	InventoryItemId int64
+	SkuId           int64
 	SkuCode         *string
 	SkuColor        *string
 	SkuSize         *string

@@ -7,6 +7,7 @@ import (
 
 type GetInventoryItemsViewModel struct {
 	InventoryItemId int64   `json:"inventory_item_id"`
+	SkuId           int64   `json:"sku_id"`
 	SkuCode         string  `json:"sku_code"`
 	ProductName     string  `json:"product_name"`
 	InventoryType   string  `json:"inventory_type"`
@@ -50,6 +51,7 @@ func ToGetInventoryItemsViewModel(inventoryItem output.GetInventoryItemsOutput) 
 
 	return GetInventoryItemsViewModel{
 		InventoryItemId: inventoryItem.InventoryItemId,
+		SkuId:           inventoryItem.SkuId,
 		SkuCode:         *inventoryItem.SkuCode,
 		ProductName:     productName,
 		InventoryType:   inventoryType,
