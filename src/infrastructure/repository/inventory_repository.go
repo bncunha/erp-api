@@ -9,10 +9,15 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 )
 
+var (
+	ErrInventoryNotFound = errors.New("Inventário não encontrado")
+)
+
 type InventoryRepository interface {
 	Create(ctx context.Context, inventory domain.Inventory) (int64, error)
 	GetById(ctx context.Context, id int64) (domain.Inventory, error)
 	GetAll(ctx context.Context) ([]domain.Inventory, error)
+	GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error)
 }
 
 type inventoryRepository struct {
@@ -40,7 +45,7 @@ func (r *inventoryRepository) GetById(ctx context.Context, id int64) (domain.Inv
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&inventory.Id, &inventory.TenantId, &inventory.Type)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventory, errors.New("Inventário não encontrado")
+			return inventory, ErrInventoryNotFound
 		}
 		return inventory, err
 	}
@@ -78,4 +83,21 @@ func (r *inventoryRepository) GetAll(ctx context.Context) ([]domain.Inventory, e
 		inventories = append(inventories, inventory)
 	}
 	return inventories, err
+}
+
+func (r *inventoryRepository) GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error) {
+	var inventory domain.Inventory
+
+	query := `SELECT i.id, u.id, u.name, i.tenant_id, i.type
+	FROM inventories i
+	LEFT JOIN users u ON u.id = i.user_id
+	WHERE i.user_id = $1 AND i.deleted_at IS NULL AND i.tenant_id = $2 ORDER BY i.id ASC`
+	err := r.db.QueryRowContext(ctx, query, userId, ctx.Value(constants.TENANT_KEY)).Scan(&inventory.Id, &inventory.User.Id, &inventory.User.Name, &inventory.TenantId, &inventory.Type)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return inventory, ErrInventoryNotFound
+		}
+		return inventory, err
+	}
+	return inventory, nil
 }

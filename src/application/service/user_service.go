@@ -83,6 +83,24 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 		}
 		return err
 	}
+
+	if request.Role == string(domain.InventoryTypeReseller) {
+		_, err := s.inventoryRepository.GetByUserId(ctx, userId)
+		if err != nil && !errors.Is(err, repository.ErrInventoryNotFound) {
+			return err
+		}
+
+		if err != nil && errors.Is(err, repository.ErrInventoryNotFound) {
+			inventory := domain.Inventory{
+				User: domain.User{Id: userId},
+				Type: domain.InventoryTypeReseller,
+			}
+			_, err = s.inventoryRepository.Create(ctx, inventory)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
