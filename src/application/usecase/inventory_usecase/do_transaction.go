@@ -122,7 +122,7 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 
 func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, transaction domain.InventoryTransaction, transactionType domain.InventoryTransactionType) error {
 	if transactionType == domain.InventoryTransactionTypeTransfer {
-		transaction.InventoryItem = inventoryItemIn
+		transaction.InventoryItem = inventoryItemOut
 		transaction.Type = domain.InventoryTransactionTypeTransfer
 		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
 		if err != nil {
