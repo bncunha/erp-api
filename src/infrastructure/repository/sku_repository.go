@@ -76,7 +76,14 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku = make([]domain.Sku, 0)
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE product_id = $1 AND tenant_id = $2 AND deleted_at IS NULL ORDER BY id ASC`
+	query := `
+		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, sum(inv_item.quantity)
+		FROM skus s
+		LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
+		WHERE s.product_id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL
+		GROUP BY s.id
+		ORDER BY id ASC`
+
 	rows, err := r.db.QueryContext(ctx, query, productId, tenantId)
 	if err != nil {
 		return skus, err
@@ -85,9 +92,13 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 
 	for rows.Next() {
 		var sku domain.Sku
-		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+		var quantity sql.NullFloat64
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &quantity)
 		if err != nil {
 			return skus, err
+		}
+		if quantity.Valid {
+			sku.Quantity = quantity.Float64
 		}
 		skus = append(skus, sku)
 	}
@@ -105,8 +116,11 @@ func (r *skuRepository) GetById(ctx context.Context, id int64) (domain.Sku, erro
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var sku domain.Sku
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+	query := `SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	FROM skus s 
+	INNER JOIN products p ON p.id = s.product_id
+	WHERE s.id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return sku, errors.New("SKU não encontrada")
@@ -120,7 +134,13 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku
 
-	query := `SELECT id, code, color, size, cost, price FROM skus WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY id ASC`
+	query := `SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name, sum(inv_item.quantity)
+	FROM skus s 
+	INNER JOIN products p ON p.id = s.product_id
+	LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
+	WHERE s.tenant_id = $1 AND s.deleted_at IS NULL 
+	GROUP BY s.id, p.name
+	ORDER BY s.id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return skus, err
@@ -129,9 +149,13 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 
 	for rows.Next() {
 		var sku domain.Sku
-		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price)
+		var quantity sql.NullFloat64
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name, &quantity)
 		if err != nil {
 			return skus, err
+		}
+		if quantity.Valid {
+			sku.Quantity = quantity.Float64
 		}
 		skus = append(skus, sku)
 	}

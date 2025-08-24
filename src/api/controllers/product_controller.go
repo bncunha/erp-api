@@ -42,7 +42,7 @@ func (c *ProductController) Edit(context echo.Context) error {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(errors.New("parametros invalidos")))
 	}
 
-	productRequest.Id =  helper.ParseInt64(context.Param("id"))
+	productRequest.Id = helper.ParseInt64(context.Param("id"))
 	err := c.productService.Edit(context.Request().Context(), productRequest)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
@@ -70,7 +70,7 @@ func (c *ProductController) GetAll(context echo.Context) error {
 
 	var productViewModels []viewmodel.GetProductViewModel
 	for _, product := range products {
-		productViewModels = append(productViewModels, viewmodel.ToGetProductViewModel(product))
+		productViewModels = append(productViewModels, viewmodel.ToGetAllProductsViewModel(product))
 	}
 
 	return context.JSON(_http.StatusOK, productViewModels)

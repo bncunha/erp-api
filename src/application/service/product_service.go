@@ -4,6 +4,7 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/validator"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
@@ -13,15 +14,15 @@ type ProductService interface {
 	Create(ctx context.Context, input request.CreateProductRequest) (int64, error)
 	Edit(ctx context.Context, input request.EditProductRequest) error
 	GetById(ctx context.Context, id int64) (domain.Product, error)
-	GetAll(ctx context.Context) ([]domain.Product, error)
+	GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error)
 	Inactivate(ctx context.Context, id int64) error
 	GetSkus(ctx context.Context, id int64) ([]domain.Sku, error)
 }
 
-type productService struct{
-	productRepository repository.ProductRepository
+type productService struct {
+	productRepository  repository.ProductRepository
 	categoryRepository repository.CategoryRepository
-	skuRepository repository.SkuRepository
+	skuRepository      repository.SkuRepository
 }
 
 func NewProductService(productRepository repository.ProductRepository, categoryRepository repository.CategoryRepository, skuRepositoy repository.SkuRepository) ProductService {
@@ -29,7 +30,7 @@ func NewProductService(productRepository repository.ProductRepository, categoryR
 }
 
 func (s *productService) Create(ctx context.Context, input request.CreateProductRequest) (int64, error) {
-	err := input.Validate()	
+	err := input.Validate()
 	if err != nil {
 		return 0, err
 	}
@@ -40,16 +41,15 @@ func (s *productService) Create(ctx context.Context, input request.CreateProduct
 	}
 
 	productId, err := s.productRepository.Create(ctx, domain.Product{
-		Name: input.Name,
+		Name:        input.Name,
 		Description: input.Description,
-		Category: category,
+		Category:    category,
 	})
 	if err != nil {
 		return 0, err
-	}	
+	}
 
-
-	_, err = s.insertSkus(ctx, input.Skus, productId) 
+	_, err = s.insertSkus(ctx, input.Skus, productId)
 	if err != nil {
 		return 0, err
 	}
@@ -69,9 +69,9 @@ func (s *productService) Edit(ctx context.Context, input request.EditProductRequ
 	}
 
 	_, err = s.productRepository.Edit(ctx, domain.Product{
-		Name: input.Name,
+		Name:        input.Name,
 		Description: input.Description,
-		Category: category,
+		Category:    category,
 	}, input.Id)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (s *productService) GetById(ctx context.Context, id int64) (domain.Product,
 	return product, nil
 }
 
-func (s *productService) GetAll(ctx context.Context) ([]domain.Product, error) {
+func (s *productService) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
 	products, err := s.productRepository.GetAll(ctx)
 	if err != nil {
 		return products, err
@@ -118,11 +118,11 @@ func (s *productService) insertSkus(ctx context.Context, skus []request.CreateSk
 	var skusDomain []domain.Sku
 	for _, sku := range skus {
 		skusDomain = append(skusDomain, domain.Sku{
-			Code:    sku.Code,
-			Color:   sku.Color,
-			Size:    sku.Size,
-			Cost:    sku.Cost,
-			Price:   sku.Price,
+			Code:  sku.Code,
+			Color: sku.Color,
+			Size:  sku.Size,
+			Cost:  sku.Cost,
+			Price: sku.Price,
 		})
 	}
 

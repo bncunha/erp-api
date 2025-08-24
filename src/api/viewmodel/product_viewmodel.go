@@ -1,19 +1,36 @@
 package viewmodel
 
-import "github.com/bncunha/erp-api/src/domain"
+import (
+	"github.com/bncunha/erp-api/src/application/service/output"
+	"github.com/bncunha/erp-api/src/domain"
+)
 
 type GetProductViewModel struct {
-	Id          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	CategoryId  int64 `json:"categoryId,omitempty"`
-	CategoryName string `json:"categoryName,omitempty"`
-	Skus        []SkuViewModel `json:"skus,omitempty"`
+	Id           int64          `json:"id"`
+	Name         string         `json:"name"`
+	Description  string         `json:"description"`
+	CategoryId   int64          `json:"categoryId,omitempty"`
+	CategoryName string         `json:"categoryName,omitempty"`
+	Skus         []SkuViewModel `json:"skus,omitempty"`
+	Quantity     float64        `json:"quantity"`
+}
+
+func ToGetAllProductsViewModel(output output.GetAllProductsOutput) GetProductViewModel {
+	product := ToGetProductViewModel(output.Product)
+	return GetProductViewModel{
+		Id:           product.Id,
+		Name:         product.Name,
+		Description:  product.Description,
+		CategoryId:   product.CategoryId,
+		CategoryName: product.CategoryName,
+		Skus:         product.Skus,
+		Quantity:     output.Quantity,
+	}
 }
 
 func ToGetProductViewModel(product domain.Product) GetProductViewModel {
-	var categoryId int64;
-	var categoryName string;
+	var categoryId int64
+	var categoryName string
 	skuViewModel := []SkuViewModel{}
 	for _, sku := range product.Skus {
 		skuViewModel = append(skuViewModel, ToSkuViewModel(sku))
@@ -25,11 +42,11 @@ func ToGetProductViewModel(product domain.Product) GetProductViewModel {
 	}
 
 	return GetProductViewModel{
-		Id:          product.Id,
-		Name:        product.Name,
-		Description: product.Description,
-		CategoryId:  categoryId,
+		Id:           product.Id,
+		Name:         product.Name,
+		Description:  product.Description,
+		CategoryId:   categoryId,
 		CategoryName: categoryName,
-		Skus:        skuViewModel,
-	}	
+		Skus:         skuViewModel,
+	}
 }
