@@ -134,10 +134,13 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku
 
-	query := `SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	query := `SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name, sum(inv_item.quantity)
 	FROM skus s 
 	INNER JOIN products p ON p.id = s.product_id
-	WHERE s.tenant_id = $1 AND s.deleted_at IS NULL ORDER BY s.id ASC`
+	LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
+	WHERE s.tenant_id = $1 AND s.deleted_at IS NULL 
+	GROUP BY s.id, p.name
+	ORDER BY s.id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return skus, err
@@ -146,9 +149,13 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 
 	for rows.Next() {
 		var sku domain.Sku
-		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name)
+		var quantity sql.NullFloat64
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name, &quantity)
 		if err != nil {
 			return skus, err
+		}
+		if quantity.Valid {
+			sku.Quantity = quantity.Float64
 		}
 		skus = append(skus, sku)
 	}
