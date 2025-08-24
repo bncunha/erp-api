@@ -61,14 +61,15 @@ func ToGetInventoryItemsViewModel(inventoryItem output.GetInventoryItemsOutput) 
 }
 
 type GetInventoryTransactionsViewModel struct {
-	Id          int64   `json:"id"`
-	Date        string  `json:"date"`
-	Type        string  `json:"type"`
-	Quantity    float64 `json:"quantity"`
-	SkuCode     string  `json:"sku_code"`
-	ProductName string  `json:"product_name"`
-	Origin      *string `json:"origin"`
-	Destination *string `json:"destination"`
+	Id            int64   `json:"id"`
+	Date          string  `json:"date"`
+	Type          string  `json:"type"`
+	Quantity      float64 `json:"quantity"`
+	SkuCode       string  `json:"sku_code"`
+	ProductName   string  `json:"product_name"`
+	Origin        *string `json:"origin"`
+	Destination   *string `json:"destination"`
+	Justification *string `json:"justification"`
 }
 
 func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventoryTransactionsOutput) GetInventoryTransactionsViewModel {
@@ -113,14 +114,15 @@ func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventor
 	}
 
 	return GetInventoryTransactionsViewModel{
-		Id:          inventoryTransaction.Id,
-		Date:        inventoryTransaction.Date.Format("02/01/2006 15:04"),
-		Type:        transactionType,
-		Quantity:    inventoryTransaction.Quantity,
-		ProductName: productName,
-		Origin:      origin,
-		Destination: destionation,
-		SkuCode:     inventoryTransaction.SkuCode,
+		Id:            inventoryTransaction.Id,
+		Date:          inventoryTransaction.Date.Format("02/01/2006 15:04"),
+		Type:          transactionType,
+		Quantity:      inventoryTransaction.Quantity,
+		ProductName:   productName,
+		Origin:        origin,
+		Destination:   destionation,
+		SkuCode:       inventoryTransaction.SkuCode,
+		Justification: inventoryTransaction.Justification,
 	}
 }
 

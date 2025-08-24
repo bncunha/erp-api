@@ -31,4 +31,5 @@ type GetInventoryTransactionsOutput struct {
 	InventoryDestinationType *domain.InventoryType
 	UserOriginName           *string
 	UserDestinationName      *string
+	Justification            *string
 }
