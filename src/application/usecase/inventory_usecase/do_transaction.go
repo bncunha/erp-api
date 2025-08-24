@@ -150,7 +150,7 @@ func (s *inventoryUseCase) createInventoryItemInIfNotExists(ctx context.Context,
 	if inventoryItemIn.Id != 0 {
 		return inventoryItemIn, nil
 	}
-	if transactionType == domain.InventoryTransactionTypeIn && inventoryItemIn.Id == 0 {
+	if (transactionType == domain.InventoryTransactionTypeIn || transactionType == domain.InventoryTransactionTypeTransfer) && inventoryItemIn.Id == 0 {
 		insertInventoryItem := domain.InventoryItem{
 			InventoryId: inventoryIn.Id,
 			SkuId:       sku.Id,
