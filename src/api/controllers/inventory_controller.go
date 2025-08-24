@@ -6,6 +6,7 @@ import (
 	"github.com/bncunha/erp-api/src/api/http"
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/api/viewmodel"
+	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/labstack/echo/v4"
 )
@@ -39,6 +40,22 @@ func (c *InventoryController) GetAllInventoryItems(context echo.Context) error {
 	}
 
 	var inventoryItemViewModels []viewmodel.GetInventoryItemsViewModel
+	for _, inventoryItem := range inventoryItems {
+		inventoryItemViewModels = append(inventoryItemViewModels, viewmodel.ToGetInventoryItemsViewModel(inventoryItem))
+	}
+
+	return context.JSON(_http.StatusOK, inventoryItemViewModels)
+}
+
+func (c *InventoryController) GetInventoryItemsByInventoryId(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	inventoryItems, err := c.inventoryService.GetInventoryItemsByInventoryId(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	inventoryItemViewModels := make([]viewmodel.GetInventoryItemsViewModel, 0)
 	for _, inventoryItem := range inventoryItems {
 		inventoryItemViewModels = append(inventoryItemViewModels, viewmodel.ToGetInventoryItemsViewModel(inventoryItem))
 	}

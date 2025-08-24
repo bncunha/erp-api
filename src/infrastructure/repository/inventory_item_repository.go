@@ -21,6 +21,7 @@ type InventoryItemRepository interface {
 	GetByIdWithTransaction(ctx context.Context, tx *sql.Tx, id int64) (domain.InventoryItem, error)
 	GetBySkuIdAndInventoryId(ctx context.Context, skuId int64, inventoryId int64) (domain.InventoryItem, error)
 	GetAll(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
+	GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error)
 }
 
 type inventoryItemRepository struct {
@@ -104,6 +105,34 @@ func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInven
 	LEFT JOIN users u ON u.id = inv.user_id 
 	WHERE inv_items.tenant_id = $1 AND inv_items.deleted_at IS NULL ORDER BY inv_items.id ASC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	if err != nil {
+		return inventoryItems, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var inventoryItem output.GetInventoryItemsOutput
+
+		err = rows.Scan(&inventoryItem.InventoryItemId, &inventoryItem.SkuCode, &inventoryItem.SkuColor, &inventoryItem.SkuSize, &inventoryItem.ProductName, &inventoryItem.InventoryType, &inventoryItem.UserName, &inventoryItem.Quantity, &inventoryItem.SkuId)
+		if err != nil {
+			return inventoryItems, err
+		}
+		inventoryItems = append(inventoryItems, inventoryItem)
+	}
+	return inventoryItems, err
+}
+
+func (r *inventoryItemRepository) GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error) {
+	inventoryItems := make([]output.GetInventoryItemsOutput, 0)
+
+	query := `SELECT inv_items.id, sku.code, sku.color, sku.size, p.name, inv.type, u.name, inv_items.quantity, sku.id
+	FROM inventory_items inv_items 
+	INNER JOIN inventories inv ON inv.id = inv_items.inventory_id
+	INNER JOIN skus sku ON sku.id = inv_items.sku_id
+	INNER JOIN products p ON p.id = sku.product_id
+	LEFT JOIN users u ON u.id = inv.user_id 
+	WHERE inv_items.inventory_id = $1 AND inv_items.tenant_id = $2 AND inv_items.deleted_at IS NULL ORDER BY inv_items.id ASC`
+	rows, err := r.db.QueryContext(ctx, query, id, ctx.Value(constants.TENANT_KEY))
 	if err != nil {
 		return inventoryItems, err
 	}

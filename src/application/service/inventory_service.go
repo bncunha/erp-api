@@ -13,6 +13,7 @@ import (
 type InventoryService interface {
 	DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error
 	GetAllInventoryItems(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
+	GetInventoryItemsByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error)
 	GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error)
 	GetAllInventories(ctx context.Context) ([]domain.Inventory, error)
 }
@@ -46,6 +47,10 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 
 func (s *inventoryService) GetAllInventoryItems(ctx context.Context) ([]output.GetInventoryItemsOutput, error) {
 	return s.inventoryItemRepository.GetAll(ctx)
+}
+
+func (s *inventoryService) GetInventoryItemsByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error) {
+	return s.inventoryItemRepository.GetByInventoryId(ctx, id)
 }
 
 func (s *inventoryService) GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {

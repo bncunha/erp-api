@@ -87,6 +87,7 @@ func (r *router) setupPrivateRoutes() {
 
 	inventoryGroup := private.Group("/inventory")
 	inventoryGroup.GET("", r.controller.InventoryController.GetAllInventories)
+	inventoryGroup.GET("/:id/items", r.controller.InventoryController.GetInventoryItemsByInventoryId)
 	inventoryGroup.GET("/items", r.controller.InventoryController.GetAllInventoryItems)
 	inventoryGroup.GET("/transaction", r.controller.InventoryController.GetAllInventoryTransactions)
 	inventoryGroup.POST("/transaction", r.controller.InventoryController.DoTransaction)
