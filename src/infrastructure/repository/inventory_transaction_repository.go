@@ -55,7 +55,7 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	LEFT JOIN inventories inventory_destination ON inventory_destination.id = inv_transactions.inventory_in_id
 	LEFT JOIN users user_origin ON user_origin.id = inventory_origin.user_id
 	LEFT JOIN users user_destination ON user_destination.id = inventory_destination.user_id
-	WHERE inv_transactions.tenant_id = $1 AND inv_transactions.deleted_at IS NULL ORDER BY inv_transactions.date ASC`
+	WHERE inv_transactions.tenant_id = $1 AND inv_transactions.deleted_at IS NULL ORDER BY inv_transactions.date DESC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
 		return inventoryTransactions, err
