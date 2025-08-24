@@ -7,7 +7,7 @@ import (
 type CreateUserRequest struct {
 	Username    string `json:"username" validate:"required,max=30"`
 	Name        string `json:"name" validate:"required,max=100"`
-	PhoneNumber string `json:"phone_number" validate:"required,max=20"`
+	PhoneNumber string `json:"phone_number" validate:"max=20"`
 	Password    string `json:"password" validate:"required,max=20"`
 	Role        string `json:"role" validate:"required,max=100"`
 }
@@ -23,7 +23,7 @@ func (r *CreateUserRequest) Validate() error {
 type EditUserRequest struct {
 	Username    string `json:"username" validate:"required,max=30"`
 	Name        string `json:"name" validate:"required,max=100"`
-	PhoneNumber string `json:"phone_number" validate:"required,max=20"`
+	PhoneNumber string `json:"phone_number" validate:"max=20"`
 	Password    string `json:"password" validate:"max=20"`
 	Role        string `json:"role" validate:"required,max=100"`
 }
