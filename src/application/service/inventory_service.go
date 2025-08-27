@@ -35,13 +35,20 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 		return err
 	}
 
+	inputSkus := make([]inventory_usecase.DoTransactionSkusInput, 0)
+	for _, sku := range request.Skus {
+		inputSkus = append(inputSkus, inventory_usecase.DoTransactionSkusInput{
+			SkuId:    sku.SkuId,
+			Quantity: sku.Quantity,
+		})
+	}
+
 	return s.inventoryUseCase.DoTransaction(ctx, inventory_usecase.DoTransactionInput{
 		Type:                   domain.InventoryTransactionType(request.Type),
-		SkuId:                  request.SkuId,
 		InventoryOriginId:      request.InventoryOriginId,
 		InventoryDestinationId: request.InventoryDestinationId,
-		Quantity:               request.Quantity,
 		Justification:          request.Justification,
+		Skus:                   inputSkus,
 	})
 }
 

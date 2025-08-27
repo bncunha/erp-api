@@ -58,11 +58,10 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 	if request.Quantity != nil && request.DestinationId != nil {
 		err = s.inventoryUseCase.DoTransaction(ctx, inventory_usecase.DoTransactionInput{
 			Type:                   domain.InventoryTransactionTypeIn,
-			SkuId:                  skuId,
 			InventoryOriginId:      0,
 			InventoryDestinationId: *request.DestinationId,
-			Quantity:               *request.Quantity,
 			Justification:          "Cadastro de Produto",
+			Skus:                   []inventory_usecase.DoTransactionSkusInput{{SkuId: skuId, Quantity: *request.Quantity}},
 		})
 		if err != nil {
 			return errors.New("Operação realizada parcialmente! Erro ao atualizar a quantidade de itens no estoque!")

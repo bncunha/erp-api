@@ -9,6 +9,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/lib/pq"
 )
 
 type SkuRepository interface {
@@ -17,6 +18,7 @@ type SkuRepository interface {
 	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
 	Update(ctx context.Context, sku domain.Sku) error
 	GetById(ctx context.Context, id int64) (domain.Sku, error)
+	GetByManyIds(ctx context.Context, ids []int64) ([]domain.Sku, error)
 	GetAll(ctx context.Context) ([]domain.Sku, error)
 	Inactivate(ctx context.Context, id int64) error
 }
@@ -128,6 +130,31 @@ func (r *skuRepository) GetById(ctx context.Context, id int64) (domain.Sku, erro
 		return sku, err
 	}
 	return sku, nil
+}
+
+func (r *skuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]domain.Sku, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var skus []domain.Sku
+
+	query := `SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	FROM skus s 
+	INNER JOIN products p ON p.id = s.product_id
+	WHERE s.id = ANY($1) AND s.tenant_id = $2 AND s.deleted_at IS NULL`
+	rows, err := r.db.QueryContext(ctx, query, pq.Array(ids), tenantId)
+	if err != nil {
+		return skus, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var sku domain.Sku
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name)
+		if err != nil {
+			return skus, err
+		}
+		skus = append(skus, sku)
+	}
+	return skus, err
 }
 
 func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {

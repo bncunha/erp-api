@@ -8,6 +8,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/lib/pq"
 )
 
 var (
@@ -19,7 +20,7 @@ type InventoryItemRepository interface {
 	UpdateQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem) error
 	GetById(ctx context.Context, id int64) (domain.InventoryItem, error)
 	GetByIdWithTransaction(ctx context.Context, tx *sql.Tx, id int64) (domain.InventoryItem, error)
-	GetBySkuIdAndInventoryId(ctx context.Context, skuId int64, inventoryId int64) (domain.InventoryItem, error)
+	GetByManySkuIdsAndInventoryId(ctx context.Context, skuIds []int64, inventoryId int64) ([]domain.InventoryItem, error)
 	GetAll(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
 	GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error)
 }
@@ -63,19 +64,26 @@ func (r *inventoryItemRepository) GetById(ctx context.Context, id int64) (domain
 	return inventoryItem, nil
 }
 
-func (r *inventoryItemRepository) GetBySkuIdAndInventoryId(ctx context.Context, skuId int64, inventoryId int64) (domain.InventoryItem, error) {
+func (r *inventoryItemRepository) GetByManySkuIdsAndInventoryId(ctx context.Context, skuIds []int64, inventoryId int64) ([]domain.InventoryItem, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var inventoryItem domain.InventoryItem
+	var inventoryItems []domain.InventoryItem
 
-	query := `SELECT id, inventory_id, sku_id, quantity, tenant_id FROM inventory_items WHERE sku_id = $1 AND inventory_id = $2 AND tenant_id = $3 AND deleted_at IS NULL`
-	err := r.db.QueryRowContext(ctx, query, skuId, inventoryId, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.SkuId, &inventoryItem.Quantity, &tenantId)
+	query := `SELECT id, inventory_id, sku_id, quantity, tenant_id FROM inventory_items WHERE sku_id = ANY($1) AND inventory_id = $2 AND tenant_id = $3 AND deleted_at IS NULL`
+	rows, err := r.db.QueryContext(ctx, query, pq.Array(skuIds), inventoryId, tenantId)
 	if err != nil {
-		if errors.IsNoRowsFinded(err) {
-			return inventoryItem, ErrInventoryItemNotFound
-		}
-		return inventoryItem, err
+		return inventoryItems, err
 	}
-	return inventoryItem, nil
+	defer rows.Close()
+
+	for rows.Next() {
+		var inventoryItem domain.InventoryItem
+		err = rows.Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.SkuId, &inventoryItem.Quantity, &tenantId)
+		if err != nil {
+			return inventoryItems, err
+		}
+		inventoryItems = append(inventoryItems, inventoryItem)
+	}
+	return inventoryItems, err
 }
 
 func (r *inventoryItemRepository) GetByIdWithTransaction(ctx context.Context, tx *sql.Tx, id int64) (domain.InventoryItem, error) {
