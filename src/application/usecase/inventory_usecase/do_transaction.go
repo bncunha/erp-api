@@ -3,6 +3,7 @@ package inventory_usecase
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/bncunha/erp-api/src/application/errors"
@@ -15,6 +16,8 @@ var (
 	ErrInventoryItemOriginNotFound      = errors.New("Item de estoque não encontrado na origem")
 	ErrQuantityInsufficient             = errors.New("Quantidade insuficiente")
 	ErrInventoryesTransferEquais        = errors.New("Inventários de origem e de destino precisam ser diferentes")
+	ErrInventoryItemNotFound            = errors.New("Item de estoque não encontrado")
+	ErrSkusNotFound                     = errors.New("SKUs não encontrados")
 )
 
 type InventoryUseCase interface {
@@ -37,8 +40,9 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 
 	var inventoryOut domain.Inventory
 	var inventoryIn domain.Inventory
-	var inventoryItemOut domain.InventoryItem
-	var inventoryItemIn domain.InventoryItem
+	var inventoryItemOut []domain.InventoryItem
+	var inventoryItemIn []domain.InventoryItem
+	skusIds := s.detachIds(input.Skus)
 
 	if input.InventoryDestinationId != 0 {
 		inventoryIn, err = s.inventoryRepository.GetById(ctx, input.InventoryDestinationId)
@@ -53,22 +57,32 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 		}
 	}
 
-	sku, err := s.skuRepository.GetById(ctx, input.SkuId)
+	skus, err := s.skuRepository.GetByManyIds(ctx, skusIds)
+	if err != nil {
+		return err
+	}
+	if len(skus) != len(skusIds) {
+		return ErrSkusNotFound
+	}
+	for i, sku := range skus {
+		for _, inputSku := range input.Skus {
+			if sku.Id == inputSku.SkuId {
+				skus[i].Quantity = inputSku.Quantity
+			}
+		}
+	}
+
+	inventoryItemOut, err = s.inventoryItemRepository.GetByManySkuIdsAndInventoryId(ctx, skusIds, inventoryOut.Id)
 	if err != nil {
 		return err
 	}
 
-	inventoryItemOut, err = s.inventoryItemRepository.GetBySkuIdAndInventoryId(ctx, sku.Id, inventoryOut.Id)
-	if err != nil && !errors.Is(err, repository.ErrInventoryItemNotFound) {
+	inventoryItemIn, err = s.inventoryItemRepository.GetByManySkuIdsAndInventoryId(ctx, skusIds, inventoryIn.Id)
+	if err != nil {
 		return err
 	}
 
-	inventoryItemIn, err = s.inventoryItemRepository.GetBySkuIdAndInventoryId(ctx, sku.Id, inventoryIn.Id)
-	if err != nil && !errors.Is(err, repository.ErrInventoryItemNotFound) {
-		return err
-	}
-
-	err = s.validateInventoryTransaction(ctx, inventoryItemOut, inventoryItemIn, input.Quantity, input.Type)
+	err = s.validateInventoryTransaction(inventoryIn, inventoryOut, inventoryItemOut, inventoryItemIn, skus, input.Type)
 	if err != nil {
 		return err
 	}
@@ -83,35 +97,29 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 		}
 	}()
 
-	inventoryItemIn, err = s.createInventoryItemInIfNotExists(ctx, tx, sku, input.Quantity, inventoryItemIn, domain.InventoryTransactionType(input.Type), inventoryIn)
+	inventoryItemIn, err = s.createInventoryItemInIfNotExists(ctx, tx, skus, inventoryItemIn, domain.InventoryTransactionType(input.Type), inventoryIn)
 	if err != nil {
 		return err
 	}
 
-	err = s.createTransactions(ctx, tx, inventoryItemOut, inventoryItemIn, domain.InventoryTransaction{
-		Quantity:      input.Quantity,
-		Date:          time.Now(),
-		InventoryOut:  inventoryOut,
-		InventoryIn:   inventoryIn,
-		Justification: input.Justification,
-	}, input.Type)
+	err = s.createTransactions(ctx, tx, inventoryItemOut, inventoryItemIn, inventoryOut, inventoryIn, skus, input.Type, input.Justification)
 	if err != nil {
 		return err
 	}
 
 	switch input.Type {
 	case domain.InventoryTransactionTypeTransfer:
-		err = s.transferQuantity(ctx, tx, inventoryItemOut, inventoryItemIn, input.Quantity)
+		err = s.transferQuantity(ctx, tx, inventoryItemOut, inventoryItemIn, skus)
 		if err != nil {
 			return err
 		}
 	case domain.InventoryTransactionTypeIn:
-		err = s.addQuantity(ctx, tx, inventoryItemIn, input.Quantity)
+		err = s.addQuantity(ctx, tx, inventoryItemIn, skus)
 		if err != nil {
 			return err
 		}
 	case domain.InventoryTransactionTypeOut:
-		err = s.subQuantity(ctx, tx, inventoryItemOut, input.Quantity)
+		err = s.subQuantity(ctx, tx, inventoryItemOut, skus)
 		if err != nil {
 			return err
 		}
@@ -120,24 +128,41 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 	return tx.Commit()
 }
 
-func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, transaction domain.InventoryTransaction, transactionType domain.InventoryTransactionType) error {
-	if transactionType == domain.InventoryTransactionTypeTransfer {
-		transaction.InventoryItem = inventoryItemOut
-		transaction.Type = domain.InventoryTransactionTypeTransfer
-		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
-		if err != nil {
-			return err
+func (s *inventoryUseCase) detachIds(skusInput []DoTransactionSkusInput) []int64 {
+	var skuIds []int64
+	for _, sku := range skusInput {
+		skuIds = append(skuIds, sku.SkuId)
+	}
+	return skuIds
+}
+
+func (s *inventoryUseCase) findInventoryItem(inventoryItems []domain.InventoryItem, skuId int64) *domain.InventoryItem {
+	for _, inventoryItem := range inventoryItems {
+		if inventoryItem.SkuId == skuId {
+			return &inventoryItem
 		}
-	} else if transactionType == domain.InventoryTransactionTypeIn {
-		transaction.InventoryItem = inventoryItemIn
-		transaction.Type = domain.InventoryTransactionTypeIn
-		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
-		if err != nil {
-			return err
+	}
+	return nil
+}
+
+func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemsOut []domain.InventoryItem, inventoryItemsIn []domain.InventoryItem, inventoryOut domain.Inventory, inventoryIn domain.Inventory, inputSkus []domain.Sku, transactionType domain.InventoryTransactionType, justification string) error {
+	for _, inputSku := range inputSkus {
+		findedInventoryItemOut := s.findInventoryItem(inventoryItemsOut, inputSku.Id)
+		findedInventoryItemIn := s.findInventoryItem(inventoryItemsIn, inputSku.Id)
+
+		transaction := domain.InventoryTransaction{
+			Quantity:      inputSku.Quantity,
+			Date:          time.Now(),
+			InventoryOut:  inventoryOut,
+			InventoryIn:   inventoryIn,
+			Justification: justification,
+			Type:          transactionType,
 		}
-	} else if transactionType == domain.InventoryTransactionTypeOut {
-		transaction.InventoryItem = inventoryItemOut
-		transaction.Type = domain.InventoryTransactionTypeOut
+		if transactionType == domain.InventoryTransactionTypeTransfer || transactionType == domain.InventoryTransactionTypeOut {
+			transaction.InventoryItem = *findedInventoryItemOut
+		} else if transactionType == domain.InventoryTransactionTypeIn {
+			transaction.InventoryItem = *findedInventoryItemIn
+		}
 		_, err := s.inventoryTransactionRepo.Create(ctx, tx, transaction)
 		if err != nil {
 			return err
@@ -146,75 +171,118 @@ func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, i
 	return nil
 }
 
-func (s *inventoryUseCase) createInventoryItemInIfNotExists(ctx context.Context, tx *sql.Tx, sku domain.Sku, quantity float64, inventoryItemIn domain.InventoryItem, transactionType domain.InventoryTransactionType, inventoryIn domain.Inventory) (domain.InventoryItem, error) {
-	if inventoryItemIn.Id != 0 {
-		return inventoryItemIn, nil
+func (s *inventoryUseCase) createInventoryItemInIfNotExists(ctx context.Context, tx *sql.Tx, inputSku []domain.Sku, inventoriesItemIn []domain.InventoryItem, transactionType domain.InventoryTransactionType, inventoryIn domain.Inventory) ([]domain.InventoryItem, error) {
+	var createdInventoryItemIn []domain.InventoryItem
+	for _, inputSku := range inputSku {
+		if s.findInventoryItem(inventoriesItemIn, inputSku.Id) == nil {
+			if transactionType == domain.InventoryTransactionTypeIn || transactionType == domain.InventoryTransactionTypeTransfer {
+				insertInventoryItem := domain.InventoryItem{
+					InventoryId: inventoryIn.Id,
+					SkuId:       inputSku.Id,
+					Quantity:    0,
+				}
+				inventoryItemId, err := s.inventoryItemRepository.Create(ctx, tx, insertInventoryItem)
+				if err != nil {
+					return []domain.InventoryItem{}, err
+				}
+				inventoryItemIn, err := s.inventoryItemRepository.GetByIdWithTransaction(ctx, tx, inventoryItemId)
+				if err != nil {
+					return []domain.InventoryItem{}, err
+				}
+				createdInventoryItemIn = append(createdInventoryItemIn, inventoryItemIn)
+			}
+		}
 	}
-	if (transactionType == domain.InventoryTransactionTypeIn || transactionType == domain.InventoryTransactionTypeTransfer) && inventoryItemIn.Id == 0 {
-		insertInventoryItem := domain.InventoryItem{
-			InventoryId: inventoryIn.Id,
-			SkuId:       sku.Id,
-			Quantity:    0,
-		}
-		inventoryItemId, err := s.inventoryItemRepository.Create(ctx, tx, insertInventoryItem)
-		if err != nil {
-			return domain.InventoryItem{}, err
-		}
-		inventoryItemIn, err = s.inventoryItemRepository.GetByIdWithTransaction(ctx, tx, inventoryItemId)
-		if err != nil {
-			return domain.InventoryItem{}, err
-		}
-	}
-	return inventoryItemIn, nil
+	return append(createdInventoryItemIn, inventoriesItemIn...), nil
 }
 
-func (s *inventoryUseCase) validateInventoryTransaction(ctx context.Context, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, quantity float64, inventoryType domain.InventoryTransactionType) error {
+func (s *inventoryUseCase) validateInventoryTransaction(inventoryIn domain.Inventory, inventoryOut domain.Inventory, inventoriesItemOut []domain.InventoryItem, inventoriesItemIn []domain.InventoryItem, skusInput []domain.Sku, inventoryType domain.InventoryTransactionType) error {
 	if inventoryType == domain.InventoryTransactionTypeTransfer || inventoryType == domain.InventoryTransactionTypeOut {
-		if inventoryItemOut.Id == 0 {
-			return ErrInventoryItemOriginNotFound
+		if validateExistingInventoryItemOutErr := s.validateExistingInventoryItemOut(inventoriesItemOut, skusInput); validateExistingInventoryItemOutErr != nil {
+			return validateExistingInventoryItemOutErr
 		}
 
-		if inventoryItemOut.Quantity < quantity {
-			return ErrQuantityInsufficient
+		if validateInventoryItemOutQuantitiesErr := s.validateIInventotyItemOutQuantities(inventoriesItemOut, skusInput); validateInventoryItemOutQuantitiesErr != nil {
+			return validateInventoryItemOutQuantitiesErr
 		}
 	}
 	if inventoryType == domain.InventoryTransactionTypeTransfer {
-		if inventoryItemIn.Id == inventoryItemOut.Id {
+		if inventoryIn.Id == inventoryOut.Id {
 			return ErrInventoryesTransferEquais
 		}
 	}
 	return nil
 }
 
-func (s *inventoryUseCase) transferQuantity(ctx context.Context, tx *sql.Tx, inventoryItemOut domain.InventoryItem, inventoryItemIn domain.InventoryItem, quantity float64) error {
-	err := s.subQuantity(ctx, tx, inventoryItemOut, quantity)
+func (s *inventoryUseCase) validateExistingInventoryItemOut(inventoryItemOut []domain.InventoryItem, skusInput []domain.Sku) error {
+	notExistingSkus := make([]string, 0)
+	for _, sku := range skusInput {
+		if s.findInventoryItem(inventoryItemOut, sku.Id) == nil {
+			notExistingSkus = append(notExistingSkus, fmt.Sprintf(`(%d) %s`, sku.Id, sku.GetName()))
+		}
+	}
+	if len(notExistingSkus) > 0 {
+		return errors.New(ErrInventoryItemOriginNotFound.Error() + fmt.Sprintf(": %v", notExistingSkus))
+	}
+	return nil
+}
+
+func (s *inventoryUseCase) validateIInventotyItemOutQuantities(inventoryItemOut []domain.InventoryItem, skusInput []domain.Sku) error {
+	for _, sku := range skusInput {
+		for _, inventoryItem := range inventoryItemOut {
+			if inventoryItem.SkuId == sku.Id {
+				if sku.Quantity > inventoryItem.Quantity {
+					return errors.New(ErrQuantityInsufficient.Error() + fmt.Sprintf(": (%d) %s", sku.Id, sku.GetName()))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (s *inventoryUseCase) transferQuantity(ctx context.Context, tx *sql.Tx, inventoryItemsOut []domain.InventoryItem, inventoryItemsIn []domain.InventoryItem, inputSkus []domain.Sku) error {
+	err := s.subQuantity(ctx, tx, inventoryItemsOut, inputSkus)
 	if err != nil {
 		return err
 	}
-	err = s.addQuantity(ctx, tx, inventoryItemIn, quantity)
+	err = s.addQuantity(ctx, tx, inventoryItemsIn, inputSkus)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *inventoryUseCase) addQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem, quantity float64) error {
-	inventoryItem.Quantity = inventoryItem.Quantity + quantity
-	err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, inventoryItem)
-	if err != nil {
-		return err
+func (s *inventoryUseCase) addQuantity(ctx context.Context, tx *sql.Tx, inventoryItems []domain.InventoryItem, inputSkus []domain.Sku) error {
+	for _, inputSku := range inputSkus {
+		findedInventoryItem := s.findInventoryItem(inventoryItems, inputSku.Id)
+		if findedInventoryItem != nil {
+			findedInventoryItem.Quantity = findedInventoryItem.Quantity + inputSku.Quantity
+			err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, *findedInventoryItem)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New(ErrInventoryItemNotFound.Error() + fmt.Sprintf(": %v", inputSku.Id))
+		}
 	}
 	return nil
 }
 
-func (s *inventoryUseCase) subQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem, quantity float64) error {
-	inventoryItem.Quantity = inventoryItem.Quantity - quantity
-	if inventoryItem.Quantity < 0 {
-		return ErrQuantityInsufficient
-	}
-	err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, inventoryItem)
-	if err != nil {
-		return err
+func (s *inventoryUseCase) subQuantity(ctx context.Context, tx *sql.Tx, inventoryItems []domain.InventoryItem, inputSkus []domain.Sku) error {
+	for _, inputSku := range inputSkus {
+		findedInventoryItem := s.findInventoryItem(inventoryItems, inputSku.Id)
+		if findedInventoryItem != nil {
+			findedInventoryItem.Quantity = findedInventoryItem.Quantity - inputSku.Quantity
+			if findedInventoryItem.Quantity < 0 {
+				return ErrQuantityInsufficient
+			}
+			err := s.inventoryItemRepository.UpdateQuantity(ctx, tx, *findedInventoryItem)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New(ErrInventoryItemNotFound.Error() + fmt.Sprintf(": %v", inputSku.Id))
+		}
 	}
 	return nil
 }

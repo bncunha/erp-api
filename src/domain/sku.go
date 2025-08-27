@@ -12,5 +12,15 @@ type Sku struct {
 }
 
 func (s *Sku) GetName() string {
-	return s.Product.Name + " - " + s.Color + " - " + s.Size
+	skuName := ""
+	if s.Product.Name != "" {
+		skuName = s.Product.Name + " - "
+	}
+	if s.Color != "" {
+		skuName = skuName + s.Color + " - "
+	}
+	if s.Size != "" {
+		skuName = skuName + s.Size
+	}
+	return skuName
 }

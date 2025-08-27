@@ -7,12 +7,16 @@ import (
 )
 
 type CreateInventoryTransactionRequest struct {
-	Type                   domain.InventoryTransactionType `json:"type" validate:"required,oneof=TRANSFER IN OUT"`
-	SkuId                  int64                           `json:"sku_id" validate:"required"`
-	InventoryOriginId      int64                           `json:"inventory_origin_id"`
-	InventoryDestinationId int64                           `json:"inventory_destination_id"`
-	Quantity               float64                         `json:"quantity" validate:"required,gt=0"`
-	Justification          string                          `json:"justification" validate:"max=200"`
+	Type                   domain.InventoryTransactionType         `json:"type" validate:"required,oneof=TRANSFER IN OUT"`
+	Skus                   []CreateInventoryTransactionSkusRequest `json:"skus" validate:"required,gt=0"`
+	InventoryOriginId      int64                                   `json:"inventory_origin_id"`
+	InventoryDestinationId int64                                   `json:"inventory_destination_id"`
+	Justification          string                                  `json:"justification" validate:"max=200"`
+}
+
+type CreateInventoryTransactionSkusRequest struct {
+	SkuId    int64   `json:"sku_id" validate:"required"`
+	Quantity float64 `json:"quantity" validate:"required,gt=0"`
 }
 
 func (r *CreateInventoryTransactionRequest) Validate() error {
