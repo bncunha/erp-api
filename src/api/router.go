@@ -40,6 +40,9 @@ func (r *router) SetupCors(env string) {
 }
 
 func (r *router) SetupRoutes() {
+	r.echo.Use(middleware.RequestLogger())
+	r.echo.Use(middleware.Recover())
+
 	r.setupPublicRoutes()
 	r.setupPrivateRoutes()
 }
