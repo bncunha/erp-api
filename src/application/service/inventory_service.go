@@ -43,7 +43,7 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 		})
 	}
 
-	return s.inventoryUseCase.DoTransaction(ctx, inventory_usecase.DoTransactionInput{
+	return s.inventoryUseCase.DoTransaction(ctx, nil, inventory_usecase.DoTransactionInput{
 		Type:                   domain.InventoryTransactionType(request.Type),
 		InventoryOriginId:      request.InventoryOriginId,
 		InventoryDestinationId: request.InventoryDestinationId,

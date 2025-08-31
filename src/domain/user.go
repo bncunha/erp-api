@@ -1,5 +1,12 @@
 package domain
 
+type Role string
+
+const (
+	UserRoleReseller Role = "RESELLER"
+	UserRoleAdmin    Role = "ADMIN"
+)
+
 type User struct {
 	Id          int64
 	Username    string

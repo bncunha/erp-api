@@ -56,7 +56,7 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 	}
 
 	if request.Quantity != nil && request.DestinationId != nil {
-		err = s.inventoryUseCase.DoTransaction(ctx, inventory_usecase.DoTransactionInput{
+		err = s.inventoryUseCase.DoTransaction(ctx, nil, inventory_usecase.DoTransactionInput{
 			Type:                   domain.InventoryTransactionTypeIn,
 			InventoryOriginId:      0,
 			InventoryDestinationId: *request.DestinationId,

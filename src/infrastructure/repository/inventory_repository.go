@@ -18,6 +18,7 @@ type InventoryRepository interface {
 	GetById(ctx context.Context, id int64) (domain.Inventory, error)
 	GetAll(ctx context.Context) ([]domain.Inventory, error)
 	GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error)
+	GetPrimaryInventory(ctx context.Context) (domain.Inventory, error)
 }
 
 type inventoryRepository struct {
@@ -93,6 +94,22 @@ func (r *inventoryRepository) GetByUserId(ctx context.Context, userId int64) (do
 	LEFT JOIN users u ON u.id = i.user_id
 	WHERE i.user_id = $1 AND i.deleted_at IS NULL AND i.tenant_id = $2 ORDER BY i.id ASC`
 	err := r.db.QueryRowContext(ctx, query, userId, ctx.Value(constants.TENANT_KEY)).Scan(&inventory.Id, &inventory.User.Id, &inventory.User.Name, &inventory.TenantId, &inventory.Type)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return inventory, ErrInventoryNotFound
+		}
+		return inventory, err
+	}
+	return inventory, nil
+}
+
+func (r *inventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.Inventory, error) {
+	var inventory domain.Inventory
+
+	query := `SELECT i.id, u.id, u.name, i.tenant_id, i.type
+	FROM inventories i
+	WHERE i.deleted_at IS NULL AND i.tenant_id = $1 AND i.type = $2 ORDER BY i.id ASC`
+	err := r.db.QueryRowContext(ctx, query, ctx.Value(constants.TENANT_KEY), domain.InventoryTypePrimary).Scan(&inventory.Id, &inventory.TenantId, &inventory.Type)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return inventory, ErrInventoryNotFound

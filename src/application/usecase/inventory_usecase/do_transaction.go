@@ -8,35 +8,9 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
-var (
-	ErrEnventoryItemDestinationNotFound = errors.New("Item de estoque não encontrado no destino")
-	ErrInventoryItemOriginNotFound      = errors.New("Item de estoque não encontrado na origem")
-	ErrQuantityInsufficient             = errors.New("Quantidade insuficiente")
-	ErrInventoryesTransferEquais        = errors.New("Inventários de origem e de destino precisam ser diferentes")
-	ErrInventoryItemNotFound            = errors.New("Item de estoque não encontrado")
-	ErrSkusNotFound                     = errors.New("SKUs não encontrados")
-)
-
-type InventoryUseCase interface {
-	DoTransaction(ctx context.Context, input DoTransactionInput) error
-}
-
-type inventoryUseCase struct {
-	repository               *repository.Repository
-	inventoryRepository      repository.InventoryRepository
-	inventoryItemRepository  repository.InventoryItemRepository
-	inventoryTransactionRepo repository.InventoryTransactionRepository
-	skuRepository            repository.SkuRepository
-}
-
-func NewInventoryUseCase(repository *repository.Repository, inventoryRepository repository.InventoryRepository, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, skuRepository repository.SkuRepository) InventoryUseCase {
-	return &inventoryUseCase{repository, inventoryRepository, inventoryItemRepository, inventoryTransactionRepo, skuRepository}
-}
-
-func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactionInput) (err error) {
+func (s *inventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input DoTransactionInput) (err error) {
 
 	var inventoryOut domain.Inventory
 	var inventoryIn domain.Inventory
@@ -87,9 +61,11 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, input DoTransactio
 		return err
 	}
 
-	tx, err := s.repository.BeginTx(ctx)
-	if err != nil {
-		return err
+	if tx == nil {
+		tx, err = s.repository.BeginTx(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	defer func() {
 		if err != nil {
