@@ -37,7 +37,7 @@ func (s *authService) Login(ctx context.Context, input request.LoginRequest) (ou
 		return out, errors.New("senha incorreta")
 	}
 
-	token, err := helper.GenerateJWT(user.Username, user.TenantId)
+	token, err := helper.GenerateJWT(user.Username, user.TenantId, user.Role, user.Id)
 	if err != nil {
 		return out, err
 	}

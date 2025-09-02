@@ -20,13 +20,15 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		token := strings.TrimPrefix(auth, "Bearer ")
-		username, tenant_id, err := helper.ParseJWT(token)
+		username, tenant_id, role, user_id, err := helper.ParseJWT(token)
 		if err != nil {
 			return c.JSON(_http.StatusUnauthorized, http.HandleError(fmt.Errorf("Token inválido")))
 		}
 
 		ctx := context.WithValue(c.Request().Context(), constants.TENANT_KEY, tenant_id)
 		ctx = context.WithValue(ctx, constants.USERNAME_KEY, username)
+		ctx = context.WithValue(ctx, constants.USERID_KEY, user_id)
+		ctx = context.WithValue(ctx, constants.ROLE_KEY, role)
 		c.SetRequest(c.Request().WithContext(ctx))
 		return next(c)
 	}

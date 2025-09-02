@@ -41,7 +41,10 @@ func RequestLogger() echo.MiddlewareFunc {
 			log := logs.Logger.With(fields)
 
 			if err != nil {
-				log.Errorf("request completed with error: %v", err)
+				log.With(map[string]any{
+					"body": c.Request().Body,
+					"err":  err.Error(),
+				}).Errorf("request completed with error: %v", err)
 				return err
 			}
 

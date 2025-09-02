@@ -14,6 +14,8 @@ type Repository struct {
 	InventoryRepository            InventoryRepository
 	InventoryItemRepository        InventoryItemRepository
 	InventoryTransactionRepository InventoryTransactionRepository
+	SalesRepository                SalesRepository
+	CustomerRepository             CustomerRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -28,6 +30,8 @@ func (r *Repository) SetupRepositories() {
 	r.InventoryRepository = NewInventoryRepository(r.db)
 	r.InventoryItemRepository = NewInventoryItemRepository(r.db)
 	r.InventoryTransactionRepository = NewInventoryTransactionRepository(r.db, r.InventoryItemRepository)
+	r.SalesRepository = NewSalesRepository()
+	r.CustomerRepository = NewCustomerRepository(r.db)
 }
 
 func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {

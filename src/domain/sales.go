@@ -88,6 +88,43 @@ func NewSalesPayment(paymentType PaymentType, dates []SalesPaymentDates) SalesPa
 	}
 }
 
+func (s *SalesPayment) IsInstallmentPayment() bool {
+	return s.PaymentType == PaymentTypeCreditStore || s.PaymentType == PaymentTypeCreditCard
+}
+
+func (s *SalesPayment) IsOnCashPayment() bool {
+	return s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix || s.PaymentType == PaymentTypeDebitCard
+}
+
+func (s *SalesPayment) IsPaymentDatesGraterThanToday() bool {
+	for _, date := range s.Dates {
+		if time.Now().After(date.DueDate) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *SalesPayment) IsPaymentDatesOrderValid() bool {
+	for i := 1; i < len(s.Dates); i++ {
+		if !s.Dates[i].DueDate.After(s.Dates[i-1].DueDate) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, paidDate time.Time, installmentNumber int, installmentValue float64) {
+	newDate := NewSalesPaymentDates(dueDate, paidDate, installmentNumber, installmentValue, "")
+	if s.IsInstallmentPayment() {
+		newDate.Status = PaymentStatusPending
+	} else if s.IsOnCashPayment() {
+		newDate.Status = PaymentStatusPaid
+	}
+	s.Dates = append(s.Dates, newDate)
+
+}
+
 type SalesPaymentDates struct {
 	DueDate           time.Time
 	PaidDate          time.Time

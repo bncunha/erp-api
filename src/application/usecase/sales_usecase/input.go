@@ -15,9 +15,8 @@ type DoSaleInput struct {
 }
 
 type DoSaleItemsInput struct {
-	SkuId     int64
-	UnitPrice float64
-	Quantity  float64
+	SkuId    int64
+	Quantity float64
 }
 
 type DoSalePaymentsInput struct {
@@ -30,5 +29,5 @@ type DoSalePaymentDatesInput struct {
 	PaidDate          time.Time
 	InstallmentNumber int
 	InstallmentValue  float64
-	Status            string
+	Status            domain.PaymentStatus
 }

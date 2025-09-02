@@ -15,6 +15,8 @@ var (
 	ErrSkusNotFound                    = errors.New("SKUs não encontrados")
 	ErrPaymentValuesNotMatchTotalValue = errors.New("Valores de pagamento não correspondem ao valor total")
 	ErrQuantityNotValid                = errors.New("Não há quantidade suficiente no estoque")
+	ErrPaymentDatesPast                = errors.New("As datas de pagamento devem ser maiores que a data atual")
+	ErrPaymentDatesOrderInvalid        = errors.New("As datas de pagamento devem ser ordenadas")
 )
 
 func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
@@ -117,17 +119,17 @@ func (s *salesUseCase) createSale(user domain.User, customer domain.Customer, sk
 	for i, item := range itemsInput {
 		for _, sku := range skus {
 			if sku.Id == item.SkuId {
-				items[i] = domain.NewSalesItem(sku, item.UnitPrice, item.Quantity)
+				items[i] = domain.NewSalesItem(sku, *sku.Price, item.Quantity)
 				continue
 			}
 		}
 	}
 	for i, payment := range paymentsInput {
 		paymentDates := make([]domain.SalesPaymentDates, len(payment.Dates))
-		for j, date := range payment.Dates {
-			paymentDates[j] = domain.NewSalesPaymentDates(date.DueDate, date.PaidDate, date.InstallmentNumber, date.InstallmentValue, domain.PaymentStatusPending)
-		}
 		payments[i] = domain.NewSalesPayment(payment.PaymentType, paymentDates)
+		for _, date := range payment.Dates {
+			payments[i].AppendNewSalesDate(date.DueDate, date.PaidDate, date.InstallmentNumber, date.InstallmentValue)
+		}
 	}
 	return domain.NewSales(time.Now(), user, customer, items, payments)
 }
@@ -147,6 +149,14 @@ func (s *salesUseCase) validateSale(sale domain.Sales) error {
 	for _, item := range sale.Items {
 		if !item.IsQuantityValid() {
 			return errors.New(ErrQuantityNotValid.Error() + fmt.Sprintf(": (%d) %s", item.Sku.Id, item.Sku.GetName()))
+		}
+	}
+	for _, payment := range sale.Payments {
+		if !payment.IsPaymentDatesOrderValid() {
+			return ErrPaymentDatesOrderInvalid
+		}
+		if !payment.IsPaymentDatesGraterThanToday() {
+			return ErrPaymentDatesPast
 		}
 	}
 	return nil
