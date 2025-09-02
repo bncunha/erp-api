@@ -11,7 +11,6 @@ import (
 )
 
 func (s *inventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input DoTransactionInput) (err error) {
-
 	var inventoryOut domain.Inventory
 	var inventoryIn domain.Inventory
 	var inventoryItemOut []domain.InventoryItem
@@ -35,9 +34,17 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input 
 	if err != nil {
 		return err
 	}
-	if len(skus) != len(skusIds) {
-		return ErrSkusNotFound
+
+	err = s.validateDuplicatedSkus(skus, skusIds)
+	if err != nil {
+		return err
 	}
+
+	err = s.validateExistsSkus(skus, skusIds)
+	if err != nil {
+		return err
+	}
+
 	for i, sku := range skus {
 		for _, inputSku := range input.Skus {
 			if sku.Id == inputSku.SkuId {
@@ -212,6 +219,48 @@ func (s *inventoryUseCase) validateIInventotyItemOutQuantities(inventoryItemOut 
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func (s *inventoryUseCase) validateExistsSkus(skus []domain.Sku, skusIds []int64) error {
+	// Cria um mapa para marcar os SKUs encontrados
+	found := make(map[int64]bool)
+	for _, sku := range skus {
+		found[sku.Id] = true
+	}
+
+	// Verifica se todos os IDs enviados pelo usuário estão no mapa
+	for _, id := range skusIds {
+		if !found[id] {
+			return errors.New(ErrSkusNotFound.Error() + fmt.Sprintf(": %v", id))
+		}
+	}
+	return nil
+}
+
+func (s *inventoryUseCase) validateDuplicatedSkus(skus []domain.Sku, skusIds []int64) error {
+	seen := make(map[int64]bool)
+	duplicates := []int64{}
+
+	for _, id := range skusIds {
+		if seen[id] {
+			duplicates = append(duplicates, id)
+		} else {
+			seen[id] = true
+		}
+	}
+
+	if len(duplicates) > 0 {
+		errMEssage := ErrSkusDuplicated.Error() + ":"
+		for _, id := range duplicates {
+			for _, sku := range skus {
+				if sku.Id == id {
+					errMEssage = errMEssage + fmt.Sprintf("- (%s) %s | ", sku.Code, sku.GetName())
+				}
+			}
+		}
+		return errors.New(errMEssage)
 	}
 	return nil
 }
