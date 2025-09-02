@@ -77,13 +77,17 @@ func readAndRestoreBody(req *http.Request, max int64) ([]byte, string) {
 	if ct == "" {
 		ct = defaultContentType
 	}
-	// Leia com limite
-	limited := io.LimitReader(req.Body, max+1) // +1 para detectar truncamento
-	body, _ := io.ReadAll(limited)
-	// Restaura Body para os handlers posteriores
+
+	// Leia TUDO para restaurar o body fielmente
+	all, _ := io.ReadAll(req.Body)
 	req.Body.Close()
-	req.Body = io.NopCloser(bytes.NewBuffer(body))
-	return body, ct
+	req.Body = io.NopCloser(bytes.NewBuffer(all))
+
+	// Para LOG: mantenha só até 'max'
+	if int64(len(all)) > max {
+		return all[:max], ct // logará truncado, mas o handler recebe tudo
+	}
+	return all, ct
 }
 
 func normalizeContentType(ct string) (mt string) {
@@ -241,11 +245,14 @@ func RequestLogger() echo.MiddlewareFunc {
 			}
 
 			// Inclui os corpos no log se existirem
-			if reqBodyStr != "" {
-				fields["req_body"] = reqBodyStr
-			}
-			if resBodyStr != "" {
-				fields["res_body"] = resBodyStr
+			logBodies := c.Response().Status >= 400 // ou: status >= 400
+			if logBodies {
+				if reqBodyStr != "" {
+					fields["req_body"] = reqBodyStr
+				}
+				if resBodyStr != "" {
+					fields["res_body"] = resBodyStr
+				}
 			}
 			// Tamanhos (não truncados) para monitorar payloads
 			fields["req_size"] = len(reqBodyBytes)
