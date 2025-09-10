@@ -6,7 +6,7 @@ type Sku struct {
 	Color    string
 	Size     string
 	Cost     *float64
-	Price    *float64
+	Price    float64
 	Quantity float64
 	Product  Product
 }

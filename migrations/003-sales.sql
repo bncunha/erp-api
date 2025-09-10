@@ -46,9 +46,9 @@ CREATE TABLE payments (
 CREATE TABLE payment_dates (
   id BIGSERIAL PRIMARY KEY,
   due_date DATE NOT NULL,
-  paid_date DATE NOT NULL,
-  installmentNumber INT NOT NULL,
-  installmentValue FLOAT NOT NULL,
+  paid_date DATE NULL,
+  installment_number INT NOT NULL,
+  installment_value FLOAT NOT NULL,
   status VARCHAR(50) NOT NULL,
   payment_id BIGINT NOT NULL,
   tenant_id BIGINT NOT NULL,
@@ -59,3 +59,4 @@ CREATE TABLE payment_dates (
 
 ALTER TABLE inventory_transactions ADD COLUMN sales_id BIGINT NULL;
 ALTER TABLE inventory_transactions ADD CONSTRAINT InventoryTransactions_sales_id_fkey FOREIGN KEY (sales_id) REFERENCES sales(id);
+ALTER TABLE skus ALTER COLUMN price SET NOT NULL;

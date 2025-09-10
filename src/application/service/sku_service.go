@@ -22,10 +22,11 @@ type skuService struct {
 	skuRepository     repository.SkuRepository
 	inventoryUseCase  inventory_usecase.InventoryUseCase
 	productRepository repository.ProductRepository
+	repository        *repository.Repository
 }
 
-func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository) SkuService {
-	return &skuService{skuRepository, inventoryUseCase, productRepository}
+func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository, repository *repository.Repository) SkuService {
+	return &skuService{skuRepository, inventoryUseCase, productRepository, repository}
 }
 
 func (s *skuService) Create(ctx context.Context, request request.CreateSkuRequest, productId int64) error {
@@ -55,8 +56,18 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 		return err
 	}
 
+	tx, err := s.repository.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	if request.Quantity != nil && request.DestinationId != nil {
-		err = s.inventoryUseCase.DoTransaction(ctx, nil, inventory_usecase.DoTransactionInput{
+		err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
 			Type:                   domain.InventoryTransactionTypeIn,
 			InventoryOriginId:      0,
 			InventoryDestinationId: *request.DestinationId,
@@ -67,7 +78,7 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 			return errors.New("Operação realizada parcialmente! Erro ao atualizar a quantidade de itens no estoque!")
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (s *skuService) Update(ctx context.Context, request request.EditSkuRequest, skuId int64) error {

@@ -38,7 +38,7 @@ func (r *inventoryItemRepository) Create(ctx context.Context, tx *sql.Tx, invent
 	var insertedID int64
 
 	query := `INSERT INTO inventory_items (inventory_id, sku_id, quantity, tenant_id) VALUES ($1, $2, $3, $4) RETURNING id`
-	err := tx.QueryRowContext(ctx, query, inventoryItem.InventoryId, inventoryItem.SkuId, inventoryItem.Quantity, tenantId).Scan(&insertedID)
+	err := tx.QueryRowContext(ctx, query, inventoryItem.InventoryId, inventoryItem.Sku.Id, inventoryItem.Quantity, tenantId).Scan(&insertedID)
 	return insertedID, err
 }
 
@@ -53,8 +53,12 @@ func (r *inventoryItemRepository) GetById(ctx context.Context, id int64) (domain
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventoryItem domain.InventoryItem
 
-	query := `SELECT id, inventory_id, sku_id, quantity, tenant_id FROM inventory_items WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.SkuId, &inventoryItem.Quantity, &tenantId)
+	query := `SELECT ii.id, ii.inventory_id, ii.quantity, ii.tenant_id, s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	FROM inventory_items ii
+	INNER JOIN skus s ON s.id = ii.sku_id
+	INNER JOIN products p ON p.id = s.product_id
+	WHERE ii.id = $1 AND ii.tenant_id = $2 AND ii.deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.Quantity, &tenantId, &inventoryItem.Sku.Id, &inventoryItem.Sku.Code, &inventoryItem.Sku.Color, &inventoryItem.Sku.Size, &inventoryItem.Sku.Cost, &inventoryItem.Sku.Price, &inventoryItem.Sku.Product.Name)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return inventoryItem, ErrInventoryItemNotFound
@@ -68,7 +72,11 @@ func (r *inventoryItemRepository) GetByManySkuIdsAndInventoryId(ctx context.Cont
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventoryItems []domain.InventoryItem
 
-	query := `SELECT id, inventory_id, sku_id, quantity, tenant_id FROM inventory_items WHERE sku_id = ANY($1) AND inventory_id = $2 AND tenant_id = $3 AND deleted_at IS NULL`
+	query := `SELECT ii.id, ii.inventory_id, ii.quantity, ii.tenant_id, s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	FROM inventory_items ii
+	INNER JOIN skus s ON s.id = ii.sku_id
+	INNER JOIN products p ON p.id = s.product_id
+	WHERE ii.sku_id = ANY($1) AND ii.inventory_id = $2 AND ii.tenant_id = $3 AND ii.deleted_at IS NULL`
 	rows, err := r.db.QueryContext(ctx, query, pq.Array(skuIds), inventoryId, tenantId)
 	if err != nil {
 		return inventoryItems, err
@@ -77,10 +85,11 @@ func (r *inventoryItemRepository) GetByManySkuIdsAndInventoryId(ctx context.Cont
 
 	for rows.Next() {
 		var inventoryItem domain.InventoryItem
-		err = rows.Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.SkuId, &inventoryItem.Quantity, &tenantId)
+		err = rows.Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.Quantity, &tenantId, &inventoryItem.Sku.Id, &inventoryItem.Sku.Code, &inventoryItem.Sku.Color, &inventoryItem.Sku.Size, &inventoryItem.Sku.Cost, &inventoryItem.Sku.Price, &inventoryItem.Sku.Product.Name)
 		if err != nil {
 			return inventoryItems, err
 		}
+		inventoryItem.Sku.Quantity = inventoryItem.Quantity
 		inventoryItems = append(inventoryItems, inventoryItem)
 	}
 	return inventoryItems, err
@@ -90,8 +99,12 @@ func (r *inventoryItemRepository) GetByIdWithTransaction(ctx context.Context, tx
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventoryItem domain.InventoryItem
 
-	query := `SELECT id, inventory_id, sku_id, quantity, tenant_id FROM inventory_items WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
-	err := tx.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.SkuId, &inventoryItem.Quantity, &tenantId)
+	query := `SELECT ii.id, ii.inventory_id, ii.quantity, ii.tenant_id, s.id, s.code, s.color, s.size, s.cost, s.price, p.name
+	FROM inventory_items ii
+	INNER JOIN skus s ON s.id = ii.sku_id
+	INNER JOIN products p ON p.id = s.product_id
+	WHERE ii.id = $1 AND ii.tenant_id = $2 AND ii.deleted_at IS NULL`
+	err := tx.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.Quantity, &tenantId, &inventoryItem.Sku.Id, &inventoryItem.Sku.Code, &inventoryItem.Sku.Color, &inventoryItem.Sku.Size, &inventoryItem.Sku.Cost, &inventoryItem.Sku.Price, &inventoryItem.Sku.Product.Name)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return inventoryItem, ErrInventoryItemNotFound

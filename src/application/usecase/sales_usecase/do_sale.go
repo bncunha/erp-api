@@ -12,11 +12,7 @@ import (
 )
 
 var (
-	ErrSkusNotFound                    = errors.New("SKUs não encontrados")
-	ErrPaymentValuesNotMatchTotalValue = errors.New("Valores de pagamento não correspondem ao valor total")
-	ErrQuantityNotValid                = errors.New("Não há quantidade suficiente no estoque")
-	ErrPaymentDatesPast                = errors.New("As datas de pagamento devem ser maiores que a data atual")
-	ErrPaymentDatesOrderInvalid        = errors.New("As datas de pagamento devem ser ordenadas")
+	ErrSkusNotFound = errors.New("SKUs não encontrados")
 )
 
 func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
@@ -36,13 +32,7 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 	if err != nil {
 		return err
 	}
-	if len(skus) != len(skusIds) {
-		return ErrSkusNotFound
-	}
-
-	sale := s.createSale(user, customer, skus, input.Items, input.Payments)
-
-	err = s.validateSale(sale)
+	err = s.validateDuplicatedSkus(skus, skusIds)
 	if err != nil {
 		return err
 	}
@@ -56,6 +46,24 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		return err
+	}
+
+	inventoryItems, err := s.inventoryItemRepository.GetByManySkuIdsAndInventoryId(ctx, skusIds, inventoryOrigin.Id)
+	if err != nil {
+		return err
+	}
+	err = s.validateExistsInventoryItem(inventoryItems, skusIds)
+	if err != nil {
+		return err
+	}
+
+	sale := s.createSale(user, customer, inventoryItems, input.Items, input.Payments)
+
+	err = sale.ValidateSale()
+	if err != nil {
+		return err
 	}
 
 	tx, err := s.repository.BeginTx(ctx)
@@ -74,17 +82,6 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 			SkuId:    item.Sku.Id,
 			Quantity: item.Quantity,
 		}
-	}
-
-	err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
-		Type:                   domain.InventoryTransactionTypeOut,
-		InventoryOriginId:      inventoryOrigin.Id,
-		InventoryDestinationId: 0,
-		Skus:                   skusInventoryInput,
-		Justification:          "Vendido em " + time.Now().Format("02/01/2006"),
-	})
-	if err != nil {
-		return err
 	}
 
 	sale.Id, err = s.saleRepository.CreateSale(ctx, tx, sale)
@@ -109,26 +106,37 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 		}
 	}
 
-	return nil
+	err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
+		Type:                   domain.InventoryTransactionTypeOut,
+		InventoryOriginId:      inventoryOrigin.Id,
+		InventoryDestinationId: 0,
+		Skus:                   skusInventoryInput,
+		Sale:                   sale,
+		Justification:          "Vendido em " + time.Now().Format("02/01/2006"),
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
-func (s *salesUseCase) createSale(user domain.User, customer domain.Customer, skus []domain.Sku, itemsInput []DoSaleItemsInput, paymentsInput []DoSalePaymentsInput) domain.Sales {
+func (s *salesUseCase) createSale(user domain.User, customer domain.Customer, inventoryItems []domain.InventoryItem, itemsInput []DoSaleItemsInput, paymentsInput []DoSalePaymentsInput) domain.Sales {
 	items := make([]domain.SalesItem, len(itemsInput))
 	payments := make([]domain.SalesPayment, len(paymentsInput))
 
-	for i, item := range itemsInput {
-		for _, sku := range skus {
-			if sku.Id == item.SkuId {
-				items[i] = domain.NewSalesItem(sku, *sku.Price, item.Quantity)
+	for i, input := range itemsInput {
+		for _, item := range inventoryItems {
+			if item.Sku.Id == input.SkuId {
+				items[i] = domain.NewSalesItem(item.Sku, input.Quantity)
 				continue
 			}
 		}
 	}
 	for i, payment := range paymentsInput {
-		paymentDates := make([]domain.SalesPaymentDates, len(payment.Dates))
-		payments[i] = domain.NewSalesPayment(payment.PaymentType, paymentDates)
+		payments[i] = domain.NewSalesPayment(payment.PaymentType)
 		for _, date := range payment.Dates {
-			payments[i].AppendNewSalesDate(date.DueDate, date.PaidDate, date.InstallmentNumber, date.InstallmentValue)
+			payments[i].AppendNewSalesDate(date.DueDate, date.InstallmentNumber, date.InstallmentValue)
 		}
 	}
 	return domain.NewSales(time.Now(), user, customer, items, payments)
@@ -142,22 +150,44 @@ func (s *salesUseCase) detachIds(items []DoSaleItemsInput) []int64 {
 	return skuIds
 }
 
-func (s *salesUseCase) validateSale(sale domain.Sales) error {
-	if !sale.IsPaymentValuesMatchTotalValue() {
-		return ErrPaymentValuesNotMatchTotalValue
+func (s *salesUseCase) validateExistsInventoryItem(inventoryItems []domain.InventoryItem, skusIds []int64) error {
+	// Cria um mapa para marcar os SKUs encontrados
+	found := make(map[int64]bool)
+	for _, item := range inventoryItems {
+		found[item.Sku.Id] = true
 	}
-	for _, item := range sale.Items {
-		if !item.IsQuantityValid() {
-			return errors.New(ErrQuantityNotValid.Error() + fmt.Sprintf(": (%d) %s", item.Sku.Id, item.Sku.GetName()))
+
+	// Verifica se todos os IDs enviados pelo usuário estão no mapa
+	for _, id := range skusIds {
+		if !found[id] {
+			return errors.New(ErrSkusNotFound.Error() + fmt.Sprintf(": %v", id))
 		}
 	}
-	for _, payment := range sale.Payments {
-		if !payment.IsPaymentDatesOrderValid() {
-			return ErrPaymentDatesOrderInvalid
+	return nil
+}
+
+func (s *salesUseCase) validateDuplicatedSkus(skus []domain.Sku, skusIds []int64) error {
+	seen := make(map[int64]bool)
+	duplicates := []int64{}
+
+	for _, id := range skusIds {
+		if seen[id] {
+			duplicates = append(duplicates, id)
+		} else {
+			seen[id] = true
 		}
-		if !payment.IsPaymentDatesGraterThanToday() {
-			return ErrPaymentDatesPast
+	}
+
+	if len(duplicates) > 0 {
+		errMEssage := domain.ErrSkusDuplicated.Error() + ":"
+		for _, id := range duplicates {
+			for _, sku := range skus {
+				if sku.Id == id {
+					errMEssage = errMEssage + fmt.Sprintf("- (%s) %s | ", sku.Code, sku.GetName())
+				}
+			}
 		}
+		return errors.New(errMEssage)
 	}
 	return nil
 }

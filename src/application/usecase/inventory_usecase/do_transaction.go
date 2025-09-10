@@ -68,24 +68,12 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input 
 		return err
 	}
 
-	if tx == nil {
-		tx, err = s.repository.BeginTx(ctx)
-		if err != nil {
-			return err
-		}
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
 	inventoryItemIn, err = s.createInventoryItemInIfNotExists(ctx, tx, skus, inventoryItemIn, domain.InventoryTransactionType(input.Type), inventoryIn)
 	if err != nil {
 		return err
 	}
 
-	err = s.createTransactions(ctx, tx, inventoryItemOut, inventoryItemIn, inventoryOut, inventoryIn, skus, input.Type, input.Justification)
+	err = s.createTransactions(ctx, tx, inventoryItemOut, inventoryItemIn, inventoryOut, inventoryIn, skus, input.Type, input.Justification, input.Sale)
 	if err != nil {
 		return err
 	}
@@ -108,7 +96,7 @@ func (s *inventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input 
 		}
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 func (s *inventoryUseCase) detachIds(skusInput []DoTransactionSkusInput) []int64 {
@@ -121,14 +109,14 @@ func (s *inventoryUseCase) detachIds(skusInput []DoTransactionSkusInput) []int64
 
 func (s *inventoryUseCase) findInventoryItem(inventoryItems []domain.InventoryItem, skuId int64) *domain.InventoryItem {
 	for _, inventoryItem := range inventoryItems {
-		if inventoryItem.SkuId == skuId {
+		if inventoryItem.Sku.Id == skuId {
 			return &inventoryItem
 		}
 	}
 	return nil
 }
 
-func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemsOut []domain.InventoryItem, inventoryItemsIn []domain.InventoryItem, inventoryOut domain.Inventory, inventoryIn domain.Inventory, inputSkus []domain.Sku, transactionType domain.InventoryTransactionType, justification string) error {
+func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, inventoryItemsOut []domain.InventoryItem, inventoryItemsIn []domain.InventoryItem, inventoryOut domain.Inventory, inventoryIn domain.Inventory, inputSkus []domain.Sku, transactionType domain.InventoryTransactionType, justification string, sale domain.Sales) error {
 	for _, inputSku := range inputSkus {
 		findedInventoryItemOut := s.findInventoryItem(inventoryItemsOut, inputSku.Id)
 		findedInventoryItemIn := s.findInventoryItem(inventoryItemsIn, inputSku.Id)
@@ -140,6 +128,7 @@ func (s *inventoryUseCase) createTransactions(ctx context.Context, tx *sql.Tx, i
 			InventoryIn:   inventoryIn,
 			Justification: justification,
 			Type:          transactionType,
+			Sale:          sale,
 		}
 		if transactionType == domain.InventoryTransactionTypeTransfer || transactionType == domain.InventoryTransactionTypeOut {
 			transaction.InventoryItem = *findedInventoryItemOut
@@ -159,11 +148,7 @@ func (s *inventoryUseCase) createInventoryItemInIfNotExists(ctx context.Context,
 	for _, inputSku := range inputSku {
 		if s.findInventoryItem(inventoriesItemIn, inputSku.Id) == nil {
 			if transactionType == domain.InventoryTransactionTypeIn || transactionType == domain.InventoryTransactionTypeTransfer {
-				insertInventoryItem := domain.InventoryItem{
-					InventoryId: inventoryIn.Id,
-					SkuId:       inputSku.Id,
-					Quantity:    0,
-				}
+				insertInventoryItem := domain.NewInventoryItem(inventoryIn.Id, domain.Sku{Id: inputSku.Id}, 0)
 				inventoryItemId, err := s.inventoryItemRepository.Create(ctx, tx, insertInventoryItem)
 				if err != nil {
 					return []domain.InventoryItem{}, err
@@ -213,7 +198,7 @@ func (s *inventoryUseCase) validateExistingInventoryItemOut(inventoryItemOut []d
 func (s *inventoryUseCase) validateIInventotyItemOutQuantities(inventoryItemOut []domain.InventoryItem, skusInput []domain.Sku) error {
 	for _, sku := range skusInput {
 		for _, inventoryItem := range inventoryItemOut {
-			if inventoryItem.SkuId == sku.Id {
+			if inventoryItem.Sku.Id == sku.Id {
 				if sku.Quantity > inventoryItem.Quantity {
 					return errors.New(ErrQuantityInsufficient.Error() + fmt.Sprintf(": (%d) %s", sku.Id, sku.GetName()))
 				}

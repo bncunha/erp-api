@@ -1,10 +1,27 @@
 package domain
 
-import "time"
+import (
+	"errors"
+	"fmt"
+	"sort"
+	"time"
+)
 
 type PaymentType string
 
 type PaymentStatus string
+
+var (
+	ErrPaymentValueIsMissing       = errors.New("Valor de pagamento insuficiente para o valor da compra")
+	ErrQuantityNotValid            = errors.New("Não há quantidade suficiente no estoque")
+	ErrPaymentValueIsOverTotal     = errors.New("Valor de pagamento excede o valor total da compra")
+	ErrPaymentDatesPast            = errors.New("As datas de pagamento devem ser maiores que a data atual")
+	ErrPaymentDatesOrderInvalid    = errors.New("As datas de pagamento devem ser ordenadas")
+	ErrPaymentDatesQuantityInvalid = errors.New("Pagamento em dinheiro, PIX ou débito deve ter apenas uma data de pagamento")
+	ErrSkusDuplicated              = errors.New("SKUs duplicados encontrados")
+	ErrPaymentTypesDuplicated      = errors.New("Tipos de pagamento duplicados encontrados. Remova os tipos de pagamento duplicados")
+	ErrPaymentDatesDuplicated      = errors.New("As datas de pagamento devem ser diferentes")
+)
 
 const (
 	PaymentTypeCash        PaymentType = "CASH"
@@ -39,40 +56,81 @@ func NewSales(date time.Time, user User, customer Customer, items []SalesItem, p
 	}
 }
 
-func (s *Sales) IsPaymentValuesMatchTotalValue() bool {
-	totalPrice := s.GetTotal()
-	for _, payment := range s.Payments {
-		for _, date := range payment.Dates {
-			totalPrice -= date.InstallmentValue * float64(date.InstallmentNumber)
+func (s *Sales) ValidateSale() error {
+	missingValue := s.getMissingValue()
+	if missingValue > 0 {
+		return errors.New(ErrPaymentValueIsMissing.Error() + fmt.Sprintf(": R$ %.2f", missingValue))
+	} else if missingValue < 0 {
+		return errors.New(ErrPaymentValueIsOverTotal.Error() + fmt.Sprintf(": R$ %.2f", missingValue))
+	}
+	if s.isPaymentTypesDuplicated() {
+		return ErrPaymentTypesDuplicated
+	}
+	for _, item := range s.Items {
+		if !item.isQuantityValid() {
+			return errors.New(ErrQuantityNotValid.Error() + fmt.Sprintf(": (%d) %s", item.Sku.Id, item.Sku.GetName()))
 		}
 	}
-	return totalPrice == 0
+	for _, payment := range s.Payments {
+		if !payment.isPaymentDatesOrderValid() {
+			return ErrPaymentDatesOrderInvalid
+		}
+		if payment.isPaymentDatesDuplicated() {
+			return errors.New(ErrPaymentDatesDuplicated.Error() + fmt.Sprintf(": (%s)", payment.PaymentType))
+		}
+		if !payment.isPaymentDatesGraterThanToday() {
+			return ErrPaymentDatesPast
+		}
+		if !payment.isPaymentDatesQuantityValid() {
+			return ErrPaymentDatesQuantityInvalid
+		}
+	}
+	return nil
+}
+
+func (s *Sales) getMissingValue() float64 {
+	missingValue := s.GetTotal()
+	for _, payment := range s.Payments {
+		for _, date := range payment.Dates {
+			missingValue -= date.InstallmentValue
+		}
+	}
+	return missingValue
 }
 
 func (s *Sales) GetTotal() float64 {
 	var total float64
 	for _, item := range s.Items {
-		total += item.UnitPrice * item.Quantity
+		total += item.Sku.Price * item.Quantity
 	}
 	return total
 }
 
-type SalesItem struct {
-	Sku       Sku
-	UnitPrice float64
-	Quantity  float64
+func (s *Sales) isPaymentTypesDuplicated() bool {
+	paymentTypes := make(map[PaymentType]bool)
+	for _, payment := range s.Payments {
+		if paymentTypes[payment.PaymentType] {
+			return true
+		}
+		paymentTypes[payment.PaymentType] = true
+	}
+	return false
 }
 
-func NewSalesItem(sku Sku, unitPrice float64, quantity float64) SalesItem {
+type SalesItem struct {
+	Sku      Sku
+	Quantity float64
+}
+
+func NewSalesItem(sku Sku, quantity float64) SalesItem {
 	return SalesItem{
-		Sku:       sku,
-		UnitPrice: unitPrice,
-		Quantity:  quantity,
+		Sku:      sku,
+		Quantity: quantity,
 	}
 }
 
-func (s *SalesItem) IsQuantityValid() bool {
-	return s.Quantity >= s.Sku.Quantity-s.Quantity
+func (s *SalesItem) isQuantityValid() bool {
+	return s.Sku.Quantity-s.Quantity >= 0
 }
 
 type SalesPayment struct {
@@ -81,31 +139,43 @@ type SalesPayment struct {
 	Dates       []SalesPaymentDates
 }
 
-func NewSalesPayment(paymentType PaymentType, dates []SalesPaymentDates) SalesPayment {
+func NewSalesPayment(paymentType PaymentType) SalesPayment {
 	return SalesPayment{
 		PaymentType: paymentType,
-		Dates:       dates,
+		Dates:       make([]SalesPaymentDates, 0),
 	}
 }
 
-func (s *SalesPayment) IsInstallmentPayment() bool {
+func (s *SalesPayment) isInstallmentPayment() bool {
 	return s.PaymentType == PaymentTypeCreditStore || s.PaymentType == PaymentTypeCreditCard
 }
 
-func (s *SalesPayment) IsOnCashPayment() bool {
+func (s *SalesPayment) isOnCashPayment() bool {
 	return s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix || s.PaymentType == PaymentTypeDebitCard
 }
 
-func (s *SalesPayment) IsPaymentDatesGraterThanToday() bool {
+func (s *SalesPayment) isPaymentDatesQuantityValid() bool {
+	datesQuantity := len(s.Dates)
+	if s.isOnCashPayment() && datesQuantity != 1 {
+		return false
+	}
+	return true
+}
+
+func (s *SalesPayment) isPaymentDatesGraterThanToday() bool {
 	for _, date := range s.Dates {
-		if time.Now().After(date.DueDate) {
+		if time.Now().Truncate(time.Minute).After(date.DueDate) {
 			return false
 		}
 	}
 	return true
 }
 
-func (s *SalesPayment) IsPaymentDatesOrderValid() bool {
+func (s *SalesPayment) isPaymentDatesOrderValid() bool {
+	sort.Slice(s.Dates, func(i, j int) bool {
+		return s.Dates[i].DueDate.Before(s.Dates[j].DueDate)
+	})
+
 	for i := 1; i < len(s.Dates); i++ {
 		if !s.Dates[i].DueDate.After(s.Dates[i-1].DueDate) {
 			return false
@@ -114,11 +184,25 @@ func (s *SalesPayment) IsPaymentDatesOrderValid() bool {
 	return true
 }
 
-func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, paidDate time.Time, installmentNumber int, installmentValue float64) {
-	newDate := NewSalesPaymentDates(dueDate, paidDate, installmentNumber, installmentValue, "")
-	if s.IsInstallmentPayment() {
+func (s *SalesPayment) isPaymentDatesDuplicated() bool {
+	paymentDates := make(map[SalesPaymentDates]bool)
+	for _, date := range s.Dates {
+		if paymentDates[date] {
+			return true
+		}
+		paymentDates[date] = true
+	}
+	return false
+}
+
+func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64) {
+	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
+	if s.isInstallmentPayment() {
 		newDate.Status = PaymentStatusPending
-	} else if s.IsOnCashPayment() {
+	} else if s.isOnCashPayment() {
+		paidDate := time.Now()
+		newDate.DueDate = paidDate
+		newDate.PaidDate = &paidDate
 		newDate.Status = PaymentStatusPaid
 	}
 	s.Dates = append(s.Dates, newDate)
@@ -127,13 +211,13 @@ func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, paidDate time.Time,
 
 type SalesPaymentDates struct {
 	DueDate           time.Time
-	PaidDate          time.Time
+	PaidDate          *time.Time
 	InstallmentNumber int
 	InstallmentValue  float64
 	Status            PaymentStatus
 }
 
-func NewSalesPaymentDates(dueDate time.Time, paidDate time.Time, installmentNumber int, installmentValue float64, status PaymentStatus) SalesPaymentDates {
+func NewSalesPaymentDates(dueDate time.Time, paidDate *time.Time, installmentNumber int, installmentValue float64, status PaymentStatus) SalesPaymentDates {
 	return SalesPaymentDates{
 		DueDate:           dueDate,
 		PaidDate:          paidDate,

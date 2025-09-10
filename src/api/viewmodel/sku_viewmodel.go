@@ -23,7 +23,7 @@ func ToSkuViewModel(sku domain.Sku) SkuViewModel {
 		Color:    sku.Color,
 		Size:     sku.Size,
 		Cost:     sku.Cost,
-		Price:    sku.Price,
+		Price:    &sku.Price,
 		Quantity: sku.Quantity,
 	}
 }

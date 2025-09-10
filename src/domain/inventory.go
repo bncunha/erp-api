@@ -30,9 +30,17 @@ type Inventory struct {
 type InventoryItem struct {
 	Id          int64
 	InventoryId int64
-	SkuId       int64
+	Sku         Sku
 	Quantity    float64
 	TenantId    int64
+}
+
+func NewInventoryItem(inventoryId int64, sku Sku, quantity float64) InventoryItem {
+	return InventoryItem{
+		InventoryId: inventoryId,
+		Sku:         sku,
+		Quantity:    quantity,
+	}
 }
 
 type InventoryTransaction struct {
@@ -43,6 +51,7 @@ type InventoryTransaction struct {
 	InventoryIn   Inventory
 	InventoryOut  Inventory
 	InventoryItem InventoryItem
+	Sale          Sales
 	TenantId      int64
 	Justification string
 }

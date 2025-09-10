@@ -12,13 +12,14 @@ type SalesUseCase interface {
 }
 
 type salesUseCase struct {
-	userRepository      repository.UserRepository
-	customerRepository  repository.CustomerRepository
-	skuRepository       repository.SkuRepository
-	saleRepository      repository.SalesRepository
-	inventoryUseCase    inventory_usecase.InventoryUseCase
-	inventoryRepository repository.InventoryRepository
-	repository          *repository.Repository
+	userRepository          repository.UserRepository
+	customerRepository      repository.CustomerRepository
+	skuRepository           repository.SkuRepository
+	saleRepository          repository.SalesRepository
+	inventoryUseCase        inventory_usecase.InventoryUseCase
+	inventoryRepository     repository.InventoryRepository
+	inventoryItemRepository repository.InventoryItemRepository
+	repository              *repository.Repository
 }
 
 func NewSalesUseCase(userRepository repository.UserRepository,
@@ -27,14 +28,16 @@ func NewSalesUseCase(userRepository repository.UserRepository,
 	saleRepository repository.SalesRepository,
 	inventoryUseCase inventory_usecase.InventoryUseCase,
 	inventoryRepository repository.InventoryRepository,
+	inventoryItemRepository repository.InventoryItemRepository,
 	repository *repository.Repository) SalesUseCase {
 	return &salesUseCase{
-		userRepository:      userRepository,
-		customerRepository:  customerRepository,
-		skuRepository:       skuRepository,
-		saleRepository:      saleRepository,
-		inventoryUseCase:    inventoryUseCase,
-		inventoryRepository: inventoryRepository,
-		repository:          repository,
+		userRepository:          userRepository,
+		customerRepository:      customerRepository,
+		skuRepository:           skuRepository,
+		saleRepository:          saleRepository,
+		inventoryUseCase:        inventoryUseCase,
+		inventoryRepository:     inventoryRepository,
+		repository:              repository,
+		inventoryItemRepository: inventoryItemRepository,
 	}
 }

@@ -15,6 +15,7 @@ var (
 	ErrInventoryesTransferEquais        = errors.New("Inventários de origem e de destino precisam ser diferentes")
 	ErrInventoryItemNotFound            = errors.New("Item de estoque não encontrado")
 	ErrSkusNotFound                     = errors.New("SKUs não encontrados")
+	ErrSkusDuplicated                   = errors.New("SKUs duplicados encontrados")
 )
 
 type InventoryUseCase interface {

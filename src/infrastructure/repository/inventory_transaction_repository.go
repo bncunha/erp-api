@@ -28,6 +28,7 @@ func (r *inventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx,
 	var insertedID int64
 	var nullableInventoryInId *int64
 	var nullableInventoryOutId *int64
+	var nullableSaleId *int64
 
 	if transaction.InventoryIn.Id != 0 {
 		nullableInventoryInId = &transaction.InventoryIn.Id
@@ -37,8 +38,12 @@ func (r *inventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx,
 		nullableInventoryOutId = &transaction.InventoryOut.Id
 	}
 
-	query := `INSERT INTO inventory_transactions (quantity, type, date, inventory_out_id, inventory_in_id, inventory_item_id, tenant_id, justification) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	err := tx.QueryRowContext(ctx, query, transaction.Quantity, transaction.Type, transaction.Date, nullableInventoryOutId, nullableInventoryInId, transaction.InventoryItem.Id, tenantId, transaction.Justification).Scan(&insertedID)
+	if transaction.Sale.Id != 0 {
+		nullableSaleId = &transaction.Sale.Id
+	}
+
+	query := `INSERT INTO inventory_transactions (quantity, type, date, inventory_out_id, inventory_in_id, inventory_item_id, tenant_id, justification, sales_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+	err := tx.QueryRowContext(ctx, query, transaction.Quantity, transaction.Type, transaction.Date, nullableInventoryOutId, nullableInventoryInId, transaction.InventoryItem.Id, tenantId, transaction.Justification, nullableSaleId).Scan(&insertedID)
 	return insertedID, err
 }
 
@@ -46,7 +51,22 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventoryTransactions []output.GetInventoryTransactionsOutput
 
-	query := `SELECT inv_transactions.id, inv_transactions.date, inv_transactions.type, inv_transactions.quantity, sku.code, sku.color, sku.size, p.name, inventory_origin.type, inventory_destination.type, user_origin.name, user_destination.name, inv_transactions.justification
+	query := `SELECT 
+	inv_transactions.id,
+	inv_transactions.date, 
+	inv_transactions.type, 
+	inv_transactions.quantity, 
+	sku.code, 
+	sku.color, 
+	sku.size, 
+	p.name, 
+	inventory_origin.type, 
+	inventory_destination.type, 
+	user_origin.name, 
+	user_destination.name, 
+	inv_transactions.justification,
+	s.id,
+	s.date,
 	FROM inventory_transactions inv_transactions
 	INNER JOIN inventory_items inv_items ON inv_transactions.inventory_item_id = inv_items.id
 	INNER JOIN skus sku ON sku.id = inv_items.sku_id
@@ -55,6 +75,7 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	LEFT JOIN inventories inventory_destination ON inventory_destination.id = inv_transactions.inventory_in_id
 	LEFT JOIN users user_origin ON user_origin.id = inventory_origin.user_id
 	LEFT JOIN users user_destination ON user_destination.id = inventory_destination.user_id
+	LEFT JOIN sales s ON s.id = inv_transactions.sales_id
 	WHERE inv_transactions.tenant_id = $1 AND inv_transactions.deleted_at IS NULL ORDER BY inv_transactions.date DESC`
 	rows, err := r.db.QueryContext(ctx, query, tenantId)
 	if err != nil {
@@ -65,7 +86,7 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	for rows.Next() {
 		var inventoryTransaction output.GetInventoryTransactionsOutput
 
-		err = rows.Scan(&inventoryTransaction.Id, &inventoryTransaction.Date, &inventoryTransaction.Type, &inventoryTransaction.Quantity, &inventoryTransaction.SkuCode, &inventoryTransaction.SkuColor, &inventoryTransaction.SkuSize, &inventoryTransaction.ProductName, &inventoryTransaction.InventoryOriginType, &inventoryTransaction.InventoryDestinationType, &inventoryTransaction.UserOriginName, &inventoryTransaction.UserDestinationName, &inventoryTransaction.Justification)
+		err = rows.Scan(&inventoryTransaction.Id, &inventoryTransaction.Date, &inventoryTransaction.Type, &inventoryTransaction.Quantity, &inventoryTransaction.SkuCode, &inventoryTransaction.SkuColor, &inventoryTransaction.SkuSize, &inventoryTransaction.ProductName, &inventoryTransaction.InventoryOriginType, &inventoryTransaction.InventoryDestinationType, &inventoryTransaction.UserOriginName, &inventoryTransaction.UserDestinationName, &inventoryTransaction.Justification, &inventoryTransaction.Sale.Id, &inventoryTransaction.Sale.Date)
 		if err != nil {
 			return inventoryTransactions, err
 		}

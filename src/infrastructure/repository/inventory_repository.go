@@ -106,7 +106,7 @@ func (r *inventoryRepository) GetByUserId(ctx context.Context, userId int64) (do
 func (r *inventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.Inventory, error) {
 	var inventory domain.Inventory
 
-	query := `SELECT i.id, u.id, u.name, i.tenant_id, i.type
+	query := `SELECT i.id, i.tenant_id, i.type
 	FROM inventories i
 	WHERE i.deleted_at IS NULL AND i.tenant_id = $1 AND i.type = $2 ORDER BY i.id ASC`
 	err := r.db.QueryRowContext(ctx, query, ctx.Value(constants.TENANT_KEY), domain.InventoryTypePrimary).Scan(&inventory.Id, &inventory.TenantId, &inventory.Type)

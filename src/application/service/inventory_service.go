@@ -23,10 +23,11 @@ type inventoryService struct {
 	inventoryItemRepository  repository.InventoryItemRepository
 	inventoryTransactionRepo repository.InventoryTransactionRepository
 	inventoryRepository      repository.InventoryRepository
+	repository               *repository.Repository
 }
 
-func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, inventoryRepository repository.InventoryRepository) InventoryService {
-	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo, inventoryRepository}
+func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, inventoryRepository repository.InventoryRepository, repository *repository.Repository) InventoryService {
+	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo, inventoryRepository, repository}
 }
 
 func (s *inventoryService) DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error {
@@ -43,13 +44,27 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 		})
 	}
 
-	return s.inventoryUseCase.DoTransaction(ctx, nil, inventory_usecase.DoTransactionInput{
+	tx, err := s.repository.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
 		Type:                   domain.InventoryTransactionType(request.Type),
 		InventoryOriginId:      request.InventoryOriginId,
 		InventoryDestinationId: request.InventoryDestinationId,
 		Justification:          request.Justification,
 		Skus:                   inputSkus,
 	})
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *inventoryService) GetAllInventoryItems(ctx context.Context) ([]output.GetInventoryItemsOutput, error) {

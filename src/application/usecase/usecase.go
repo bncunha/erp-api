@@ -25,6 +25,7 @@ func (s *ApplicationUseCase) SetupUseCases() {
 		s.repositories.SalesRepository,
 		s.InventoryUseCase,
 		s.repositories.InventoryRepository,
+		s.repositories.InventoryItemRepository,
 		s.repositories,
 	)
 }

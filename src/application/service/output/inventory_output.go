@@ -29,6 +29,7 @@ type GetInventoryTransactionsOutput struct {
 	ProductName              string
 	InventoryOriginType      *domain.InventoryType
 	InventoryDestinationType *domain.InventoryType
+	Sale                     *domain.Sales
 	UserOriginName           *string
 	UserDestinationName      *string
 	Justification            *string

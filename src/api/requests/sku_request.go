@@ -10,7 +10,7 @@ type CreateSkuRequest struct {
 	Color         string   `json:"color" validate:"max=200"`
 	Size          string   `json:"size" validate:"max=200"`
 	Cost          *float64 `json:"cost" validate:"omitempty,gt=0"`
-	Price         *float64 `json:"price" validate:"omitempty,gt=0"`
+	Price         float64  `json:"price" validate:"omitempty,gt=0"`
 	Quantity      *float64 `json:"quantity" validate:"omitempty,gt=0"`
 	DestinationId *int64   `json:"destination_id" validate:"omitempty,gt=0"`
 }

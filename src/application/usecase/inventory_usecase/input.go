@@ -8,6 +8,7 @@ type DoTransactionInput struct {
 	InventoryOriginId      int64
 	InventoryDestinationId int64
 	Justification          string
+	Sale                   domain.Sales
 }
 
 type DoTransactionSkusInput struct {
