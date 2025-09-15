@@ -35,6 +35,7 @@ const (
 	PaymentStatusPaid    PaymentStatus = "PAID"
 	PaymentStatusCancel  PaymentStatus = "CANCEL"
 	PaymentStatusPending PaymentStatus = "PENDING"
+	PaymentStatusDelayed PaymentStatus = "DELAYED"
 )
 
 type Sales struct {
@@ -118,8 +119,9 @@ func (s *Sales) isPaymentTypesDuplicated() bool {
 }
 
 type SalesItem struct {
-	Sku      Sku
-	Quantity float64
+	Sku       Sku
+	Quantity  float64
+	UnitPrice float64
 }
 
 func NewSalesItem(sku Sku, quantity float64) SalesItem {

@@ -30,7 +30,7 @@ func (r *Repository) SetupRepositories() {
 	r.InventoryRepository = NewInventoryRepository(r.db)
 	r.InventoryItemRepository = NewInventoryItemRepository(r.db)
 	r.InventoryTransactionRepository = NewInventoryTransactionRepository(r.db, r.InventoryItemRepository)
-	r.SalesRepository = NewSalesRepository()
+	r.SalesRepository = NewSalesRepository(r.db)
 	r.CustomerRepository = NewCustomerRepository(r.db)
 }
 

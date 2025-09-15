@@ -28,5 +28,5 @@ func (s *ApplicationService) SetupServices() {
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
-	s.SalesService = NewSalesService(s.useCases.SalesUsecase)
+	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
 }
