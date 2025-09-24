@@ -72,3 +72,14 @@ func (c *SalesController) GetAll(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, viewmodel.ToSalesViewModel(sales))
 }
+
+func (c *SalesController) GetById(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	saleOutput, paymentGroupOutput, itemsOutput, err := c.salesService.GetById(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, viewmodel.ToSaleByIdViewModel(saleOutput, paymentGroupOutput, itemsOutput))
+}

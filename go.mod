@@ -22,6 +22,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/newrelic/go-agent/v3/integrations/nrecho-v4 v1.1.5 // indirect
 	github.com/newrelic/go-agent/v3/integrations/nrlogrus v1.0.3 // indirect
+	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/segmentio/ksuid"
 )
 
 type PaymentType string
@@ -40,6 +42,7 @@ const (
 
 type Sales struct {
 	Id       int64
+	Code     string
 	Date     time.Time
 	User     User
 	Customer Customer
@@ -49,6 +52,7 @@ type Sales struct {
 
 func NewSales(date time.Time, user User, customer Customer, items []SalesItem, payments []SalesPayment) Sales {
 	return Sales{
+		Code:     "V-" + ksuid.New().String(),
 		Date:     date,
 		User:     user,
 		Customer: customer,

@@ -21,6 +21,7 @@ var (
 type SalesService interface {
 	CreateSales(ctx context.Context, request request.CreateSaleRequest) error
 	GetSales(ctx context.Context, request request.ListSalesRequest) (output output.GetSalesOutput, err error)
+	GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, err error)
 }
 
 type salesService struct {
@@ -105,4 +106,47 @@ func (s *salesService) GetSales(ctx context.Context, request request.ListSalesRe
 
 	output.Sales = sales
 	return output, nil
+}
+
+func (s *salesService) GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, err error) {
+	saleOutput, err = s.salesRepository.GetSaleById(ctx, id)
+	if err != nil {
+		return saleOutput, paymentGroupOutput, itemsOutput, err
+	}
+
+	paymentOutput, err := s.salesRepository.GetPaymentsBySaleId(ctx, id)
+	if err != nil {
+		return saleOutput, paymentGroupOutput, itemsOutput, err
+	}
+	paymentGroupOutput = s.groupPaymentsByPaymentType(paymentOutput)
+
+	itemsOutput, err = s.salesRepository.GetItemsBySaleId(ctx, id)
+	if err != nil {
+		return saleOutput, paymentGroupOutput, itemsOutput, err
+	}
+
+	return saleOutput, paymentGroupOutput, itemsOutput, err
+}
+
+func (s *salesService) groupPaymentsByPaymentType(payments []output.GetSalesPaymentOutput) []output.GetSalesPaymentGroupOutput {
+	items := make([]output.GetSalesPaymentGroupOutput, 0)
+
+	for _, payment := range payments {
+		found := false
+		for i, item := range items {
+			if item.PaymentType == payment.PaymentType {
+				items[i].Installments = append(items[i].Installments, payment)
+				found = true
+				break
+			}
+		}
+		if !found {
+			items = append(items, output.GetSalesPaymentGroupOutput{
+				PaymentType:  payment.PaymentType,
+				Installments: []output.GetSalesPaymentOutput{payment},
+			})
+		}
+	}
+
+	return items
 }

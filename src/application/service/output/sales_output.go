@@ -1,6 +1,10 @@
 package output
 
-import "github.com/bncunha/erp-api/src/domain"
+import (
+	"time"
+
+	"github.com/bncunha/erp-api/src/domain"
+)
 
 type GetSalesOutput struct {
 	Sales []GetSalesItemOutput
@@ -46,4 +50,53 @@ type GetSalesItemOutput struct {
 	TotalValue   float64
 	TotalItems   float64
 	Status       domain.PaymentStatus
+}
+
+type GetSaleByIdOutput struct {
+	Id            int
+	Code          string
+	Date          time.Time
+	TotalValue    float64
+	SellerName    string
+	CustomerName  string
+	ReceivedValue float64
+	FutureRevenue float64
+	PaymentStatus domain.PaymentStatus
+}
+
+type GetSaleByIdPayment struct {
+	InstallmentNumber int64
+	DueDate           time.Time
+	PaidDate          time.Time
+	PaymentStatus     domain.PaymentStatus
+	PaymentType       domain.PaymentType
+}
+
+type GetSaleByIdItem struct {
+	Code        string
+	Description string
+	Quantity    float64
+	UnitPrice   float64
+	TotalValue  float64
+}
+
+type GetSalesPaymentOutput struct {
+	InstallmentNumber int64
+	InstallmentValue  float64
+	DueDate           time.Time
+	PaidDate          *time.Time
+	PaymentStatus     domain.PaymentStatus
+	PaymentType       domain.PaymentType
+}
+
+type GetSalesPaymentGroupOutput struct {
+	PaymentType  domain.PaymentType
+	Installments []GetSalesPaymentOutput
+}
+
+type GetItemsOutput struct {
+	Sku        domain.Sku
+	Quantity   float64
+	UnitPrice  float64
+	TotalValue float64
 }

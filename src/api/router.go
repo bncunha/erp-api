@@ -98,6 +98,7 @@ func (r *router) setupPrivateRoutes() {
 	salesGroup := private.Group("/sales")
 	salesGroup.POST("", r.controller.SalesController.Create)
 	salesGroup.GET("", r.controller.SalesController.GetAll)
+	salesGroup.GET("/:id", r.controller.SalesController.GetById)
 }
 
 func (r *router) Start() {

@@ -60,3 +60,5 @@ CREATE TABLE payment_dates (
 ALTER TABLE inventory_transactions ADD COLUMN sales_id BIGINT NULL;
 ALTER TABLE inventory_transactions ADD CONSTRAINT InventoryTransactions_sales_id_fkey FOREIGN KEY (sales_id) REFERENCES sales(id);
 ALTER TABLE skus ALTER COLUMN price SET NOT NULL;
+
+ALTER TABLE sales ADD COLUMN code VARCHAR(50) NOT NULL DEFAULT CONCAT('V-', NOW());

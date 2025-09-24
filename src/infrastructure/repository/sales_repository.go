@@ -18,6 +18,9 @@ type SalesRepository interface {
 	CreatePayment(ctx context.Context, tx *sql.Tx, sale domain.Sales, payment domain.SalesPayment) (int64, error)
 	CreateManyPaymentDates(ctx context.Context, tx *sql.Tx, payment domain.SalesPayment, paymentDates []domain.SalesPaymentDates) ([]int64, error)
 	GetSales(ctx context.Context, input input.GetSalesInput) ([]output.GetSalesItemOutput, error)
+	GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error)
+	GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error)
+	GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error)
 }
 
 type salesRepository struct {
@@ -31,8 +34,8 @@ func NewSalesRepository(db *sql.DB) SalesRepository {
 func (r *salesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale domain.Sales) (int64, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var insertedId int64
-	query := `INSERT INTO sales (date, user_id, customer_id, tenant_id) VALUES ($1, $2, $3, $4) RETURNING id`
-	err := tx.QueryRowContext(ctx, query, sale.Date, sale.User.Id, sale.Customer.Id, tenantId).Scan(&insertedId)
+	query := `INSERT INTO sales (date, user_id, customer_id, tenant_id, code) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := tx.QueryRowContext(ctx, query, sale.Date, sale.User.Id, sale.Customer.Id, tenantId, sale.Code).Scan(&insertedId)
 	if err != nil {
 		return insertedId, err
 	}
@@ -203,4 +206,127 @@ ORDER BY s.date DESC, s.id DESC;
 		sales = append(sales, sale)
 	}
 	return sales, nil
+}
+
+func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var output output.GetSaleByIdOutput
+
+	query := `
+	SELECT
+  s.id,
+  s.code,
+  s.date,
+  u.name AS seller_name,
+  c.name AS customer_name,
+
+  /* totais */
+  COALESCE(SUM(pd.installment_value), 0) AS total_value,
+  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
+  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
+
+  /* status agregado da venda */
+  CASE
+    WHEN COUNT(pd.id) > 0
+         AND COUNT(pd.id) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID')
+      THEN 'PAID'
+    WHEN COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
+      THEN 'DELAYED'
+    ELSE 'IN_DAY'
+  END AS payment_status
+
+FROM sales s
+JOIN users u
+  ON u.id = s.user_id
+ AND u.tenant_id = s.tenant_id
+JOIN customers c
+  ON c.id = s.customer_id
+ AND c.tenant_id = s.tenant_id
+LEFT JOIN payments p
+  ON p.sales_id = s.id
+ AND p.tenant_id = s.tenant_id
+LEFT JOIN payment_dates pd
+  ON pd.payment_id = p.id
+ AND pd.tenant_id = s.tenant_id
+
+WHERE s.id = $1
+  AND s.tenant_id = $2
+
+GROUP BY
+  s.id, s.code, s.date, u.name, c.name;
+
+	`
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&output.Id, &output.Code, &output.Date, &output.SellerName, &output.CustomerName, &output.TotalValue, &output.ReceivedValue, &output.FutureRevenue, &output.PaymentStatus)
+	if err != nil {
+		return output, err
+	}
+	return output, nil
+}
+
+func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var o []output.GetSalesPaymentOutput
+
+	query := `
+	SELECT 
+		pd.installment_number,
+		pd.installment_value,
+		pd.due_date,
+		pd.paid_date,
+		p.payment_type,
+		pd.status
+	FROM payments p
+	JOIN payment_dates pd ON p.id = pd.payment_id
+	WHERE p.sales_id = $1 AND p.tenant_id = $2
+	ORDER BY pd.installment_number ASC;
+	`
+	rows, err := r.db.QueryContext(ctx, query, id, tenantId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var payment output.GetSalesPaymentOutput
+		if err := rows.Scan(&payment.InstallmentNumber, &payment.InstallmentValue, &payment.DueDate, &payment.PaidDate, &payment.PaymentType, &payment.PaymentStatus); err != nil {
+			return nil, err
+		}
+		o = append(o, payment)
+	}
+	return o, nil
+}
+
+func (r *salesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var items []output.GetItemsOutput
+
+	query := `
+	SELECT
+		si.quantity,
+		si.sku_id,
+		s.price,
+		s.id,
+		s.code,
+		s.color,
+		s.size,
+		p.name,
+		p.description
+	FROM sales_items si
+	JOIN skus s ON si.sku_id = s.id
+	JOIN products p ON s.product_id = p.id
+	WHERE si.sales_id = $1 AND si.tenant_id = $2
+	ORDER BY si.sku_id ASC;
+	`
+	rows, err := r.db.QueryContext(ctx, query, id, tenantId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item output.GetItemsOutput
+		if err := rows.Scan(&item.Quantity, &item.Sku.Id, &item.Sku.Price, &item.Sku.Id, &item.Sku.Code, &item.Sku.Color, &item.Sku.Size, &item.Sku.Product.Name, &item.Sku.Product.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
