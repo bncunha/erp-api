@@ -8,6 +8,7 @@ import (
 
 	controller "github.com/bncunha/erp-api/src/api/controllers"
 	"github.com/bncunha/erp-api/src/api/middleware"
+	"github.com/bncunha/erp-api/src/domain"
 	"github.com/labstack/echo/v4"
 )
 
@@ -59,7 +60,7 @@ func (r *router) setupPrivateRoutes() {
 
 	private.Use(middleware.AuthMiddleware)
 
-	productGroup := private.Group("/products")
+	productGroup := private.Group("/products", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	productGroup.POST("", r.controller.ProductController.Create)
 	productGroup.GET("", r.controller.ProductController.GetAll)
 	productGroup.GET("/:id", r.controller.ProductController.GetById)
@@ -68,34 +69,34 @@ func (r *router) setupPrivateRoutes() {
 	productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
 	productGroup.POST("/:id/skus", r.controller.SkuController.Create)
 
-	skuGroup := private.Group("/skus")
+	skuGroup := private.Group("/skus", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	skuGroup.GET("", r.controller.SkuController.GetAll)
 	skuGroup.PUT("/:id", r.controller.SkuController.Edit)
 	skuGroup.GET("/:id", r.controller.SkuController.GetById)
 	skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate)
 
-	categoryGroup := private.Group("/categories")
+	categoryGroup := private.Group("/categories", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	categoryGroup.POST("", r.controller.CategoryController.Create)
 	categoryGroup.GET("", r.controller.CategoryController.GetAll)
 	categoryGroup.GET("/:id", r.controller.CategoryController.GetById)
 	categoryGroup.PUT("/:id", r.controller.CategoryController.Edit)
 	categoryGroup.DELETE("/:id", r.controller.CategoryController.Inactivate)
 
-	userGroup := private.Group("/users")
+	userGroup := private.Group("/users", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	userGroup.POST("", r.controller.UserController.Create)
 	userGroup.GET("", r.controller.UserController.GetAll)
 	userGroup.GET("/:id", r.controller.UserController.GetById)
 	userGroup.PUT("/:id", r.controller.UserController.Edit)
 	userGroup.DELETE("/:id", r.controller.UserController.Inactivate)
 
-	inventoryGroup := private.Group("/inventory")
+	inventoryGroup := private.Group("/inventory", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	inventoryGroup.GET("", r.controller.InventoryController.GetAllInventories)
 	inventoryGroup.GET("/:id/items", r.controller.InventoryController.GetInventoryItemsByInventoryId)
 	inventoryGroup.GET("/items", r.controller.InventoryController.GetAllInventoryItems)
 	inventoryGroup.GET("/transaction", r.controller.InventoryController.GetAllInventoryTransactions)
 	inventoryGroup.POST("/transaction", r.controller.InventoryController.DoTransaction)
 
-	salesGroup := private.Group("/sales")
+	salesGroup := private.Group("/sales", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	salesGroup.POST("", r.controller.SalesController.Create)
 	salesGroup.GET("", r.controller.SalesController.GetAll)
 	salesGroup.GET("/:id", r.controller.SalesController.GetById)
