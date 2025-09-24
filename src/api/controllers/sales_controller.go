@@ -83,3 +83,19 @@ func (c *SalesController) GetById(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, viewmodel.ToSaleByIdViewModel(saleOutput, paymentGroupOutput, itemsOutput))
 }
+
+func (c *SalesController) ChangePaymentStatus(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+	paymentId := helper.ParseInt64(context.Param("payment_id"))
+	var request request.ChangePaymentStatusRequest
+	if err := context.Bind(&request); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	err := c.salesService.ChangePaymentStatus(context.Request().Context(), id, paymentId, request)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
+}

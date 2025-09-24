@@ -83,6 +83,7 @@ type SalePaymentsViewModel struct {
 }
 
 type SalePaymentsItemViewModel struct {
+	Id                int64                `json:"id"`
 	InstallmentNumber int64                `json:"installment_number"`
 	InstallmentValue  float64              `json:"installment_value"`
 	DueDate           time.Time            `json:"due_date"`
@@ -130,6 +131,7 @@ func toSalePaymentsItemViewModel(payments []output.GetSalesPaymentOutput) []Sale
 	paymentsViewModel := make([]SalePaymentsItemViewModel, len(payments))
 	for i, payment := range payments {
 		paymentsViewModel[i] = SalePaymentsItemViewModel{
+			Id:                payment.Id,
 			InstallmentNumber: payment.InstallmentNumber,
 			InstallmentValue:  payment.InstallmentValue,
 			DueDate:           payment.DueDate,

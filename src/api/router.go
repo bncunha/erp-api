@@ -99,6 +99,7 @@ func (r *router) setupPrivateRoutes() {
 	salesGroup.POST("", r.controller.SalesController.Create)
 	salesGroup.GET("", r.controller.SalesController.GetAll)
 	salesGroup.GET("/:id", r.controller.SalesController.GetById)
+	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus)
 }
 
 func (r *router) Start() {

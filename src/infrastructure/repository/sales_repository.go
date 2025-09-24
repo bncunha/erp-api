@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bncunha/erp-api/src/application/constants"
+	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
@@ -21,6 +23,9 @@ type SalesRepository interface {
 	GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error)
 	GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error)
 	GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error)
+	ChangePaymentStatus(ctx context.Context, id int64, status domain.PaymentStatus) (int64, error)
+	ChangePaymentDate(ctx context.Context, id int64, date *time.Time) (int64, error)
+	GetPaymentDatesBySaleIdAndPaymentDateId(ctx context.Context, id int64, paymentDateId int64) (domain.SalesPaymentDates, error)
 }
 
 type salesRepository struct {
@@ -269,6 +274,7 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 
 	query := `
 	SELECT 
+		pd.id,
 		pd.installment_number,
 		pd.installment_value,
 		pd.due_date,
@@ -287,7 +293,7 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 	defer rows.Close()
 	for rows.Next() {
 		var payment output.GetSalesPaymentOutput
-		if err := rows.Scan(&payment.InstallmentNumber, &payment.InstallmentValue, &payment.DueDate, &payment.PaidDate, &payment.PaymentType, &payment.PaymentStatus); err != nil {
+		if err := rows.Scan(&payment.Id, &payment.InstallmentNumber, &payment.InstallmentValue, &payment.DueDate, &payment.PaidDate, &payment.PaymentType, &payment.PaymentStatus); err != nil {
 			return nil, err
 		}
 		o = append(o, payment)
@@ -329,4 +335,53 @@ func (r *salesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]out
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func (r *salesRepository) ChangePaymentStatus(ctx context.Context, id int64, status domain.PaymentStatus) (int64, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var insertedId int64
+	query := `UPDATE payment_dates SET status = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id`
+	err := r.db.QueryRowContext(ctx, query, status, id, tenantId).Scan(&insertedId)
+	if err != nil {
+		return insertedId, err
+	}
+	return insertedId, nil
+}
+
+func (r *salesRepository) GetPaymentDatesBySaleIdAndPaymentDateId(ctx context.Context, id int64, paymentDateId int64) (domain.SalesPaymentDates, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var output domain.SalesPaymentDates
+
+	query := `
+	SELECT
+		pd.id,
+		pd.installment_number,
+		pd.installment_value,
+		pd.due_date,
+		pd.paid_date,
+		pd.status
+	FROM payment_dates pd
+	JOIN payments p ON pd.payment_id = p.id
+	WHERE pd.id = $1 AND pd.tenant_id = $2
+	ORDER BY pd.installment_number ASC;
+	`
+	err := r.db.QueryRowContext(ctx, query, paymentDateId, tenantId).Scan(&output.Id, &output.InstallmentNumber, &output.InstallmentValue, &output.DueDate, &output.PaidDate, &output.Status)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return output, errors.New("Pagamento não encontrado")
+		}
+		return output, err
+	}
+	return output, nil
+}
+
+func (r *salesRepository) ChangePaymentDate(ctx context.Context, id int64, date *time.Time) (int64, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	var insertedId int64
+	query := `UPDATE payment_dates SET paid_date = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id`
+	err := r.db.QueryRowContext(ctx, query, date, id, tenantId).Scan(&insertedId)
+	if err != nil {
+		return insertedId, err
+	}
+	return insertedId, nil
 }

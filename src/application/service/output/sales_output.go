@@ -81,6 +81,7 @@ type GetSaleByIdItem struct {
 }
 
 type GetSalesPaymentOutput struct {
+	Id                int64
 	InstallmentNumber int64
 	InstallmentValue  float64
 	DueDate           time.Time

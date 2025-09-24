@@ -22,6 +22,7 @@ type SalesService interface {
 	CreateSales(ctx context.Context, request request.CreateSaleRequest) error
 	GetSales(ctx context.Context, request request.ListSalesRequest) (output output.GetSalesOutput, err error)
 	GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, err error)
+	ChangePaymentStatus(ctx context.Context, id int64, paymentId int64, request request.ChangePaymentStatusRequest) error
 }
 
 type salesService struct {
@@ -149,4 +150,31 @@ func (s *salesService) groupPaymentsByPaymentType(payments []output.GetSalesPaym
 	}
 
 	return items
+}
+
+func (s *salesService) ChangePaymentStatus(ctx context.Context, id int64, paymentId int64, request request.ChangePaymentStatusRequest) error {
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	_, err := s.salesRepository.GetPaymentDatesBySaleIdAndPaymentDateId(ctx, id, paymentId)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.salesRepository.ChangePaymentStatus(ctx, paymentId, domain.PaymentStatus(request.Status))
+	if err != nil {
+		return err
+	}
+
+	var date *time.Time
+	if request.Status == string(domain.PaymentStatusPaid) {
+		date = &request.Date
+	}
+	_, err = s.salesRepository.ChangePaymentDate(ctx, paymentId, date)
+	if err != nil {
+		return err
+	}
+
+	return err
 }

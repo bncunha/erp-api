@@ -216,6 +216,7 @@ func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber i
 }
 
 type SalesPaymentDates struct {
+	Id                int64
 	DueDate           time.Time
 	PaidDate          *time.Time
 	InstallmentNumber int

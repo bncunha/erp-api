@@ -3,6 +3,7 @@ package request
 import (
 	"time"
 
+	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/validator"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -82,6 +83,23 @@ func (d *CreateSaleRequestPaymentDates) Validate() error {
 	err := validator.Validate(d)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+type ChangePaymentStatusRequest struct {
+	Status string    `json:"status" validate:"required,oneof=PAID CANCEL PENDING"`
+	Date   time.Time `json:"date"`
+}
+
+func (c *ChangePaymentStatusRequest) Validate() error {
+	err := validator.Validate(c)
+	if err != nil {
+		return err
+	}
+
+	if c.Status == string(domain.PaymentStatusPaid) && c.Date.IsZero() {
+		return errors.New("Data de pagamento é obrigatória")
 	}
 	return nil
 }
