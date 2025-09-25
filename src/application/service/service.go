@@ -13,6 +13,7 @@ type ApplicationService struct {
 	UserService      UserService
 	InventoryService InventoryService
 	SalesService     SalesService
+	CustomerService  CustomerService
 	repositories     *repository.Repository
 	useCases         *usecase.ApplicationUseCase
 }
@@ -29,4 +30,5 @@ func (s *ApplicationService) SetupServices() {
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
+	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
 }

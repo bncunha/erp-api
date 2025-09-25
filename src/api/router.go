@@ -101,6 +101,9 @@ func (r *router) setupPrivateRoutes() {
 	salesGroup.GET("", r.controller.SalesController.GetAll)
 	salesGroup.GET("/:id", r.controller.SalesController.GetById)
 	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus)
+
+	customerGroup := private.Group("/customers", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	customerGroup.GET("", r.controller.CustomerController.GetAll)
 }
 
 func (r *router) Start() {

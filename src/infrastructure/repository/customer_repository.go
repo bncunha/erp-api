@@ -11,6 +11,7 @@ import (
 
 type CustomerRepository interface {
 	GetById(ctx context.Context, id int64) (domain.Customer, error)
+	GetAll(ctx context.Context) ([]domain.Customer, error)
 }
 
 type customerRepository struct {
@@ -34,4 +35,26 @@ func (r *customerRepository) GetById(ctx context.Context, id int64) (domain.Cust
 		return customer, err
 	}
 	return customer, nil
+}
+
+func (r *customerRepository) GetAll(ctx context.Context) ([]domain.Customer, error) {
+	var customers []domain.Customer
+	tenantId := ctx.Value(constants.TENANT_KEY)
+
+	query := `SELECT id, name, phone_number FROM customers WHERE deleted_at IS NULL AND tenant_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	if err != nil {
+		return customers, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var customer domain.Customer
+		err = rows.Scan(&customer.Id, &customer.Name, &customer.PhoneNumber)
+		if err != nil {
+			return customers, err
+		}
+		customers = append(customers, customer)
+	}
+	return customers, nil
 }
