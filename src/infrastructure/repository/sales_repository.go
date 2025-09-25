@@ -12,6 +12,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/lib/pq"
 )
 
 type SalesRepository interface {
@@ -196,7 +197,7 @@ HAVING
 
 ORDER BY s.date DESC, s.id DESC;
 	`
-	valueArgs := []interface{}{tenantId, input.UserId, input.CustomerId, input.InitialDate, input.FinalDate, input.PaymentStatus}
+	valueArgs := []interface{}{tenantId, pq.Array(input.UserId), pq.Array(input.CustomerId), input.InitialDate, input.FinalDate, input.PaymentStatus}
 
 	rows, err := r.db.QueryContext(ctx, query, valueArgs...)
 	if err != nil {
