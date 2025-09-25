@@ -8,6 +8,7 @@ import (
 	"github.com/bncunha/erp-api/src/api/viewmodel"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service"
+	"github.com/bncunha/erp-api/src/domain"
 	"github.com/labstack/echo/v4"
 )
 
@@ -63,7 +64,9 @@ func (c *UserController) GetById(context echo.Context) error {
 }
 
 func (c *UserController) GetAll(context echo.Context) error {
-	users, err := c.userService.GetAll(context.Request().Context())
+	users, err := c.userService.GetAll(context.Request().Context(), request.GetAllUserRequest{
+		Role: domain.Role(context.QueryParam("role")),
+	})
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}

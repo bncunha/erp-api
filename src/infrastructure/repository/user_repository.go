@@ -6,6 +6,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -14,7 +15,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user domain.User) (int64, error)
 	Update(ctx context.Context, user domain.User) error
 	Inactivate(ctx context.Context, id int64) error
-	GetAll(ctx context.Context) ([]domain.User, error)
+	GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error)
 	GetById(ctx context.Context, id int64) (domain.User, error)
 }
 
@@ -87,12 +88,22 @@ func (r *userRepository) Inactivate(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
+func (r *userRepository) GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var users []domain.User
 
-	query := `SELECT id, username, name, phone_number, password, role, tenant_id FROM users WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY id ASC`
-	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	query := `SELECT 
+		id,
+		username, 
+		name, 
+		phone_number, 
+		password, 
+		role, 
+		tenant_id 
+	FROM users 
+	WHERE tenant_id = $1 AND deleted_at IS NULL AND ($2::text IS NULL OR role = $2)
+	ORDER BY id ASC`
+	rows, err := r.db.QueryContext(ctx, query, tenantId, input.Role)
 	if err != nil {
 		return users, err
 	}

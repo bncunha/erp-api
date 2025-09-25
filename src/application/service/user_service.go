@@ -5,6 +5,7 @@ import (
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
@@ -13,7 +14,7 @@ type UserService interface {
 	Create(ctx context.Context, request request.CreateUserRequest) error
 	Update(ctx context.Context, request request.EditUserRequest, userId int64) error
 	GetById(ctx context.Context, userId int64) (domain.User, error)
-	GetAll(ctx context.Context) ([]domain.User, error)
+	GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error)
 	Inactivate(ctx context.Context, id int64) error
 }
 
@@ -112,8 +113,13 @@ func (s *userService) GetById(ctx context.Context, userId int64) (domain.User, e
 	return user, nil
 }
 
-func (s *userService) GetAll(ctx context.Context) ([]domain.User, error) {
-	users, err := s.userRepository.GetAll(ctx)
+func (s *userService) GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error) {
+	var role *domain.Role
+
+	if request.Role != "" {
+		role = &request.Role
+	}
+	users, err := s.userRepository.GetAll(ctx, input.GetAllUserInput{Role: role})
 	if err != nil {
 		return users, err
 	}

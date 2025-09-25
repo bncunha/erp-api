@@ -2,6 +2,7 @@ package request
 
 import (
 	"github.com/bncunha/erp-api/src/application/validator"
+	"github.com/bncunha/erp-api/src/domain"
 )
 
 type CreateUserRequest struct {
@@ -34,4 +35,8 @@ func (r *EditUserRequest) Validate() error {
 		return err
 	}
 	return nil
+}
+
+type GetAllUserRequest struct {
+	Role domain.Role `json:"role"`
 }
