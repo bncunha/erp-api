@@ -4,6 +4,7 @@ import (
 	_http "net/http"
 
 	"github.com/bncunha/erp-api/src/api/http"
+	"github.com/bncunha/erp-api/src/api/viewmodel"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/labstack/echo/v4"
 )
@@ -23,5 +24,5 @@ func (c *CustomerController) GetAll(context echo.Context) error {
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
-	return context.JSON(_http.StatusOK, customers)
+	return context.JSON(_http.StatusOK, viewmodel.ToCustomerViewModel(customers))
 }
