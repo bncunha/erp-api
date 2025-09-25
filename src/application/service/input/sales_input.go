@@ -9,7 +9,7 @@ import (
 type GetSalesInput struct {
 	InitialDate   *time.Time
 	FinalDate     *time.Time
-	UserId        *int64
-	CustomerId    *int64
+	UserId        []int64
+	CustomerId    []int64
 	PaymentStatus *domain.PaymentStatus
 }

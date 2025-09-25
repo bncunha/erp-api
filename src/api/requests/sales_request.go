@@ -9,10 +9,10 @@ import (
 )
 
 type ListSalesRequest struct {
-	CustomerId    *int64                `json:"customer_id"`
+	CustomerId    []int64               `json:"customer_id"`
 	MinDate       *time.Time            `json:"min_date"`
 	MaxDate       *time.Time            `json:"max_date"`
-	UserId        *int64                `json:"user_id"`
+	UserId        []int64               `json:"user_id"`
 	PaymentStatus *domain.PaymentStatus `json:"payment_status"`
 }
 

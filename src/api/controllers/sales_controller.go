@@ -35,12 +35,16 @@ func (c *SalesController) Create(context echo.Context) error {
 }
 
 func (c *SalesController) GetAll(context echo.Context) error {
-	var customerId, userId *int64
+	var customerId, userId []int64
 	var minDate, maxDate *time.Time
 	var paymentStatus *domain.PaymentStatus
-	if context.QueryParam("customer_id") != "" {
-		id := helper.ParseInt64(context.QueryParam("customer_id"))
-		customerId = &id
+
+	customersParams := context.QueryParams()["customer_id"]
+	usersParams := context.QueryParams()["user_id"]
+	if len(customersParams) > 0 {
+		for _, customerParam := range customersParams {
+			customerId = append(customerId, helper.ParseInt64(customerParam))
+		}
 	}
 	if context.QueryParam("min_date") != "" {
 		date, _ := time.Parse(time.DateOnly, context.QueryParam("min_date"))
@@ -50,13 +54,15 @@ func (c *SalesController) GetAll(context echo.Context) error {
 		date, _ := time.Parse(time.DateOnly, context.QueryParam("max_date"))
 		maxDate = &date
 	}
-	if context.QueryParam("user_id") != "" {
-		id := helper.ParseInt64(context.QueryParam("user_id"))
-		userId = &id
+	if len(usersParams) > 0 {
+		for _, userParam := range usersParams {
+			userId = append(userId, helper.ParseInt64(userParam))
+		}
 	}
 	if context.QueryParam("payment_status") != "" {
 		status := domain.PaymentStatus(context.QueryParam("payment_status"))
 		paymentStatus = &status
+
 	}
 
 	sales, err := c.salesService.GetSales(context.Request().Context(), request.ListSalesRequest{
@@ -69,7 +75,6 @@ func (c *SalesController) GetAll(context echo.Context) error {
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
-
 	return context.JSON(_http.StatusOK, viewmodel.ToSalesViewModel(sales))
 }
 

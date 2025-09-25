@@ -172,8 +172,8 @@ LEFT JOIN payment_dates pd
   ON pd.payment_id = p.id AND pd.tenant_id = s.tenant_id
 
 WHERE s.tenant_id = $1
-  AND ($2::bigint      IS NULL OR s.user_id     = $2)
-  AND ($3::bigint      IS NULL OR s.customer_id = $3)
+  AND ($2::bigint[]      IS NULL OR s.user_id     = ANY($2))
+  AND ($3::bigint[]      IS NULL OR s.customer_id = ANY($3))
   AND ($4::timestamptz IS NULL OR s.date >= $4)
   AND ($5::timestamptz IS NULL OR s.date <= $5)
 

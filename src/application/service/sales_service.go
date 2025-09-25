@@ -85,12 +85,12 @@ func (s *salesService) GetSales(ctx context.Context, request request.ListSalesRe
 		return output, ErrPermissionDenied
 	}
 
-	var userId *int64
+	var userId []int64
 	if userRole == string(domain.UserRoleAdmin) {
 		userId = request.UserId
 	} else {
 		if v, ok := ctx.Value(constants.USERID_KEY).(int64); ok {
-			userId = &v
+			userId = []int64{v}
 		}
 	}
 
