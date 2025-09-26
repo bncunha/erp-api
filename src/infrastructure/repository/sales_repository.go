@@ -285,7 +285,7 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 	FROM payments p
 	JOIN payment_dates pd ON p.id = pd.payment_id
 	WHERE p.sales_id = $1 AND p.tenant_id = $2
-	ORDER BY pd.installment_number ASC;
+	ORDER BY p.payment_type, pd.installment_number ASC;
 	`
 	rows, err := r.db.QueryContext(ctx, query, id, tenantId)
 	if err != nil {
