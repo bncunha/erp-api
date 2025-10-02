@@ -145,6 +145,8 @@ SELECT
   u.name AS seller,
 
   COALESCE(SUM(pd.installment_value), 0) AS total_value,
+  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
+  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
 
   (
     SELECT COALESCE(SUM(si.quantity), 0)
@@ -206,7 +208,7 @@ ORDER BY s.date DESC, s.id DESC;
 	defer rows.Close()
 	for rows.Next() {
 		var sale output.GetSalesItemOutput
-		if err := rows.Scan(&sale.Id, &sale.Date, &sale.CustomerName, &sale.SellerName, &sale.TotalValue, &sale.TotalItems, &sale.Status); err != nil {
+		if err := rows.Scan(&sale.Id, &sale.Date, &sale.CustomerName, &sale.SellerName, &sale.TotalValue, &sale.ReceivedValue, &sale.FutureRevenue, &sale.TotalItems, &sale.Status); err != nil {
 			return nil, err
 		}
 		sales = append(sales, sale)

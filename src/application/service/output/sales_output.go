@@ -19,11 +19,8 @@ func (o *GetSalesOutput) GetSummary() GetSalesSummaryOutput {
 	summary.AverageTicket = 0
 
 	for _, sale := range o.Sales {
-		if sale.Status == domain.PaymentStatusPaid {
-			summary.ReceivedValue += sale.TotalValue
-		} else {
-			summary.FutureRevenue += sale.TotalValue
-		}
+		summary.ReceivedValue += sale.ReceivedValue
+		summary.FutureRevenue += sale.FutureRevenue
 		summary.TotalItems += sale.TotalItems
 		totalSum += sale.TotalValue
 	}
@@ -43,13 +40,15 @@ type GetSalesSummaryOutput struct {
 }
 
 type GetSalesItemOutput struct {
-	Id           int
-	Date         string
-	SellerName   string
-	CustomerName string
-	TotalValue   float64
-	TotalItems   float64
-	Status       domain.PaymentStatus
+	Id            int
+	Date          string
+	SellerName    string
+	CustomerName  string
+	TotalValue    float64
+	ReceivedValue float64
+	FutureRevenue float64
+	TotalItems    float64
+	Status        domain.PaymentStatus
 }
 
 type GetSaleByIdOutput struct {
