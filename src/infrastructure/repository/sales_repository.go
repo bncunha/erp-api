@@ -281,7 +281,11 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 		pd.due_date,
 		pd.paid_date,
 		p.payment_type,
-		pd.status
+		CASE
+			WHEN pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE
+				THEN 'DELAYED'
+				ELSE pd.status
+		END AS status
 	FROM payments p
 	JOIN payment_dates pd ON p.id = pd.payment_id
 	WHERE p.sales_id = $1 AND p.tenant_id = $2
