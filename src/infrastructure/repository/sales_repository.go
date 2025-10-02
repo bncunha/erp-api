@@ -159,7 +159,7 @@ SELECT
       THEN 'PAID'
     WHEN BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE)
       THEN 'DELAYED'
-    ELSE 'IN_DAY'
+    ELSE 'PENDING'
   END AS summary_status
 
 FROM sales s
@@ -188,8 +188,8 @@ HAVING
                     AND COUNT(*) = COUNT(*) FILTER (WHERE pd.status = 'PAID'))
        -- $6 = 'DELAYED'
     OR ($6 = 'DELAYED' AND BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE))
-       -- $6 = 'IN_DAY'
-    OR ($6 = 'IN_DAY' AND NOT (
+       -- $6 = 'PENDING'
+    OR ($6 = 'PENDING' AND NOT (
           (COUNT(*) > 0 AND COUNT(*) = COUNT(*) FILTER (WHERE pd.status = 'PAID'))
           OR BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE)
        ))
@@ -238,7 +238,7 @@ func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (output.Get
       THEN 'PAID'
     WHEN COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
       THEN 'DELAYED'
-    ELSE 'IN_DAY'
+    ELSE 'PENDING'
   END AS payment_status
 
 FROM sales s
