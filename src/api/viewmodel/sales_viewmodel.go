@@ -148,7 +148,7 @@ func toSaleItemsViewModel(itemsOutput []output.GetItemsOutput) []SaleItemsViewMo
 	for i, item := range itemsOutput {
 		itemsViewModel[i] = SaleItemsViewModel{
 			Code:        item.Sku.Code,
-			Description: item.Sku.Product.Description,
+			Description: item.Sku.GetName(),
 			Quantity:    item.Quantity,
 			UnitPrice:   item.Sku.Price,
 			TotalValue:  item.Sku.Price * item.Quantity,
