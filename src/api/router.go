@@ -60,14 +60,14 @@ func (r *router) setupPrivateRoutes() {
 
 	private.Use(middleware.AuthMiddleware)
 
-	productGroup := private.Group("/products", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
-	productGroup.POST("", r.controller.ProductController.Create)
-	productGroup.GET("", r.controller.ProductController.GetAll)
-	productGroup.GET("/:id", r.controller.ProductController.GetById)
-	productGroup.PUT("/:id", r.controller.ProductController.Edit)
-	productGroup.DELETE("/:id", r.controller.ProductController.Inactivate)
-	productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus)
-	productGroup.POST("/:id/skus", r.controller.SkuController.Create)
+	productGroup := private.Group("/products")
+	productGroup.POST("", r.controller.ProductController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	productGroup.GET("", r.controller.ProductController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	productGroup.GET("/:id", r.controller.ProductController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	productGroup.PUT("/:id", r.controller.ProductController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	productGroup.DELETE("/:id", r.controller.ProductController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	productGroup.POST("/:id/skus", r.controller.SkuController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 
 	skuGroup := private.Group("/skus", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	skuGroup.GET("", r.controller.SkuController.GetAll)

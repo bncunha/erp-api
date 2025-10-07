@@ -6,6 +6,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -14,7 +15,7 @@ type ProductRepository interface {
 	Create(ctx context.Context, product domain.Product) (int64, error)
 	Edit(ctx context.Context, product domain.Product, id int64) (int64, error)
 	GetById(ctx context.Context, id int64) (domain.Product, error)
-	GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error)
+	GetAll(ctx context.Context, input input.GetProductsInput) ([]output.GetAllProductsOutput, error)
 	Inactivate(ctx context.Context, id int64) error
 }
 
@@ -83,7 +84,7 @@ func (r *productRepository) GetById(ctx context.Context, id int64) (domain.Produ
 	return product, nil
 }
 
-func (r *productRepository) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
+func (r *productRepository) GetAll(ctx context.Context, input input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var products []output.GetAllProductsOutput
 
@@ -93,11 +94,15 @@ func (r *productRepository) GetAll(ctx context.Context) ([]output.GetAllProducts
 		LEFT JOIN skus sku ON sku.product_id = p.id 
 		LEFT JOIN categories c ON p.category_id = c.id
 		LEFT JOIN inventory_items inv_item ON sku.id = inv_item.sku_id
-		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL 
+		LEFT JOIN inventories inv ON inv.id = inv_item.inventory_id
+		WHERE p.tenant_id = $1 AND p.deleted_at IS NULL
+
+		AND ($2::bigint IS NULL OR inv.user_id = $2::bigint)
+
 		GROUP BY p.id, c.id
 		ORDER BY p.id ASC`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	rows, err := r.db.QueryContext(ctx, query, tenantId, input.SellerId)
 	if err != nil {
 		return products, err
 	}

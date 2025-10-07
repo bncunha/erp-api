@@ -4,6 +4,9 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
+	helper "github.com/bncunha/erp-api/src/application/helpers"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/validator"
 	"github.com/bncunha/erp-api/src/domain"
@@ -95,7 +98,13 @@ func (s *productService) GetById(ctx context.Context, id int64) (domain.Product,
 }
 
 func (s *productService) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
-	products, err := s.productRepository.GetAll(ctx)
+	var sellerId *float64
+	if helper.GetRole(ctx) != domain.UserRoleAdmin {
+		id := ctx.Value(constants.USERID_KEY).(float64)
+		sellerId = &id
+	}
+
+	products, err := s.productRepository.GetAll(ctx, input.GetProductsInput{SellerId: sellerId})
 	if err != nil {
 		return products, err
 	}
