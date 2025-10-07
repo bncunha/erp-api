@@ -4,7 +4,10 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	helper "github.com/bncunha/erp-api/src/application/helpers"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
@@ -115,7 +118,13 @@ func (s *skuService) GetById(ctx context.Context, skuId int64) (domain.Sku, erro
 }
 
 func (s *skuService) GetAll(ctx context.Context) ([]domain.Sku, error) {
-	skus, err := s.skuRepository.GetAll(ctx)
+	var sellerId *float64
+	if helper.GetRole(ctx) != domain.UserRoleAdmin {
+		id := ctx.Value(constants.USERID_KEY).(float64)
+		sellerId = &id
+	}
+
+	skus, err := s.skuRepository.GetAll(ctx, input.GetSkusInput{SellerId: sellerId})
 	if err != nil {
 		return skus, err
 	}

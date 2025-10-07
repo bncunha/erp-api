@@ -69,11 +69,11 @@ func (r *router) setupPrivateRoutes() {
 	productGroup.GET("/:id/skus", r.controller.ProductController.GetSkus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	productGroup.POST("/:id/skus", r.controller.SkuController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 
-	skuGroup := private.Group("/skus", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
-	skuGroup.GET("", r.controller.SkuController.GetAll)
-	skuGroup.PUT("/:id", r.controller.SkuController.Edit)
-	skuGroup.GET("/:id", r.controller.SkuController.GetById)
-	skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate)
+	skuGroup := private.Group("/skus")
+	skuGroup.GET("", r.controller.SkuController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	skuGroup.PUT("/:id", r.controller.SkuController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	skuGroup.GET("/:id", r.controller.SkuController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 
 	categoryGroup := private.Group("/categories", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	categoryGroup.POST("", r.controller.CategoryController.Create)

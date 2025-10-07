@@ -8,6 +8,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/lib/pq"
 )
@@ -19,7 +20,7 @@ type SkuRepository interface {
 	Update(ctx context.Context, sku domain.Sku) error
 	GetById(ctx context.Context, id int64) (domain.Sku, error)
 	GetByManyIds(ctx context.Context, ids []int64) ([]domain.Sku, error)
-	GetAll(ctx context.Context) ([]domain.Sku, error)
+	GetAll(ctx context.Context, input input.GetSkusInput) ([]domain.Sku, error)
 	Inactivate(ctx context.Context, id int64) error
 }
 
@@ -157,7 +158,7 @@ func (r *skuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]domain
 	return skus, err
 }
 
-func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
+func (r *skuRepository) GetAll(ctx context.Context, input input.GetSkusInput) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku
 
@@ -165,10 +166,12 @@ func (r *skuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
 	FROM skus s 
 	INNER JOIN products p ON p.id = s.product_id
 	LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
-	WHERE s.tenant_id = $1 AND s.deleted_at IS NULL 
+	LEFT JOIN inventories inv ON inv.id = inv_item.inventory_id
+	WHERE s.tenant_id = $1 AND s.deleted_at IS NULL
+	AND ($2::bigint IS NULL OR inv.user_id = $2::bigint)
 	GROUP BY s.id, p.name
 	ORDER BY s.id ASC`
-	rows, err := r.db.QueryContext(ctx, query, tenantId)
+	rows, err := r.db.QueryContext(ctx, query, tenantId, input.SellerId)
 	if err != nil {
 		return skus, err
 	}
