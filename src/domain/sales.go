@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/segmentio/ksuid"
+	"github.com/bncunha/erp-api/src/infrastructure/ksuid"
 )
 
 type PaymentType string

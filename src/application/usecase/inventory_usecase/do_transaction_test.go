@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
@@ -100,11 +101,11 @@ func TestDetachIds(t *testing.T) {
 
 func TestFindInventoryItem(t *testing.T) {
 	uc := &inventoryUseCase{}
-	item := uc.findInventoryItem([]domain.InventoryItem{{SkuId: 1}}, 1)
-	if item == nil || item.SkuId != 1 {
+	item := uc.findInventoryItem([]domain.InventoryItem{{Sku: domain.Sku{Id: 1}}}, 1)
+	if item == nil || item.Sku.Id != 1 {
 		t.Fatalf("expected to find inventory item")
 	}
-	if uc.findInventoryItem([]domain.InventoryItem{{SkuId: 2}}, 1) != nil {
+	if uc.findInventoryItem([]domain.InventoryItem{{Sku: domain.Sku{Id: 2}}}, 1) != nil {
 		t.Fatalf("expected nil when not found")
 	}
 }
@@ -112,16 +113,16 @@ func TestFindInventoryItem(t *testing.T) {
 func TestCreateInventoryItemInIfNotExists(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
-	tx := &sql.Tx{}
+	var tx *sql.Tx
 	inventory := domain.Inventory{Id: 10}
 	sku := domain.Sku{Id: 1}
 
-	repo.returnedInventoryItem = domain.InventoryItem{Id: 2, SkuId: sku.Id, InventoryId: inventory.Id}
+	repo.returnedInventoryItem = domain.InventoryItem{Id: 2, Sku: domain.Sku{Id: sku.Id}, InventoryId: inventory.Id}
 	items, err := uc.createInventoryItemInIfNotExists(context.Background(), tx, []domain.Sku{sku}, nil, domain.InventoryTransactionTypeIn, inventory)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(items) != 1 || items[0].SkuId != sku.Id {
+	if len(items) != 1 || items[0].Sku.Id != sku.Id {
 		t.Fatalf("expected created inventory item, got %v", items)
 	}
 }
@@ -129,10 +130,10 @@ func TestCreateInventoryItemInIfNotExists(t *testing.T) {
 func TestCreateInventoryItemInIfNotExistsAlreadyExists(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
-	tx := &sql.Tx{}
+	var tx *sql.Tx
 	inventory := domain.Inventory{Id: 10}
 	sku := domain.Sku{Id: 1}
-	existing := []domain.InventoryItem{{SkuId: sku.Id}}
+	existing := []domain.InventoryItem{{Sku: domain.Sku{Id: sku.Id}}}
 
 	items, err := uc.createInventoryItemInIfNotExists(context.Background(), tx, []domain.Sku{sku}, existing, domain.InventoryTransactionTypeTransfer, inventory)
 	if err != nil {
@@ -145,7 +146,7 @@ func TestCreateInventoryItemInIfNotExistsAlreadyExists(t *testing.T) {
 
 func TestValidateInventoryTransaction(t *testing.T) {
 	uc := &inventoryUseCase{}
-	items := []domain.InventoryItem{{SkuId: 1, Quantity: 5}}
+	items := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 5}}
 	skus := []domain.Sku{{Id: 1, Quantity: 3}}
 
 	if err := uc.validateInventoryTransaction(domain.Inventory{Id: 1}, domain.Inventory{Id: 1}, items, nil, skus, domain.InventoryTransactionTypeTransfer); err == nil {
@@ -164,7 +165,7 @@ func TestValidateExistingInventoryItemOut(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error when sku missing")
 	}
-	err = uc.validateExistingInventoryItemOut([]domain.InventoryItem{{SkuId: 1}}, []domain.Sku{{Id: 1}})
+	err = uc.validateExistingInventoryItemOut([]domain.InventoryItem{{Sku: domain.Sku{Id: 1}}}, []domain.Sku{{Id: 1}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -172,11 +173,11 @@ func TestValidateExistingInventoryItemOut(t *testing.T) {
 
 func TestValidateInventoryItemOutQuantities(t *testing.T) {
 	uc := &inventoryUseCase{}
-	err := uc.validateIInventotyItemOutQuantities([]domain.InventoryItem{{SkuId: 1, Quantity: 1}}, []domain.Sku{{Id: 1, Quantity: 2}})
+	err := uc.validateIInventotyItemOutQuantities([]domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1}}, []domain.Sku{{Id: 1, Quantity: 2}})
 	if err == nil {
 		t.Fatalf("expected quantity error")
 	}
-	err = uc.validateIInventotyItemOutQuantities([]domain.InventoryItem{{SkuId: 1, Quantity: 2}}, []domain.Sku{{Id: 1, Quantity: 1}})
+	err = uc.validateIInventotyItemOutQuantities([]domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 2}}, []domain.Sku{{Id: 1, Quantity: 1}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -207,9 +208,9 @@ func TestValidateDuplicatedSkus(t *testing.T) {
 func TestTransferQuantity(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
-	tx := &sql.Tx{}
-	out := []domain.InventoryItem{{SkuId: 1, Quantity: 5}}
-	in := []domain.InventoryItem{{SkuId: 1, Quantity: 1}}
+	var tx *sql.Tx
+	out := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 5}}
+	in := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1}}
 	skus := []domain.Sku{{Id: 1, Quantity: 2}}
 
 	if err := uc.transferQuantity(context.Background(), tx, out, in, skus); err != nil {
@@ -220,8 +221,8 @@ func TestTransferQuantity(t *testing.T) {
 func TestAddQuantity(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
-	tx := &sql.Tx{}
-	items := []domain.InventoryItem{{SkuId: 1, Quantity: 1, Id: 10}}
+	var tx *sql.Tx
+	items := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1, Id: 10}}
 	skus := []domain.Sku{{Id: 1, Quantity: 2}}
 
 	if err := uc.addQuantity(context.Background(), tx, items, skus); err != nil {
@@ -239,8 +240,8 @@ func TestAddQuantity(t *testing.T) {
 func TestSubQuantity(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
-	tx := &sql.Tx{}
-	items := []domain.InventoryItem{{SkuId: 1, Quantity: 3, Id: 10}}
+	var tx *sql.Tx
+	items := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 3, Id: 10}}
 	skus := []domain.Sku{{Id: 1, Quantity: 2}}
 
 	if err := uc.subQuantity(context.Background(), tx, items, skus); err != nil {
@@ -250,7 +251,7 @@ func TestSubQuantity(t *testing.T) {
 		t.Fatalf("expected quantity 1, got %v", repo.returnedInventoryItem.Quantity)
 	}
 
-	if err := uc.subQuantity(context.Background(), tx, []domain.InventoryItem{{SkuId: 1, Quantity: 1}}, []domain.Sku{{Id: 1, Quantity: 2}}); err == nil {
+	if err := uc.subQuantity(context.Background(), tx, []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1}}, []domain.Sku{{Id: 1, Quantity: 2}}); err == nil {
 		t.Fatalf("expected insufficient quantity error")
 	}
 }
@@ -258,12 +259,12 @@ func TestSubQuantity(t *testing.T) {
 func TestCreateTransactions(t *testing.T) {
 	repo := &stubInventoryTransactionRepository{}
 	uc := &inventoryUseCase{inventoryTransactionRepo: repo}
-	tx := &sql.Tx{}
-	outItems := []domain.InventoryItem{{SkuId: 1, Id: 1}}
-	inItems := []domain.InventoryItem{{SkuId: 1, Id: 2}}
+	var tx *sql.Tx
+	outItems := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Id: 1}}
+	inItems := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Id: 2}}
 	skus := []domain.Sku{{Id: 1, Quantity: 2}}
 
-	if err := uc.createTransactions(context.Background(), tx, outItems, inItems, domain.Inventory{}, domain.Inventory{}, skus, domain.InventoryTransactionTypeIn, "just"); err != nil {
+	if err := uc.createTransactions(context.Background(), tx, outItems, inItems, domain.Inventory{}, domain.Inventory{}, skus, domain.InventoryTransactionTypeIn, "just", domain.Sales{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(repo.created) != 1 {
@@ -338,6 +339,10 @@ func (r *doTxInventoryRepository) GetAll(ctx context.Context) ([]domain.Inventor
 	return nil, nil
 }
 func (r *doTxInventoryRepository) GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error) {
+	return domain.Inventory{}, nil
+}
+
+func (r *doTxInventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.Inventory, error) {
 	return domain.Inventory{}, nil
 }
 
@@ -421,8 +426,10 @@ func (r *doTxSkuRepository) Update(ctx context.Context, sku domain.Sku) error { 
 func (r *doTxSkuRepository) GetById(ctx context.Context, id int64) (domain.Sku, error) {
 	return domain.Sku{}, nil
 }
-func (r *doTxSkuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) { return nil, nil }
-func (r *doTxSkuRepository) Inactivate(ctx context.Context, id int64) error   { return nil }
+func (r *doTxSkuRepository) GetAll(ctx context.Context, _ input.GetSkusInput) ([]domain.Sku, error) {
+	return nil, nil
+}
+func (r *doTxSkuRepository) Inactivate(ctx context.Context, id int64) error { return nil }
 
 var fakeDriverCounter int64
 
@@ -437,10 +444,11 @@ func TestInventoryUseCaseDoTransaction(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{1: {Id: 1}, 2: {Id: 2}}}
 	itemRepo := newDoTxInventoryItemRepository()
-	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, SkuId: 1, Quantity: 5}}
+	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, Sku: domain.Sku{Id: 1}, Quantity: 5}}
 	txRepo := &doTxInventoryTransactionRepository{}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 
@@ -452,7 +460,7 @@ func TestInventoryUseCaseDoTransaction(t *testing.T) {
 		skuRepository:            skuRepo,
 	}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{
 		Type:                   domain.InventoryTransactionTypeTransfer,
 		InventoryOriginId:      1,
 		InventoryDestinationId: 2,
@@ -461,9 +469,6 @@ func TestInventoryUseCaseDoTransaction(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if !fakeTx.committed || fakeTx.rolledBack {
-		t.Fatalf("expected transaction commit")
 	}
 	if len(itemRepo.createdItems) != 1 || len(itemRepo.updatedItems) != 2 {
 		t.Fatalf("expected inventory item updates")
@@ -475,7 +480,7 @@ func TestInventoryUseCaseDoTransaction(t *testing.T) {
 
 func TestInventoryUseCaseDoTransactionDuplicatedSkus(t *testing.T) {
 	uc := &inventoryUseCase{skuRepository: &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}}
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}, {SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), nil, DoTransactionInput{Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}, {SkuId: 1, Quantity: 1}}})
 	if err == nil || !strings.Contains(err.Error(), ErrSkusDuplicated.Error()) {
 		t.Fatalf("expected duplicated skus error")
 	}
@@ -483,7 +488,7 @@ func TestInventoryUseCaseDoTransactionDuplicatedSkus(t *testing.T) {
 
 func TestInventoryUseCaseDoTransactionSkuNotFound(t *testing.T) {
 	uc := &inventoryUseCase{skuRepository: &doTxSkuRepository{skus: []domain.Sku{{Id: 2, Code: "A", Product: domain.Product{Name: "Prod"}}}}}
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), nil, DoTransactionInput{Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil || !strings.Contains(err.Error(), ErrSkusNotFound.Error()) {
 		t.Fatalf("expected sku not found error")
 	}
@@ -495,7 +500,7 @@ func TestInventoryUseCaseDoTransactionInventoryItemError(t *testing.T) {
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 	uc := &inventoryUseCase{inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), nil, DoTransactionInput{InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil || err.Error() != "fail" {
 		t.Fatalf("expected inventory item error")
 	}
@@ -505,6 +510,7 @@ func TestInventoryUseCaseDoTransactionTypeIn(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{2: {Id: 2}}}
 	itemRepo := newDoTxInventoryItemRepository()
 	txRepo := &doTxInventoryTransactionRepository{}
@@ -512,11 +518,11 @@ func TestInventoryUseCaseDoTransactionTypeIn(t *testing.T) {
 
 	uc := &inventoryUseCase{repository: repos, inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, inventoryTransactionRepo: txRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Type: domain.InventoryTransactionTypeIn, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 3}}})
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{Type: domain.InventoryTransactionTypeIn, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 3}}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !fakeTx.committed || len(itemRepo.createdItems) != 1 {
+	if len(itemRepo.createdItems) != 1 {
 		t.Fatalf("expected inventory item created for type in")
 	}
 }
@@ -525,19 +531,20 @@ func TestInventoryUseCaseDoTransactionTypeOut(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{1: {Id: 1}}}
 	itemRepo := newDoTxInventoryItemRepository()
-	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, SkuId: 1, Quantity: 5}}
+	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, Sku: domain.Sku{Id: 1}, Quantity: 5}}
 	txRepo := &doTxInventoryTransactionRepository{}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 
 	uc := &inventoryUseCase{repository: repos, inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, inventoryTransactionRepo: txRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Type: domain.InventoryTransactionTypeOut, InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 2}}})
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{Type: domain.InventoryTransactionTypeOut, InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 2}}})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !fakeTx.committed || len(itemRepo.updatedItems) != 1 {
+	if len(itemRepo.updatedItems) != 1 {
 		t.Fatalf("expected inventory item updated for type out")
 	}
 }
@@ -546,7 +553,7 @@ func TestInventoryUseCaseDoTransactionInventoryNotFound(t *testing.T) {
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{}}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 	uc := &inventoryUseCase{inventoryRepository: inventoryRepo, skuRepository: skuRepo}
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), nil, DoTransactionInput{InventoryOriginId: 1, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil {
 		t.Fatalf("expected error when inventory not found")
 	}
@@ -556,18 +563,16 @@ func TestInventoryUseCaseDoTransactionCreateInventoryItemError(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{2: {Id: 2}}}
 	itemRepo := &stubInventoryItemRepository{createErr: errors.New("fail"), items: make(map[int64][]domain.InventoryItem)}
 	txRepo := &doTxInventoryTransactionRepository{}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 	uc := &inventoryUseCase{repository: repos, inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, inventoryTransactionRepo: txRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Type: domain.InventoryTransactionTypeIn, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{Type: domain.InventoryTransactionTypeIn, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil || err.Error() != "fail" {
 		t.Fatalf("expected error from inventory item creation")
-	}
-	if !fakeTx.rolledBack {
-		t.Fatalf("expected rollback on error")
 	}
 }
 
@@ -575,19 +580,17 @@ func TestInventoryUseCaseDoTransactionTransactionError(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{1: {Id: 1}, 2: {Id: 2}}}
 	itemRepo := newDoTxInventoryItemRepository()
-	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, SkuId: 1, Quantity: 5}}
+	itemRepo.items[1] = []domain.InventoryItem{{Id: 1, InventoryId: 1, Sku: domain.Sku{Id: 1}, Quantity: 5}}
 	txRepo := &stubInventoryTransactionRepository{err: errors.New("fail")}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 	uc := &inventoryUseCase{repository: repos, inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, inventoryTransactionRepo: txRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Type: domain.InventoryTransactionTypeTransfer, InventoryOriginId: 1, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{Type: domain.InventoryTransactionTypeTransfer, InventoryOriginId: 1, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil || err.Error() != "fail" {
 		t.Fatalf("expected transaction error")
-	}
-	if !fakeTx.rolledBack {
-		t.Fatalf("expected rollback on transaction error")
 	}
 }
 
@@ -595,17 +598,15 @@ func TestInventoryUseCaseDoTransactionUpdateQuantityError(t *testing.T) {
 	fakeTx := &fakeTx{}
 	db := newFakeDB(fakeTx)
 	repos := repository.NewRepository(db)
+	tx, _ := db.BeginTx(context.Background(), nil)
 	inventoryRepo := &doTxInventoryRepository{inventories: map[int64]domain.Inventory{1: {Id: 1}, 2: {Id: 2}}}
-	itemRepo := &stubInventoryItemRepository{updateErr: errors.New("fail"), items: map[int64][]domain.InventoryItem{1: {{Id: 1, InventoryId: 1, SkuId: 1, Quantity: 5}}, 2: {{Id: 2, InventoryId: 2, SkuId: 1, Quantity: 0}}}, returnedInventoryItem: domain.InventoryItem{Id: 2, InventoryId: 2, SkuId: 1, Quantity: 0}}
+	itemRepo := &stubInventoryItemRepository{updateErr: errors.New("fail"), items: map[int64][]domain.InventoryItem{1: {{Id: 1, InventoryId: 1, Sku: domain.Sku{Id: 1}, Quantity: 5}}, 2: {{Id: 2, InventoryId: 2, Sku: domain.Sku{Id: 1}, Quantity: 0}}}, returnedInventoryItem: domain.InventoryItem{Id: 2, InventoryId: 2, Sku: domain.Sku{Id: 1}, Quantity: 0}}
 	txRepo := &doTxInventoryTransactionRepository{}
 	skuRepo := &doTxSkuRepository{skus: []domain.Sku{{Id: 1, Code: "A", Product: domain.Product{Name: "Prod"}}}}
 	uc := &inventoryUseCase{repository: repos, inventoryRepository: inventoryRepo, inventoryItemRepository: itemRepo, inventoryTransactionRepo: txRepo, skuRepository: skuRepo}
 
-	err := uc.DoTransaction(context.Background(), DoTransactionInput{Type: domain.InventoryTransactionTypeTransfer, InventoryOriginId: 1, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
+	err := uc.DoTransaction(context.Background(), tx, DoTransactionInput{Type: domain.InventoryTransactionTypeTransfer, InventoryOriginId: 1, InventoryDestinationId: 2, Skus: []DoTransactionSkusInput{{SkuId: 1, Quantity: 1}}})
 	if err == nil || err.Error() != "fail" {
 		t.Fatalf("expected update quantity error")
-	}
-	if !fakeTx.rolledBack {
-		t.Fatalf("expected rollback on update error")
 	}
 }

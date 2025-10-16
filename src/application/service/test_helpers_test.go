@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
@@ -39,7 +40,7 @@ func (s *stubProductRepository) GetById(ctx context.Context, id int64) (domain.P
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubProductRepository) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
+func (s *stubProductRepository) GetAll(ctx context.Context, _ input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -143,7 +144,7 @@ func (s *stubSkuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]do
 	return nil, nil
 }
 
-func (s *stubSkuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
+func (s *stubSkuRepository) GetAll(ctx context.Context, _ input.GetSkusInput) ([]domain.Sku, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -184,7 +185,7 @@ func (s *stubUserRepository) GetById(ctx context.Context, id int64) (domain.User
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubUserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
+func (s *stubUserRepository) GetAll(ctx context.Context, _ input.GetAllUserInput) ([]domain.User, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -197,14 +198,16 @@ func (s *stubUserRepository) GetByUsername(ctx context.Context, username string)
 }
 
 type stubInventoryRepository struct {
-	createErr    error
-	created      domain.Inventory
-	getAll       []domain.Inventory
-	getAllErr    error
-	getByUser    domain.Inventory
-	getByUserErr error
-	getById      domain.Inventory
-	getByIdErr   error
+	createErr     error
+	created       domain.Inventory
+	getAll        []domain.Inventory
+	getAllErr     error
+	getByUser     domain.Inventory
+	getByUserErr  error
+	getById       domain.Inventory
+	getByIdErr    error
+	getPrimary    domain.Inventory
+	getPrimaryErr error
 }
 
 func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.Inventory) (int64, error) {
@@ -217,6 +220,10 @@ func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.I
 
 func (s *stubInventoryRepository) GetById(ctx context.Context, id int64) (domain.Inventory, error) {
 	return s.getById, s.getByIdErr
+}
+
+func (s *stubInventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.Inventory, error) {
+	return s.getPrimary, s.getPrimaryErr
 }
 
 func (s *stubInventoryRepository) GetAll(ctx context.Context) ([]domain.Inventory, error) {
@@ -288,7 +295,7 @@ type stubInventoryUseCase struct {
 	err           error
 }
 
-func (s *stubInventoryUseCase) DoTransaction(ctx context.Context, input inventory_usecase.DoTransactionInput) error {
+func (s *stubInventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input inventory_usecase.DoTransactionInput) error {
 	s.receivedInput = input
 	return s.err
 }
