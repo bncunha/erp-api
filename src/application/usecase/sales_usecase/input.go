@@ -21,6 +21,7 @@ type DoSaleItemsInput struct {
 
 type DoSalePaymentsInput struct {
 	PaymentType domain.PaymentType
+	Value       float64
 	Dates       []DoSalePaymentDatesInput
 }
 

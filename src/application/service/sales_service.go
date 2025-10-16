@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"time"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
@@ -55,15 +56,25 @@ func (s *salesService) CreateSales(ctx context.Context, request request.CreateSa
 
 	for _, payment := range request.Payments {
 		dates := make([]sales_usecase.DoSalePaymentDatesInput, 0)
-		for j, date := range payment.Dates {
+		installmentQuantity := 1
+		if payment.InstallmentsQuantity != nil {
+			installmentQuantity = *payment.InstallmentsQuantity
+		}
+		installmentsValue := s.calculateTotalValue(payment.Value, installmentQuantity)
+		for i := 0; i < installmentQuantity; i++ {
+			dueDate := time.Now()
+			if payment.FirstInstallmentDate != nil {
+				dueDate = *payment.FirstInstallmentDate
+			}
 			dates = append(dates, sales_usecase.DoSalePaymentDatesInput{
-				DueDate:           date.Date,
-				InstallmentNumber: j + 1,
-				InstallmentValue:  date.InstallmentValue,
+				DueDate:           dueDate.AddDate(0, i, 0),
+				InstallmentNumber: i + 1,
+				InstallmentValue:  installmentsValue[i],
 			})
 		}
 		payments = append(payments, sales_usecase.DoSalePaymentsInput{
 			PaymentType: payment.PaymentType,
+			Value:       payment.Value,
 			Dates:       dates,
 		})
 	}
@@ -77,6 +88,25 @@ func (s *salesService) CreateSales(ctx context.Context, request request.CreateSa
 	}
 
 	return s.salesUsecase.DoSale(ctx, input)
+}
+
+func (s *salesService) calculateTotalValue(total float64, n int) []float64 {
+	totalCents := int64(math.Round(total * 100)) // ex.: 14.00 -> 1400
+	base := totalCents / int64(n)
+	rem := totalCents % int64(n)
+
+	out := make([]int64, n)
+	outFloat := make([]float64, n)
+	for i := 0; i < n; i++ {
+		out[i] = base
+		if int64(i) < rem {
+			out[i]++ // distribui 1 centavo nas primeiras 'rem' parcelas
+		}
+	}
+	for i, v := range out {
+		outFloat[i] = float64(v) / 100
+	}
+	return outFloat
 }
 
 func (s *salesService) GetSales(ctx context.Context, request request.ListSalesRequest) (output output.GetSalesOutput, err error) {

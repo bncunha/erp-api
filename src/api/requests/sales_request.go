@@ -38,12 +38,6 @@ func (r *CreateSaleRequest) Validate() error {
 		if err != nil {
 			return err
 		}
-		for _, date := range payment.Dates {
-			err = date.Validate()
-			if err != nil {
-				return err
-			}
-		}
 	}
 	return nil
 }
@@ -62,25 +56,20 @@ func (i *CreateSaleRequestItems) Validate() error {
 }
 
 type CreateSaleRequestPayments struct {
-	PaymentType domain.PaymentType              `json:"payment_type" validate:"required,oneof=CASH CREDIT_CARD DEBIT_CARD PIX CREDIT_STORE"`
-	Dates       []CreateSaleRequestPaymentDates `json:"dates" validate:"required"`
+	PaymentType          domain.PaymentType `json:"payment_type" validate:"required,oneof=CASH CREDIT_CARD DEBIT_CARD PIX CREDIT_STORE"`
+	Value                float64            `json:"value" validate:"required,gt=0"`
+	InstallmentsQuantity *int               `json:"installments_quantity" validate:"omitempty,gt=1"`
+	FirstInstallmentDate *time.Time         `json:"first_installment_date"`
 }
 
 func (p *CreateSaleRequestPayments) Validate() error {
 	err := validator.Validate(p)
-	if err != nil {
-		return err
+	if (p.PaymentType == domain.PaymentTypeCreditStore || p.PaymentType == domain.PaymentTypeCreditCard) && p.InstallmentsQuantity == nil {
+		return errors.New("Quantidade de parcelas é obrigatória para Cartão de Crédito ou Notinha")
 	}
-	return nil
-}
-
-type CreateSaleRequestPaymentDates struct {
-	Date             time.Time `json:"date" validate:"required"`
-	InstallmentValue float64   `json:"installment_value" validate:"required,gt=0"`
-}
-
-func (d *CreateSaleRequestPaymentDates) Validate() error {
-	err := validator.Validate(d)
+	if p.PaymentType == domain.PaymentTypeCreditStore && p.FirstInstallmentDate == nil {
+		return errors.New("Data de primeira parcela é obrigatória para Notinha")
+	}
 	if err != nil {
 		return err
 	}

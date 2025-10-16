@@ -170,7 +170,7 @@ func (s *SalesPayment) isPaymentDatesQuantityValid() bool {
 
 func (s *SalesPayment) isPaymentDatesGraterThanToday() bool {
 	for _, date := range s.Dates {
-		if time.Now().Truncate(time.Minute).After(date.DueDate) {
+		if time.Now().Truncate(25 * time.Hour).After(date.DueDate) {
 			return false
 		}
 	}

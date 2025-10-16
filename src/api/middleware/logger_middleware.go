@@ -270,11 +270,9 @@ func RequestLogger() echo.MiddlewareFunc {
 
 			switch {
 			case status >= 500:
-				log.Errorf("request completed")
+				log.Errorf("error")
 			case status >= 400:
-				log.Warnf("request completed")
-			default:
-				log.Infof("request completed")
+				log.Warnf("warning")
 			}
 
 			return nil
