@@ -105,6 +105,9 @@ func (r *router) setupPrivateRoutes() {
 	customerGroup := private.Group("/customers")
 	customerGroup.POST("", r.controller.CustomerController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	customerGroup.GET("", r.controller.CustomerController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+    customerGroup.GET("/:id", r.controller.CustomerController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+    customerGroup.PUT("/:id", r.controller.CustomerController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+    customerGroup.DELETE("/:id", r.controller.CustomerController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 }
 
 func (r *router) Start() {
