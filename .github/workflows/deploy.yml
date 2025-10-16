@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: "1.24"
 
       - name: Download dependencies
         run: go mod download
@@ -31,13 +31,13 @@ jobs:
           go test ./src/application/... ./src/domain/... -coverprofile=coverage.out
           COVERAGE=$(go tool cover -func=coverage.out | tail -n 1 | awk '{print substr($3, 1, length($3)-1)}')
           python - "$COVERAGE" <<'PY'
-import sys
-coverage = float(sys.argv[1])
-threshold = 90.0
-if coverage < threshold:
-    raise SystemExit(f"Coverage {coverage:.2f}% is below threshold {threshold}%")
-print(f"Coverage {coverage:.2f}% meets threshold {threshold}%")
-PY
+          import sys
+          coverage = float(sys.argv[1])
+          threshold = 90.0
+          if coverage < threshold:
+              raise SystemExit(f"Coverage {coverage:.2f}% is below threshold {threshold}%")
+          print(f"Coverage {coverage:.2f}% meets threshold {threshold}%")
+          PY
 
       - name: Deploy to Render (production)
         if: github.ref == 'refs/heads/main'
