@@ -86,8 +86,8 @@ type SalePaymentsItemViewModel struct {
 	Id                int64                `json:"id"`
 	InstallmentNumber int64                `json:"installment_number"`
 	InstallmentValue  float64              `json:"installment_value"`
-	DueDate           time.Time            `json:"due_date"`
-	PaidDate          *time.Time           `json:"paid_date"`
+	DueDate           string               `json:"due_date"`
+	PaidDate          *string              `json:"paid_date"`
 	PaymentStatus     domain.PaymentStatus `json:"payment_status"`
 	PaymentType       domain.PaymentType   `json:"payment_type"`
 }
@@ -129,13 +129,18 @@ func toSalePaymentsViewModel(paymentGroupOutput []output.GetSalesPaymentGroupOut
 
 func toSalePaymentsItemViewModel(payments []output.GetSalesPaymentOutput) []SalePaymentsItemViewModel {
 	paymentsViewModel := make([]SalePaymentsItemViewModel, len(payments))
+
 	for i, payment := range payments {
+		var paidDate string
+		if payment.PaidDate != nil {
+			paidDate = payment.PaidDate.Format(time.DateOnly)
+		}
 		paymentsViewModel[i] = SalePaymentsItemViewModel{
 			Id:                payment.Id,
 			InstallmentNumber: payment.InstallmentNumber,
 			InstallmentValue:  payment.InstallmentValue,
-			DueDate:           payment.DueDate,
-			PaidDate:          payment.PaidDate,
+			DueDate:           payment.DueDate.Format(time.DateOnly),
+			PaidDate:          &paidDate,
 			PaymentStatus:     payment.PaymentStatus,
 			PaymentType:       payment.PaymentType,
 		}
