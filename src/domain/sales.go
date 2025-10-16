@@ -152,8 +152,8 @@ func NewSalesPayment(paymentType PaymentType) SalesPayment {
 	}
 }
 
-func (s *SalesPayment) isInstallmentPayment() bool {
-	return s.PaymentType == PaymentTypeCreditStore || s.PaymentType == PaymentTypeCreditCard
+func (s *SalesPayment) shouldConfirmPayment() bool {
+	return s.PaymentType == PaymentTypeCreditStore
 }
 
 func (s *SalesPayment) isOnCashPayment() bool {
@@ -203,7 +203,7 @@ func (s *SalesPayment) isPaymentDatesDuplicated() bool {
 
 func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64) {
 	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
-	if s.isInstallmentPayment() {
+	if s.shouldConfirmPayment() {
 		newDate.Status = PaymentStatusPending
 	} else if s.isOnCashPayment() {
 		paidDate := time.Now()
