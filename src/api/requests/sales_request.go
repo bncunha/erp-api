@@ -58,7 +58,7 @@ func (i *CreateSaleRequestItems) Validate() error {
 type CreateSaleRequestPayments struct {
 	PaymentType          domain.PaymentType `json:"payment_type" validate:"required,oneof=CASH CREDIT_CARD DEBIT_CARD PIX CREDIT_STORE"`
 	Value                float64            `json:"value" validate:"required,gt=0"`
-	InstallmentsQuantity *int               `json:"installments_quantity" validate:"omitempty,gt=1"`
+	InstallmentsQuantity *int               `json:"installments_quantity" validate:"omitempty,gt=0"`
 	FirstInstallmentDate *time.Time         `json:"first_installment_date"`
 }
 
