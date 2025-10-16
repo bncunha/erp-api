@@ -46,7 +46,8 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 		if err != nil {
 			return err
 		}
-	} else {
+	}
+	if err != nil {
 		return err
 	}
 
