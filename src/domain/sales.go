@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -100,7 +101,7 @@ func (s *Sales) getMissingValue() float64 {
 			missingValue -= date.InstallmentValue
 		}
 	}
-	return missingValue
+	return math.Round(missingValue*100) / 100
 }
 
 func (s *Sales) GetTotal() float64 {
