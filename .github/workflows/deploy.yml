@@ -1,0 +1,50 @@
+name: Build, Test and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run unit tests with coverage
+        run: |
+          go test ./src/application/... ./src/domain/... -coverprofile=coverage.out
+          COVERAGE=$(go tool cover -func=coverage.out | tail -n 1 | awk '{print substr($3, 1, length($3)-1)}')
+          python - "$COVERAGE" <<'PY'
+import sys
+coverage = float(sys.argv[1])
+threshold = 90.0
+if coverage < threshold:
+    raise SystemExit(f"Coverage {coverage:.2f}% is below threshold {threshold}%")
+print(f"Coverage {coverage:.2f}% meets threshold {threshold}%")
+PY
+
+      - name: Deploy to Render
+        if: github.ref == 'refs/heads/main'
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL secret is not configured"
+            exit 1
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK_URL"
