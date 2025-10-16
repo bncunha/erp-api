@@ -5,7 +5,7 @@ This repository contains a Go-based ERP API with automated CI/CD and a comprehen
 ## Requirements
 
 - Go 1.21 or newer (GitHub Actions uses 1.24).
-- A Render deploy hook URL stored as the `RENDER_DEPLOY_HOOK_URL` secret in the GitHub repository.
+- Render deploy hook URLs stored as the `RENDER_DEPLOY_HOOK_URL` (production) and `RENDER_DEPLOY_HOOK_URL_DEV` (development) secrets in the GitHub repository.
 
 ## Local development
 
@@ -25,14 +25,14 @@ go tool cover -html=coverage.out
 
 ## Continuous integration and deployment
 
-The workflow defined in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on pushes and pull requests to `main`.
+The workflow defined in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) runs on pushes and pull requests to `main` and `development`.
 
 1. Checkout the repository and set up Go.
 2. Build the project.
 3. Run the targeted unit tests with a coverage gate of 90%.
-4. Trigger a Render deployment via the `RENDER_DEPLOY_HOOK_URL` secret when the build occurs on `main`.
+4. Trigger a Render deployment via the `RENDER_DEPLOY_HOOK_URL` secret when the build occurs on `main` and via `RENDER_DEPLOY_HOOK_URL_DEV` when the build occurs on `development`.
 
-Ensure that the Render deploy hook URL is configured in the repository secrets before merging to `main` so successful builds automatically deploy.
+Ensure that the Render deploy hook URLs are configured in the repository secrets before merging so successful builds automatically deploy to the correct environment.
 
 ## Test coverage expectations
 
