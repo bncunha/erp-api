@@ -119,8 +119,8 @@ func (s *salesService) GetSales(ctx context.Context, request request.ListSalesRe
 	if userRole == string(domain.UserRoleAdmin) {
 		userId = request.UserId
 	} else {
-		if v, ok := ctx.Value(constants.USERID_KEY).(int64); ok {
-			userId = []int64{v}
+		if v, ok := ctx.Value(constants.USERID_KEY).(float64); ok {
+			userId = []int64{int64(v)}
 		}
 	}
 
