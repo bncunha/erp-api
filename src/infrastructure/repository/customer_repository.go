@@ -10,8 +10,9 @@ import (
 )
 
 type CustomerRepository interface {
-	GetById(ctx context.Context, id int64) (domain.Customer, error)
-	GetAll(ctx context.Context) ([]domain.Customer, error)
+    GetById(ctx context.Context, id int64) (domain.Customer, error)
+    GetAll(ctx context.Context) ([]domain.Customer, error)
+    Create(ctx context.Context, customer domain.Customer) (int64, error)
 }
 
 type customerRepository struct {
@@ -19,7 +20,18 @@ type customerRepository struct {
 }
 
 func NewCustomerRepository(db *sql.DB) CustomerRepository {
-	return &customerRepository{db}
+    return &customerRepository{db}
+}
+
+func (r *customerRepository) Create(ctx context.Context, customer domain.Customer) (int64, error) {
+    var insertedID int64
+    tenantId := ctx.Value(constants.TENANT_KEY)
+    query := `INSERT INTO customers (name, phone_number, tenant_id) VALUES ($1, $2, $3) RETURNING id`
+    err := r.db.QueryRowContext(ctx, query, customer.Name, customer.PhoneNumber, tenantId).Scan(&insertedID)
+    if err != nil {
+        return insertedID, err
+    }
+    return insertedID, nil
 }
 
 func (r *customerRepository) GetById(ctx context.Context, id int64) (domain.Customer, error) {
