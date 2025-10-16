@@ -206,7 +206,7 @@ func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber i
 	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
 	if s.shouldConfirmPayment() {
 		newDate.Status = PaymentStatusPending
-	} else if s.isOnCashPayment() {
+	} else {
 		paidDate := time.Now()
 		newDate.DueDate = paidDate
 		newDate.PaidDate = &paidDate
