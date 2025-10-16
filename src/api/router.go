@@ -96,14 +96,14 @@ func (r *router) setupPrivateRoutes() {
 	inventoryGroup.GET("/transaction", r.controller.InventoryController.GetAllInventoryTransactions)
 	inventoryGroup.POST("/transaction", r.controller.InventoryController.DoTransaction)
 
-	salesGroup := private.Group("/sales", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
-	salesGroup.POST("", r.controller.SalesController.Create)
-	salesGroup.GET("", r.controller.SalesController.GetAll)
-	salesGroup.GET("/:id", r.controller.SalesController.GetById)
-	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus)
+	salesGroup := private.Group("/sales")
+	salesGroup.POST("", r.controller.SalesController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	salesGroup.GET("", r.controller.SalesController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	salesGroup.GET("/:id", r.controller.SalesController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 
-	customerGroup := private.Group("/customers", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
-	customerGroup.GET("", r.controller.CustomerController.GetAll)
+	customerGroup := private.Group("/customers")
+	customerGroup.GET("", r.controller.CustomerController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 }
 
 func (r *router) Start() {
