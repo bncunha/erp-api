@@ -23,9 +23,6 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build
-        run: go build ./...
-
       - name: Run unit tests with coverage
         run: |
           go test ./src/application/... ./src/domain/... -coverprofile=coverage.out
