@@ -66,7 +66,7 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	user_destination.name, 
 	inv_transactions.justification,
 	s.id,
-	s.date,
+	s.date
 	FROM inventory_transactions inv_transactions
 	INNER JOIN inventory_items inv_items ON inv_transactions.inventory_item_id = inv_items.id
 	INNER JOIN skus sku ON sku.id = inv_items.sku_id
@@ -85,10 +85,15 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 
 	for rows.Next() {
 		var inventoryTransaction output.GetInventoryTransactionsOutput
+		saleId := sql.NullInt64{}
+		saleDate := sql.NullTime{}
 
-		err = rows.Scan(&inventoryTransaction.Id, &inventoryTransaction.Date, &inventoryTransaction.Type, &inventoryTransaction.Quantity, &inventoryTransaction.SkuCode, &inventoryTransaction.SkuColor, &inventoryTransaction.SkuSize, &inventoryTransaction.ProductName, &inventoryTransaction.InventoryOriginType, &inventoryTransaction.InventoryDestinationType, &inventoryTransaction.UserOriginName, &inventoryTransaction.UserDestinationName, &inventoryTransaction.Justification, &inventoryTransaction.Sale.Id, &inventoryTransaction.Sale.Date)
+		err = rows.Scan(&inventoryTransaction.Id, &inventoryTransaction.Date, &inventoryTransaction.Type, &inventoryTransaction.Quantity, &inventoryTransaction.SkuCode, &inventoryTransaction.SkuColor, &inventoryTransaction.SkuSize, &inventoryTransaction.ProductName, &inventoryTransaction.InventoryOriginType, &inventoryTransaction.InventoryDestinationType, &inventoryTransaction.UserOriginName, &inventoryTransaction.UserDestinationName, &inventoryTransaction.Justification, &saleId, &saleDate)
 		if err != nil {
 			return inventoryTransactions, err
+		}
+		if saleId.Valid {
+			inventoryTransaction.Sale = &domain.Sales{Id: saleId.Int64, Date: saleDate.Time}
 		}
 		inventoryTransactions = append(inventoryTransactions, inventoryTransaction)
 	}
