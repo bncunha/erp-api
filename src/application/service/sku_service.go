@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/constants"
@@ -25,11 +26,11 @@ type skuService struct {
 	skuRepository     repository.SkuRepository
 	inventoryUseCase  inventory_usecase.InventoryUseCase
 	productRepository repository.ProductRepository
-	repository        *repository.Repository
+	txManager         transactionManager
 }
 
-func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository, repository *repository.Repository) SkuService {
-	return &skuService{skuRepository, inventoryUseCase, productRepository, repository}
+func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository, txManager transactionManager) SkuService {
+	return &skuService{skuRepository, inventoryUseCase, productRepository, txManager}
 }
 
 func (s *skuService) Create(ctx context.Context, request request.CreateSkuRequest, productId int64) error {
@@ -59,15 +60,18 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 		return err
 	}
 
-	tx, err := s.repository.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
+	var tx *sql.Tx
+	if s.txManager != nil {
+		tx, err = s.txManager.BeginTx(ctx)
 		if err != nil {
-			tx.Rollback()
+			return err
 		}
-	}()
+		defer func() {
+			if err != nil && tx != nil {
+				tx.Rollback()
+			}
+		}()
+	}
 
 	if request.Quantity != nil && request.DestinationId != nil {
 		err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
@@ -81,7 +85,10 @@ func (s *skuService) Create(ctx context.Context, request request.CreateSkuReques
 			return errors.New("Operação realizada parcialmente! Erro ao atualizar a quantidade de itens no estoque!")
 		}
 	}
-	return tx.Commit()
+	if tx != nil {
+		return tx.Commit()
+	}
+	return nil
 }
 
 func (s *skuService) Update(ctx context.Context, request request.EditSkuRequest, skuId int64) error {

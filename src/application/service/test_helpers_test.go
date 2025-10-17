@@ -3,9 +3,12 @@ package service
 import (
 	"context"
 	"database/sql"
+	"time"
 
+	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
+	"github.com/bncunha/erp-api/src/application/usecase/sales_usecase"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -39,7 +42,7 @@ func (s *stubProductRepository) GetById(ctx context.Context, id int64) (domain.P
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubProductRepository) GetAll(ctx context.Context) ([]output.GetAllProductsOutput, error) {
+func (s *stubProductRepository) GetAll(ctx context.Context, _ input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -93,6 +96,45 @@ func (s *stubCategoryRepository) GetAll(ctx context.Context) ([]domain.Category,
 	return s.getAll, s.getAllErr
 }
 
+type stubCustomerRepository struct {
+	created       domain.Customer
+	createErr     error
+	getAll        []domain.Customer
+	getAllErr     error
+	getById       domain.Customer
+	getByIdErr    error
+	editErr       error
+	inactivateErr error
+}
+
+func (s *stubCustomerRepository) Create(ctx context.Context, customer domain.Customer) (int64, error) {
+	if s.createErr != nil {
+		return 0, s.createErr
+	}
+	s.created = customer
+	return 1, nil
+}
+
+func (s *stubCustomerRepository) GetAll(ctx context.Context) ([]domain.Customer, error) {
+	return s.getAll, s.getAllErr
+}
+
+func (s *stubCustomerRepository) GetById(ctx context.Context, id int64) (domain.Customer, error) {
+	return s.getById, s.getByIdErr
+}
+
+func (s *stubCustomerRepository) Edit(ctx context.Context, customer domain.Customer, id int64) (int64, error) {
+	if s.editErr != nil {
+		return 0, s.editErr
+	}
+	s.created = customer
+	return id, nil
+}
+
+func (s *stubCustomerRepository) Inactivate(ctx context.Context, id int64) error {
+	return s.inactivateErr
+}
+
 type stubSkuRepository struct {
 	created         []domain.Sku
 	createErr       error
@@ -143,7 +185,7 @@ func (s *stubSkuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]do
 	return nil, nil
 }
 
-func (s *stubSkuRepository) GetAll(ctx context.Context) ([]domain.Sku, error) {
+func (s *stubSkuRepository) GetAll(ctx context.Context, _ input.GetSkusInput) ([]domain.Sku, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -184,7 +226,7 @@ func (s *stubUserRepository) GetById(ctx context.Context, id int64) (domain.User
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubUserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
+func (s *stubUserRepository) GetAll(ctx context.Context, _ input.GetAllUserInput) ([]domain.User, error) {
 	return s.getAll, s.getAllErr
 }
 
@@ -197,14 +239,16 @@ func (s *stubUserRepository) GetByUsername(ctx context.Context, username string)
 }
 
 type stubInventoryRepository struct {
-	createErr    error
-	created      domain.Inventory
-	getAll       []domain.Inventory
-	getAllErr    error
-	getByUser    domain.Inventory
-	getByUserErr error
-	getById      domain.Inventory
-	getByIdErr   error
+	createErr     error
+	created       domain.Inventory
+	getAll        []domain.Inventory
+	getAllErr     error
+	getByUser     domain.Inventory
+	getByUserErr  error
+	getById       domain.Inventory
+	getByIdErr    error
+	getPrimary    domain.Inventory
+	getPrimaryErr error
 }
 
 func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.Inventory) (int64, error) {
@@ -217,6 +261,10 @@ func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.I
 
 func (s *stubInventoryRepository) GetById(ctx context.Context, id int64) (domain.Inventory, error) {
 	return s.getById, s.getByIdErr
+}
+
+func (s *stubInventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.Inventory, error) {
+	return s.getPrimary, s.getPrimaryErr
 }
 
 func (s *stubInventoryRepository) GetAll(ctx context.Context) ([]domain.Inventory, error) {
@@ -288,7 +336,100 @@ type stubInventoryUseCase struct {
 	err           error
 }
 
-func (s *stubInventoryUseCase) DoTransaction(ctx context.Context, input inventory_usecase.DoTransactionInput) error {
+func (s *stubInventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, input inventory_usecase.DoTransactionInput) error {
 	s.receivedInput = input
 	return s.err
+}
+
+type stubSalesUseCase struct {
+	receivedInput sales_usecase.DoSaleInput
+	err           error
+}
+
+func (s *stubSalesUseCase) DoSale(ctx context.Context, input sales_usecase.DoSaleInput) error {
+	s.receivedInput = input
+	return s.err
+}
+
+type stubSalesRepository struct {
+	getSalesInput                 input.GetSalesInput
+	getSalesOutput                []output.GetSalesItemOutput
+	getSalesErr                   error
+	saleByIdOutput                output.GetSaleByIdOutput
+	saleByIdErr                   error
+	paymentsOutput                []output.GetSalesPaymentOutput
+	paymentsErr                   error
+	itemsOutput                   []output.GetItemsOutput
+	itemsErr                      error
+	getSaleByIdCalled             bool
+	getPaymentsCalled             bool
+	getItemsCalled                bool
+	changePaymentStatusCalledWith struct {
+		id     int64
+		status domain.PaymentStatus
+	}
+	changePaymentStatusErr      error
+	changePaymentDateCalledWith struct {
+		id   int64
+		date *time.Time
+	}
+	changePaymentDateErr          error
+	paymentDateBySaleAndPaymentId domain.SalesPaymentDates
+	paymentDateErr                error
+}
+
+func (s *stubSalesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale domain.Sales) (int64, error) {
+	return 0, nil
+}
+
+func (s *stubSalesRepository) CreateManySaleItem(ctx context.Context, tx *sql.Tx, sale domain.Sales, saleItems []domain.SalesItem) ([]int64, error) {
+	return nil, nil
+}
+
+func (s *stubSalesRepository) CreatePayment(ctx context.Context, tx *sql.Tx, sale domain.Sales, payment domain.SalesPayment) (int64, error) {
+	return 0, nil
+}
+
+func (s *stubSalesRepository) CreateManyPaymentDates(ctx context.Context, tx *sql.Tx, payment domain.SalesPayment, paymentDates []domain.SalesPaymentDates) ([]int64, error) {
+	return nil, nil
+}
+
+func (s *stubSalesRepository) GetSales(ctx context.Context, input input.GetSalesInput) ([]output.GetSalesItemOutput, error) {
+	s.getSalesInput = input
+	return s.getSalesOutput, s.getSalesErr
+}
+
+func (s *stubSalesRepository) GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error) {
+	s.getSaleByIdCalled = true
+	return s.saleByIdOutput, s.saleByIdErr
+}
+
+func (s *stubSalesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error) {
+	s.getPaymentsCalled = true
+	return s.paymentsOutput, s.paymentsErr
+}
+
+func (s *stubSalesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error) {
+	s.getItemsCalled = true
+	return s.itemsOutput, s.itemsErr
+}
+
+func (s *stubSalesRepository) ChangePaymentStatus(ctx context.Context, id int64, status domain.PaymentStatus) (int64, error) {
+	s.changePaymentStatusCalledWith = struct {
+		id     int64
+		status domain.PaymentStatus
+	}{id: id, status: status}
+	return id, s.changePaymentStatusErr
+}
+
+func (s *stubSalesRepository) ChangePaymentDate(ctx context.Context, id int64, date *time.Time) (int64, error) {
+	s.changePaymentDateCalledWith = struct {
+		id   int64
+		date *time.Time
+	}{id: id, date: date}
+	return id, s.changePaymentDateErr
+}
+
+func (s *stubSalesRepository) GetPaymentDatesBySaleIdAndPaymentDateId(ctx context.Context, id int64, paymentDateId int64) (domain.SalesPaymentDates, error) {
+	return s.paymentDateBySaleAndPaymentId, s.paymentDateErr
 }

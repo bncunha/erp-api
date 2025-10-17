@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -13,13 +14,13 @@ func TestSkuServiceCreate(t *testing.T) {
 	skuRepo := &stubSkuRepository{}
 	inventoryUseCase := &stubInventoryUseCase{}
 	productRepo := &stubProductRepository{getById: domain.Product{Id: 1}}
-	service := &skuService{skuRepository: skuRepo, inventoryUseCase: inventoryUseCase, productRepository: productRepo}
+	service := &skuService{skuRepository: skuRepo, inventoryUseCase: inventoryUseCase, productRepository: productRepo, txManager: &stubRepository{}}
 
 	qty := 5.0
 	dest := int64(1)
 	cost := 10.0
 	price := 15.0
-	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Quantity: &qty, DestinationId: &dest, Cost: &cost, Price: &price}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Quantity: &qty, DestinationId: &dest, Cost: &cost, Price: price}
 
 	if err := service.Create(context.Background(), req, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -34,10 +35,10 @@ func TestSkuServiceCreate(t *testing.T) {
 
 func TestSkuServiceCreateDuplicated(t *testing.T) {
 	skuRepo := &stubSkuRepository{createErr: errors.New("duplicate key value violates unique constraint")}
-	service := &skuService{skuRepository: skuRepo, productRepository: &stubProductRepository{getById: domain.Product{Id: 1}}}
+	service := &skuService{skuRepository: skuRepo, productRepository: &stubProductRepository{getById: domain.Product{Id: 1}}, txManager: &stubRepository{}}
 	cost := 1.0
 	price := 2.0
-	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}
 
 	err := service.Create(context.Background(), req, 1)
 	if err == nil || err.Error() != "Código já cadastrado!" {
@@ -50,7 +51,7 @@ func TestSkuServiceUpdate(t *testing.T) {
 	service := &skuService{skuRepository: skuRepo}
 	cost := 1.0
 	price := 2.0
-	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}}
+	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}}
 
 	if err := service.Update(context.Background(), req, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -65,7 +66,7 @@ func TestSkuServiceUpdateDuplicated(t *testing.T) {
 	service := &skuService{skuRepository: skuRepo}
 	cost := 1.0
 	price := 2.0
-	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}}
+	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}}
 
 	err := service.Update(context.Background(), req, 1)
 	if err == nil || err.Error() != "Código já cadastrado!" {
@@ -77,12 +78,12 @@ func TestSkuServiceCreateInventoryError(t *testing.T) {
 	skuRepo := &stubSkuRepository{}
 	inventoryUseCase := &stubInventoryUseCase{err: errors.New("fail")}
 	productRepo := &stubProductRepository{getById: domain.Product{Id: 1}}
-	service := &skuService{skuRepository: skuRepo, inventoryUseCase: inventoryUseCase, productRepository: productRepo}
+	service := &skuService{skuRepository: skuRepo, inventoryUseCase: inventoryUseCase, productRepository: productRepo, txManager: &stubRepository{}}
 	qty := 1.0
 	dest := int64(1)
 	cost := 1.0
 	price := 2.0
-	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Quantity: &qty, DestinationId: &dest, Cost: &cost, Price: &price}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Quantity: &qty, DestinationId: &dest, Cost: &cost, Price: price}
 
 	err := service.Create(context.Background(), req, 1)
 	if err == nil || err.Error() != "Operação realizada parcialmente! Erro ao atualizar a quantidade de itens no estoque!" {
@@ -106,10 +107,10 @@ func TestSkuServiceUpdateValidationError(t *testing.T) {
 
 func TestSkuServiceCreateRepositoryError(t *testing.T) {
 	skuRepo := &stubSkuRepository{createErr: errors.New("other")}
-	service := &skuService{skuRepository: skuRepo, productRepository: &stubProductRepository{getById: domain.Product{Id: 1}}}
+	service := &skuService{skuRepository: skuRepo, productRepository: &stubProductRepository{getById: domain.Product{Id: 1}}, txManager: &stubRepository{}}
 	cost := 1.0
 	price := 2.0
-	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}
 
 	if err := service.Create(context.Background(), req, 1); err == nil || err.Error() != "other" {
 		t.Fatalf("expected repository error")
@@ -121,7 +122,7 @@ func TestSkuServiceUpdateRepositoryError(t *testing.T) {
 	service := &skuService{skuRepository: skuRepo}
 	cost := 1.0
 	price := 2.0
-	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}}
+	req := request.EditSkuRequest{CreateSkuRequest: request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}}
 
 	if err := service.Update(context.Background(), req, 1); err == nil || err.Error() != "other" {
 		t.Fatalf("expected repository error")
@@ -153,7 +154,8 @@ func TestSkuServiceGetAll(t *testing.T) {
 	skuRepo := &stubSkuRepository{getAll: []domain.Sku{{Id: 1}}}
 	service := &skuService{skuRepository: skuRepo}
 
-	skus, err := service.GetAll(context.Background())
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
+	skus, err := service.GetAll(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -174,7 +176,8 @@ func TestSkuServiceInactivate(t *testing.T) {
 func TestSkuServiceGetAllError(t *testing.T) {
 	skuRepo := &stubSkuRepository{getAllErr: errors.New("fail")}
 	service := &skuService{skuRepository: skuRepo}
-	if _, err := service.GetAll(context.Background()); err == nil {
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
+	if _, err := service.GetAll(ctx); err == nil {
 		t.Fatalf("expected error")
 	}
 }
@@ -188,10 +191,10 @@ func TestSkuServiceInactivateError(t *testing.T) {
 }
 
 func TestSkuServiceCreateProductLookupError(t *testing.T) {
-	service := &skuService{skuRepository: &stubSkuRepository{}, productRepository: &stubProductRepository{getByIdErr: errors.New("fail")}}
+	service := &skuService{skuRepository: &stubSkuRepository{}, productRepository: &stubProductRepository{getByIdErr: errors.New("fail")}, txManager: &stubRepository{}}
 	cost := 1.0
 	price := 2.0
-	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: &price}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}
 	if err := service.Create(context.Background(), req, 1); err == nil || err.Error() != "fail" {
 		t.Fatalf("expected product lookup error")
 	}

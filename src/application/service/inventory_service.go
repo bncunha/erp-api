@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/service/output"
@@ -9,6 +10,10 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
+
+type transactionManager interface {
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+}
 
 type InventoryService interface {
 	DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error
@@ -23,11 +28,11 @@ type inventoryService struct {
 	inventoryItemRepository  repository.InventoryItemRepository
 	inventoryTransactionRepo repository.InventoryTransactionRepository
 	inventoryRepository      repository.InventoryRepository
-	repository               *repository.Repository
+	txManager                transactionManager
 }
 
-func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, inventoryRepository repository.InventoryRepository, repository *repository.Repository) InventoryService {
-	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo, inventoryRepository, repository}
+func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, inventoryRepository repository.InventoryRepository, txManager transactionManager) InventoryService {
+	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo, inventoryRepository, txManager}
 }
 
 func (s *inventoryService) DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error {
@@ -44,15 +49,18 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 		})
 	}
 
-	tx, err := s.repository.BeginTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
+	var tx *sql.Tx
+	if s.txManager != nil {
+		tx, err = s.txManager.BeginTx(ctx)
 		if err != nil {
-			tx.Rollback()
+			return err
 		}
-	}()
+		defer func() {
+			if err != nil && tx != nil {
+				tx.Rollback()
+			}
+		}()
+	}
 
 	err = s.inventoryUseCase.DoTransaction(ctx, tx, inventory_usecase.DoTransactionInput{
 		Type:                   domain.InventoryTransactionType(request.Type),
@@ -64,7 +72,10 @@ func (s *inventoryService) DoTransaction(ctx context.Context, request request.Cr
 	if err != nil {
 		return err
 	}
-	return tx.Commit()
+	if tx != nil {
+		return tx.Commit()
+	}
+	return nil
 }
 
 func (s *inventoryService) GetAllInventoryItems(ctx context.Context) ([]output.GetInventoryItemsOutput, error) {

@@ -25,6 +25,10 @@ func ParseJWT(tokenString string) (string, float64, string, float64, error) {
 		return jwtSecret, nil
 	})
 
+	if err != nil || token == nil {
+		return "", 0, "", 0, err
+	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		username := claims["username"].(string)
 		tenant_id := claims["tenant_id"].(float64)

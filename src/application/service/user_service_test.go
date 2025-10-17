@@ -102,7 +102,7 @@ func TestUserServiceGetters(t *testing.T) {
 		t.Fatalf("unexpected get by id result")
 	}
 
-	users, err := service.GetAll(context.Background())
+	users, err := service.GetAll(context.Background(), request.GetAllUserRequest{})
 	if err != nil || len(users) != 1 {
 		t.Fatalf("unexpected get all result")
 	}

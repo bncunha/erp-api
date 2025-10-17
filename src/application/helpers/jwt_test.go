@@ -3,12 +3,12 @@ package helper
 import "testing"
 
 func TestGenerateAndParseJWT(t *testing.T) {
-	token, err := GenerateJWT("user", 123)
+	token, err := GenerateJWT("user", 123, "ADMIN", 456)
 	if err != nil {
 		t.Fatalf("unexpected error generating token: %v", err)
 	}
 
-	username, tenant, err := ParseJWT(token)
+	username, tenant, role, userID, err := ParseJWT(token)
 	if err != nil {
 		t.Fatalf("unexpected error parsing token: %v", err)
 	}
@@ -16,16 +16,20 @@ func TestGenerateAndParseJWT(t *testing.T) {
 	if username != "user" {
 		t.Fatalf("expected username 'user', got %s", username)
 	}
-	if tenant != 123 {
+	if int64(tenant) != 123 {
 		t.Fatalf("expected tenant 123, got %f", tenant)
+	}
+	if role != "ADMIN" {
+		t.Fatalf("expected role 'ADMIN', got %s", role)
+	}
+	if int64(userID) != 456 {
+		t.Fatalf("expected user id 456, got %f", userID)
 	}
 }
 
 func TestParseJWTInvalid(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic for invalid token")
-		}
-	}()
-	ParseJWT("invalid")
+	_, _, _, _, err := ParseJWT("invalid")
+	if err == nil {
+		t.Fatalf("expected error parsing invalid token")
+	}
 }

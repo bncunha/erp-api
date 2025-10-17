@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -27,7 +28,7 @@ func TestProductServiceCreate(t *testing.T) {
 			Color: "red",
 			Size:  "M",
 			Cost:  &cost,
-			Price: &price,
+			Price: price,
 		}},
 	}
 
@@ -75,7 +76,8 @@ func TestProductServiceGetAll(t *testing.T) {
 	productRepo := &stubProductRepository{getAll: []output.GetAllProductsOutput{{}}}
 	service := &productService{productRepository: productRepo}
 
-	products, err := service.GetAll(context.Background())
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
+	products, err := service.GetAll(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -161,7 +163,7 @@ func TestProductServiceInsertSkus(t *testing.T) {
 	service := &productService{skuRepository: skuRepo}
 	cost := 1.0
 	price := 2.0
-	skus, err := service.insertSkus(context.Background(), []request.CreateSkuRequest{{Code: "c", Color: "c", Size: "s", Cost: &cost, Price: &price}}, 1)
+	skus, err := service.insertSkus(context.Background(), []request.CreateSkuRequest{{Code: "c", Color: "c", Size: "s", Cost: &cost, Price: price}}, 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -184,7 +186,7 @@ func TestProductServiceCreateInsertSkusError(t *testing.T) {
 	service := &productService{productRepository: productRepo, categoryRepository: categoryRepo, skuRepository: skuRepo}
 	cost := 1.0
 	price := 2.0
-	req := request.CreateProductRequest{Name: "Product", CategoryID: 1, Skus: []request.CreateSkuRequest{{Code: "c", Color: "c", Size: "s", Cost: &cost, Price: &price}}}
+	req := request.CreateProductRequest{Name: "Product", CategoryID: 1, Skus: []request.CreateSkuRequest{{Code: "c", Color: "c", Size: "s", Cost: &cost, Price: price}}}
 
 	if _, err := service.Create(context.Background(), req); err == nil {
 		t.Fatalf("expected error from insert skus")
@@ -233,7 +235,8 @@ func TestProductServiceGetAllError(t *testing.T) {
 	productRepo := &stubProductRepository{getAllErr: errors.New("fail")}
 	service := &productService{productRepository: productRepo}
 
-	if _, err := service.GetAll(context.Background()); err == nil {
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
+	if _, err := service.GetAll(ctx); err == nil {
 		t.Fatalf("expected error")
 	}
 }
