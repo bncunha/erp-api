@@ -155,7 +155,7 @@ func TestSkuServiceGetAll(t *testing.T) {
 	service := &skuService{skuRepository: skuRepo}
 
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
-	skus, err := service.GetAll(ctx)
+	skus, err := service.GetAll(ctx, GetSkusFilters{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -177,8 +177,42 @@ func TestSkuServiceGetAllError(t *testing.T) {
 	skuRepo := &stubSkuRepository{getAllErr: errors.New("fail")}
 	service := &skuService{skuRepository: skuRepo}
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
-	if _, err := service.GetAll(ctx); err == nil {
+	if _, err := service.GetAll(ctx, GetSkusFilters{}); err == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func TestSkuServiceGetAllAdminFilter(t *testing.T) {
+	skuRepo := &stubSkuRepository{}
+	service := &skuService{skuRepository: skuRepo}
+
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
+	sellerId := 10.0
+
+	if _, err := service.GetAll(ctx, GetSkusFilters{SellerId: &sellerId}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if skuRepo.getAllInput.SellerId == nil || *skuRepo.getAllInput.SellerId != sellerId {
+		t.Fatalf("expected seller filter to be forwarded")
+	}
+}
+
+func TestSkuServiceGetAllNonAdminIgnoresFilter(t *testing.T) {
+	skuRepo := &stubSkuRepository{}
+	service := &skuService{skuRepository: skuRepo}
+
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleReseller))
+	userId := 5.0
+	ctx = context.WithValue(ctx, constants.USERID_KEY, userId)
+	sellerId := 2.0
+
+	if _, err := service.GetAll(ctx, GetSkusFilters{SellerId: &sellerId}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if skuRepo.getAllInput.SellerId == nil || *skuRepo.getAllInput.SellerId != userId {
+		t.Fatalf("expected seller filter to use logged user id")
 	}
 }
 

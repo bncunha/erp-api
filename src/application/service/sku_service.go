@@ -18,7 +18,7 @@ type SkuService interface {
 	Create(ctx context.Context, request request.CreateSkuRequest, productId int64) error
 	Update(ctx context.Context, request request.EditSkuRequest, skuId int64) error
 	GetById(ctx context.Context, skuId int64) (domain.Sku, error)
-	GetAll(ctx context.Context) ([]domain.Sku, error)
+	GetAll(ctx context.Context, filters GetSkusFilters) ([]domain.Sku, error)
 	Inactivate(ctx context.Context, id int64) error
 }
 
@@ -31,6 +31,10 @@ type skuService struct {
 
 func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository, txManager transactionManager) SkuService {
 	return &skuService{skuRepository, inventoryUseCase, productRepository, txManager}
+}
+
+type GetSkusFilters struct {
+	SellerId *float64
 }
 
 func (s *skuService) Create(ctx context.Context, request request.CreateSkuRequest, productId int64) error {
@@ -124,14 +128,16 @@ func (s *skuService) GetById(ctx context.Context, skuId int64) (domain.Sku, erro
 	return sku, nil
 }
 
-func (s *skuService) GetAll(ctx context.Context) ([]domain.Sku, error) {
-	var sellerId *float64
-	if helper.GetRole(ctx) != domain.UserRoleAdmin {
+func (s *skuService) GetAll(ctx context.Context, filters GetSkusFilters) ([]domain.Sku, error) {
+	var sellerIdFilter *float64
+	if helper.GetRole(ctx) == domain.UserRoleAdmin {
+		sellerIdFilter = filters.SellerId
+	} else {
 		id := ctx.Value(constants.USERID_KEY).(float64)
-		sellerId = &id
+		sellerIdFilter = &id
 	}
 
-	skus, err := s.skuRepository.GetAll(ctx, input.GetSkusInput{SellerId: sellerId})
+	skus, err := s.skuRepository.GetAll(ctx, input.GetSkusInput{SellerId: sellerIdFilter})
 	if err != nil {
 		return skus, err
 	}

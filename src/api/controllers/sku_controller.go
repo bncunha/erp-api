@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	_http "net/http"
 
 	"github.com/bncunha/erp-api/src/api/http"
@@ -62,7 +63,16 @@ func (c *SkuController) GetById(context echo.Context) error {
 }
 
 func (c *SkuController) GetAll(context echo.Context) error {
-	skus, err := c.skuService.GetAll(context.Request().Context())
+	var sellerId *float64
+	if sellerIdParam := context.QueryParam("seller_id"); sellerIdParam != "" {
+		parsedSellerId, err := helper.ParseFloat(sellerIdParam)
+		if err != nil {
+			return context.JSON(_http.StatusBadRequest, http.HandleError(errors.New("seller_id inválido")))
+		}
+		sellerId = &parsedSellerId
+	}
+
+	skus, err := c.skuService.GetAll(context.Request().Context(), service.GetSkusFilters{SellerId: sellerId})
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}

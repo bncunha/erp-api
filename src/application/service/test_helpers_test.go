@@ -147,6 +147,7 @@ type stubSkuRepository struct {
 	getAll          []domain.Sku
 	getAllErr       error
 	inactivateErr   error
+	getAllInput     input.GetSkusInput
 }
 
 func (s *stubSkuRepository) Create(ctx context.Context, sku domain.Sku, productId int64) (int64, error) {
@@ -185,7 +186,8 @@ func (s *stubSkuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]do
 	return nil, nil
 }
 
-func (s *stubSkuRepository) GetAll(ctx context.Context, _ input.GetSkusInput) ([]domain.Sku, error) {
+func (s *stubSkuRepository) GetAll(ctx context.Context, in input.GetSkusInput) ([]domain.Sku, error) {
+	s.getAllInput = in
 	return s.getAll, s.getAllErr
 }
 
