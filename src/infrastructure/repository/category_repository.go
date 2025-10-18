@@ -77,9 +77,25 @@ func (r *categoryRepository) Update(ctx context.Context, category domain.Categor
 
 func (r *categoryRepository) Delete(ctx context.Context, id int64) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `UPDATE categories SET deleted_at = now() WHERE id = $1 AND tenant_id = $2`
-	_, err := r.db.ExecContext(ctx, query, id, tenantId)
-	return err
+	query := `DELETE FROM categories WHERE id = $1 AND tenant_id = $2`
+	result, err := r.db.ExecContext(ctx, query, id, tenantId)
+	if err != nil {
+		if errors.IsForeignKeyViolation(err) {
+			return errors.New("Não é possível deletar a categoria pois existem registros associados.")
+		}
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("Categoria não encontrada")
+	}
+
+	return nil
 }
 
 func (r *categoryRepository) GetAll(ctx context.Context) ([]domain.Category, error) {
