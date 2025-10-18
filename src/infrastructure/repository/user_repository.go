@@ -80,11 +80,24 @@ func (r *userRepository) Update(ctx context.Context, user domain.User) error {
 
 func (r *userRepository) Inactivate(ctx context.Context, id int64) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `UPDATE users SET deleted_at = NOW() WHERE id = $1 and tenant_id = $2`
-	_, err := r.db.ExecContext(ctx, query, id, tenantId)
+	query := `DELETE FROM users WHERE id = $1 AND tenant_id = $2`
+	result, err := r.db.ExecContext(ctx, query, id, tenantId)
+	if err != nil {
+		if errors.IsForeignKeyViolation(err) {
+			return errors.New("Não é possível deletar o usuário pois existem registros associados.")
+		}
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return err
 	}
+
+	if rowsAffected == 0 {
+		return errors.New("Usuário não encontrado")
+	}
+
 	return nil
 }
 

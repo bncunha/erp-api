@@ -24,6 +24,16 @@ func TestIsUniqueViolation(t *testing.T) {
 	}
 }
 
+func TestIsForeignKeyViolation(t *testing.T) {
+	pqErr := &pq.Error{Code: "23503"}
+	if !IsForeignKeyViolation(pqErr) {
+		t.Fatalf("expected true for foreign key violation")
+	}
+	if IsForeignKeyViolation(stdErrors.New("other")) {
+		t.Fatalf("expected false for non pq error")
+	}
+}
+
 func TestIsNoRowsFinded(t *testing.T) {
 	if !IsNoRowsFinded(stdErrors.New("no rows in result set")) {
 		t.Fatalf("expected true")
