@@ -222,7 +222,13 @@ func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber i
 	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
 	newDate.PaymentType = s.PaymentType
 	if s.shouldConfirmPayment() {
-		newDate.Status = PaymentStatusPending
+		if installmentNumber == 1 && isSameDay(dueDate, time.Now()) {
+			paidDate := dueDate
+			newDate.PaidDate = &paidDate
+			newDate.Status = PaymentStatusPaid
+		} else {
+			newDate.Status = PaymentStatusPending
+		}
 	} else if s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix {
 		if dateInformed && isSameDay(dueDate, time.Now()) {
 			paidDate := dueDate
