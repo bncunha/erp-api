@@ -360,19 +360,20 @@ func (r *salesRepository) GetPaymentDatesBySaleIdAndPaymentDateId(ctx context.Co
 	var output domain.SalesPaymentDates
 
 	query := `
-	SELECT
-		pd.id,
-		pd.installment_number,
-		pd.installment_value,
-		pd.due_date,
-		pd.paid_date,
-		pd.status
-	FROM payment_dates pd
-	JOIN payments p ON pd.payment_id = p.id
-	WHERE pd.id = $1 AND pd.tenant_id = $2
-	ORDER BY pd.installment_number ASC;
-	`
-	err := r.db.QueryRowContext(ctx, query, paymentDateId, tenantId).Scan(&output.Id, &output.InstallmentNumber, &output.InstallmentValue, &output.DueDate, &output.PaidDate, &output.Status)
+        SELECT
+                pd.id,
+                pd.installment_number,
+                pd.installment_value,
+                pd.due_date,
+                pd.paid_date,
+                pd.status,
+                p.payment_type
+        FROM payment_dates pd
+        JOIN payments p ON pd.payment_id = p.id
+        WHERE pd.id = $1 AND pd.tenant_id = $2
+        ORDER BY pd.installment_number ASC;
+        `
+	err := r.db.QueryRowContext(ctx, query, paymentDateId, tenantId).Scan(&output.Id, &output.InstallmentNumber, &output.InstallmentValue, &output.DueDate, &output.PaidDate, &output.Status, &output.PaymentType)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return output, errors.New("Pagamento não encontrado")

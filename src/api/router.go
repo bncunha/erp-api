@@ -100,14 +100,14 @@ func (r *router) setupPrivateRoutes() {
 	salesGroup.POST("", r.controller.SalesController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.GET("", r.controller.SalesController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.GET("/:id", r.controller.SalesController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
-	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 
 	customerGroup := private.Group("/customers")
 	customerGroup.POST("", r.controller.CustomerController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	customerGroup.GET("", r.controller.CustomerController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
-    customerGroup.GET("/:id", r.controller.CustomerController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
-    customerGroup.PUT("/:id", r.controller.CustomerController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
-    customerGroup.DELETE("/:id", r.controller.CustomerController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	customerGroup.GET("/:id", r.controller.CustomerController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	customerGroup.PUT("/:id", r.controller.CustomerController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	customerGroup.DELETE("/:id", r.controller.CustomerController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 }
 
 func (r *router) Start() {

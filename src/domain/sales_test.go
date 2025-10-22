@@ -120,10 +120,17 @@ func TestSalesPaymentDatesQuantityValid(t *testing.T) {
 	}
 }
 
-func TestSalesPaymentDatesGreaterThanToday(t *testing.T) {
+func TestSalesPaymentValidateDatesPast(t *testing.T) {
 	payment := SalesPayment{PaymentType: PaymentTypeCreditStore, Dates: []SalesPaymentDates{{DueDate: time.Now().Add(-48 * time.Hour)}}}
-	if payment.isPaymentDatesGraterThanToday() {
-		t.Fatalf("expected past due date to be invalid")
+	if err := payment.validatePaymentDates(); err != ErrPaymentDatesPast {
+		t.Fatalf("expected past due date error, got %v", err)
+	}
+}
+
+func TestSalesPaymentValidateDatesCashPixRange(t *testing.T) {
+	payment := SalesPayment{PaymentType: PaymentTypeCash, Dates: []SalesPaymentDates{{DueDate: time.Now().AddDate(0, 0, 31)}}}
+	if err := payment.validatePaymentDates(); err != ErrPaymentDatesCashAndPixRange {
+		t.Fatalf("expected cash/pix range error, got %v", err)
 	}
 }
 
@@ -152,7 +159,7 @@ func TestSalesPaymentAppendNewSalesDate(t *testing.T) {
 	}
 }
 
-func TestSalesPaymentAppendNewSalesDateCash(t *testing.T) {
+func TestSalesPaymentAppendNewSalesDateCashFuture(t *testing.T) {
 	payment := NewSalesPayment(PaymentTypeCash)
 	due := time.Now().Add(48 * time.Hour)
 	payment.AppendNewSalesDate(due, 1, 10)
@@ -160,8 +167,21 @@ func TestSalesPaymentAppendNewSalesDateCash(t *testing.T) {
 	if len(payment.Dates) != 1 {
 		t.Fatalf("expected one payment date")
 	}
+	if payment.Dates[0].Status != PaymentStatusPending || payment.Dates[0].PaidDate != nil {
+		t.Fatalf("expected pending status without paid date for future cash payment: %+v", payment.Dates[0])
+	}
+}
+
+func TestSalesPaymentAppendNewSalesDateCashSameDay(t *testing.T) {
+	payment := NewSalesPayment(PaymentTypeCash)
+	due := time.Now()
+	payment.AppendNewSalesDate(due, 1, 10)
+
+	if len(payment.Dates) != 1 {
+		t.Fatalf("expected one payment date")
+	}
 	if payment.Dates[0].Status != PaymentStatusPaid || payment.Dates[0].PaidDate == nil {
-		t.Fatalf("expected paid status for cash: %+v", payment.Dates[0])
+		t.Fatalf("expected paid status for cash on same day: %+v", payment.Dates[0])
 	}
 	if !payment.Dates[0].DueDate.Equal(*payment.Dates[0].PaidDate) {
 		t.Fatalf("expected due date to match paid date")
