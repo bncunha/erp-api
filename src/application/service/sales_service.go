@@ -61,6 +61,7 @@ func (s *salesService) CreateSales(ctx context.Context, request request.CreateSa
 			installmentQuantity = *payment.InstallmentsQuantity
 		}
 		installmentsValue := s.calculateTotalValue(payment.Value, installmentQuantity)
+		dateInformed := payment.FirstInstallmentDate != nil
 		for i := 0; i < installmentQuantity; i++ {
 			dueDate := time.Now()
 			if payment.FirstInstallmentDate != nil {
@@ -70,6 +71,7 @@ func (s *salesService) CreateSales(ctx context.Context, request request.CreateSa
 				DueDate:           dueDate.AddDate(0, i, 0),
 				InstallmentNumber: i + 1,
 				InstallmentValue:  installmentsValue[i],
+				DateInformed:      dateInformed,
 			})
 		}
 		payments = append(payments, sales_usecase.DoSalePaymentsInput{

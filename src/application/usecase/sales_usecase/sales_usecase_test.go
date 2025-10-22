@@ -338,6 +338,7 @@ func newSaleTestEnv(t *testing.T) saleTestEnv {
 				DueDate:           time.Now().Add(24 * time.Hour),
 				InstallmentNumber: 1,
 				InstallmentValue:  20,
+				DateInformed:      false,
 			}},
 		}},
 	}
@@ -598,6 +599,7 @@ func TestSalesUseCaseCreateSale(t *testing.T) {
 			DueDate:           due,
 			InstallmentNumber: 1,
 			InstallmentValue:  20,
+			DateInformed:      false,
 		}},
 	}}
 

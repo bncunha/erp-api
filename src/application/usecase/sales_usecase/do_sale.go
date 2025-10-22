@@ -137,7 +137,7 @@ func (s *salesUseCase) createSale(user domain.User, customer domain.Customer, in
 	for i, payment := range paymentsInput {
 		payments[i] = domain.NewSalesPayment(payment.PaymentType)
 		for _, date := range payment.Dates {
-			payments[i].AppendNewSalesDate(date.DueDate, date.InstallmentNumber, date.InstallmentValue)
+			payments[i].AppendNewSalesDate(date.DueDate, date.InstallmentNumber, date.InstallmentValue, date.DateInformed)
 		}
 	}
 	return domain.NewSales(time.Now(), user, customer, items, payments)
