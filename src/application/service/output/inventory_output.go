@@ -34,3 +34,12 @@ type GetInventoryTransactionsOutput struct {
 	UserDestinationName      *string
 	Justification            *string
 }
+
+type GetInventorySummaryOutput struct {
+	InventoryId       int64
+	InventoryType     domain.InventoryType
+	InventoryUserName *string
+	TotalSkus         int64
+	TotalQuantity     float64
+	ZeroQuantityItems int64
+}

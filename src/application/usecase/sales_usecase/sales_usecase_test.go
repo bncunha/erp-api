@@ -174,6 +174,10 @@ func (f *fakeInventoryRepository) GetPrimaryInventory(context.Context) (domain.I
 	return f.primary, f.primaryErr
 }
 
+func (f *fakeInventoryRepository) GetSummary(context.Context) ([]serviceOutput.GetInventorySummaryOutput, error) {
+	return nil, nil
+}
+
 type fakeInventoryItemRepository struct {
 	items    []domain.InventoryItem
 	itemsErr error
