@@ -31,4 +31,5 @@ type DoSalePaymentDatesInput struct {
 	InstallmentNumber int
 	InstallmentValue  float64
 	Status            domain.PaymentStatus
+	DateInformed      bool
 }

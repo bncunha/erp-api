@@ -218,13 +218,13 @@ func (s *SalesPayment) isPaymentDatesDuplicated() bool {
 	return false
 }
 
-func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64) {
+func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64, dateInformed bool) {
 	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
 	newDate.PaymentType = s.PaymentType
 	if s.shouldConfirmPayment() {
 		newDate.Status = PaymentStatusPending
 	} else if s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix {
-		if isSameDay(dueDate, time.Now()) {
+		if dateInformed && isSameDay(dueDate, time.Now()) {
 			paidDate := dueDate
 			newDate.PaidDate = &paidDate
 			newDate.Status = PaymentStatusPaid
