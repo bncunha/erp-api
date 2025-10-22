@@ -18,6 +18,13 @@ func IsUniqueViolation(err error) bool {
 	return false
 }
 
+func IsForeignKeyViolation(err error) bool {
+	if pqErr, ok := err.(*pq.Error); ok {
+		return pqErr.Code == "23503"
+	}
+	return false
+}
+
 func IsNoRowsFinded(err error) bool {
 	return strings.Contains(err.Error(), "no rows in result set")
 }

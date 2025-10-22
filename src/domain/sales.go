@@ -21,6 +21,7 @@ var (
 	ErrPaymentDatesPast            = errors.New("As datas de pagamento devem ser maiores que a data atual")
 	ErrPaymentDatesOrderInvalid    = errors.New("As datas de pagamento devem ser ordenadas")
 	ErrPaymentDatesQuantityInvalid = errors.New("Pagamento em dinheiro, PIX ou débito deve ter apenas uma data de pagamento")
+	ErrPaymentDatesCashAndPixRange = errors.New("Para pagamentos em dinheiro ou PIX, a data deve ser a partir de hoje e no máximo em 30 dias")
 	ErrSkusDuplicated              = errors.New("SKUs duplicados encontrados")
 	ErrPaymentTypesDuplicated      = errors.New("Tipos de pagamento duplicados encontrados. Remova os tipos de pagamento duplicados")
 	ErrPaymentDatesDuplicated      = errors.New("As datas de pagamento devem ser diferentes")
@@ -84,8 +85,8 @@ func (s *Sales) ValidateSale() error {
 		if payment.isPaymentDatesDuplicated() {
 			return errors.New(ErrPaymentDatesDuplicated.Error() + fmt.Sprintf(": (%s)", payment.PaymentType))
 		}
-		if !payment.isPaymentDatesGraterThanToday() {
-			return ErrPaymentDatesPast
+		if err := payment.validatePaymentDates(); err != nil {
+			return err
 		}
 		if !payment.isPaymentDatesQuantityValid() {
 			return ErrPaymentDatesQuantityInvalid
@@ -169,13 +170,28 @@ func (s *SalesPayment) isPaymentDatesQuantityValid() bool {
 	return true
 }
 
-func (s *SalesPayment) isPaymentDatesGraterThanToday() bool {
+func (s *SalesPayment) validatePaymentDates() error {
+	today := time.Now()
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	maxDate := todayStart.AddDate(0, 0, 30)
 	for _, date := range s.Dates {
-		if time.Now().Truncate(25 * time.Hour).After(date.DueDate) {
-			return false
+		dueDate := time.Date(date.DueDate.Year(), date.DueDate.Month(), date.DueDate.Day(), 0, 0, 0, 0, today.Location())
+		if dueDate.Before(todayStart) {
+			return ErrPaymentDatesPast
+		}
+		if s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix {
+			if dueDate.After(maxDate) {
+				return ErrPaymentDatesCashAndPixRange
+			}
 		}
 	}
-	return true
+	return nil
+}
+
+func isSameDay(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
 }
 
 func (s *SalesPayment) isPaymentDatesOrderValid() bool {
@@ -202,10 +218,25 @@ func (s *SalesPayment) isPaymentDatesDuplicated() bool {
 	return false
 }
 
-func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64) {
+func (s *SalesPayment) AppendNewSalesDate(dueDate time.Time, installmentNumber int, installmentValue float64, dateInformed bool) {
 	newDate := NewSalesPaymentDates(dueDate, nil, installmentNumber, installmentValue, "")
+	newDate.PaymentType = s.PaymentType
 	if s.shouldConfirmPayment() {
-		newDate.Status = PaymentStatusPending
+		if installmentNumber == 1 && isSameDay(dueDate, time.Now()) {
+			paidDate := dueDate
+			newDate.PaidDate = &paidDate
+			newDate.Status = PaymentStatusPaid
+		} else {
+			newDate.Status = PaymentStatusPending
+		}
+	} else if s.PaymentType == PaymentTypeCash || s.PaymentType == PaymentTypePix {
+		if dateInformed && isSameDay(dueDate, time.Now()) {
+			paidDate := dueDate
+			newDate.PaidDate = &paidDate
+			newDate.Status = PaymentStatusPaid
+		} else {
+			newDate.Status = PaymentStatusPending
+		}
 	} else {
 		paidDate := time.Now()
 		newDate.DueDate = paidDate
@@ -223,6 +254,7 @@ type SalesPaymentDates struct {
 	InstallmentNumber int
 	InstallmentValue  float64
 	Status            PaymentStatus
+	PaymentType       PaymentType
 }
 
 func NewSalesPaymentDates(dueDate time.Time, paidDate *time.Time, installmentNumber int, installmentValue float64, status PaymentStatus) SalesPaymentDates {

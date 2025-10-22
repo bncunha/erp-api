@@ -193,7 +193,24 @@ func (r *skuRepository) GetAll(ctx context.Context, input input.GetSkusInput) ([
 }
 
 func (r *skuRepository) Inactivate(ctx context.Context, id int64) error {
-	query := `UPDATE skus SET deleted_at = now() WHERE id = $1 AND tenant_id = $2`
-	_, err := r.db.ExecContext(ctx, query, id, ctx.Value(constants.TENANT_KEY))
-	return err
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	query := `DELETE FROM skus WHERE id = $1 AND tenant_id = $2`
+	result, err := r.db.ExecContext(ctx, query, id, tenantId)
+	if err != nil {
+		if errors.IsForeignKeyViolation(err) {
+			return errors.New("Não é possível deletar o SKU pois existem registros associados.")
+		}
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("SKU não encontrada")
+	}
+
+	return nil
 }
