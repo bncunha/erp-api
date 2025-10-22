@@ -67,6 +67,16 @@ func TestInventoryServiceGetInventories(t *testing.T) {
 	}
 }
 
+func TestInventoryServiceGetInventoriesSummary(t *testing.T) {
+	repo := &stubInventoryRepository{getSummary: []output.GetInventorySummaryOutput{{}}}
+	service := &inventoryService{inventoryRepository: repo}
+
+	summaries, err := service.GetInventoriesSummary(context.Background())
+	if err != nil || len(summaries) != 1 {
+		t.Fatalf("unexpected summary result")
+	}
+}
+
 func TestInventoryServiceDoTransactionValidationError(t *testing.T) {
 	service := &inventoryService{}
 	if err := service.DoTransaction(context.Background(), request.CreateInventoryTransactionRequest{}); err == nil {

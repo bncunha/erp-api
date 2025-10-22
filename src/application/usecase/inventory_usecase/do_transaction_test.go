@@ -346,6 +346,10 @@ func (r *doTxInventoryRepository) GetPrimaryInventory(ctx context.Context) (doma
 	return domain.Inventory{}, nil
 }
 
+func (r *doTxInventoryRepository) GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
+	return nil, nil
+}
+
 type doTxInventoryItemRepository struct {
 	items          map[int64][]domain.InventoryItem
 	createdItems   []domain.InventoryItem

@@ -90,3 +90,17 @@ func (c *InventoryController) GetAllInventories(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, inventoryViewModels)
 }
+
+func (c *InventoryController) GetInventoriesSummary(context echo.Context) error {
+	summaries, err := c.inventoryService.GetInventoriesSummary(context.Request().Context())
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	summaryViewModels := make([]viewmodel.GetInventorySummaryViewModel, 0, len(summaries))
+	for _, summary := range summaries {
+		summaryViewModels = append(summaryViewModels, viewmodel.ToGetInventorySummaryViewModel(summary))
+	}
+
+	return context.JSON(_http.StatusOK, summaryViewModels)
+}
