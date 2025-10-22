@@ -159,6 +159,28 @@ func TestSalesPaymentAppendNewSalesDate(t *testing.T) {
 	}
 }
 
+func TestSalesPaymentAppendNewSalesDateCreditStoreFirstInstallmentPaidWhenDueToday(t *testing.T) {
+	payment := NewSalesPayment(PaymentTypeCreditStore)
+	due := time.Now()
+	payment.AppendNewSalesDate(due, 1, 10, false)
+
+	if len(payment.Dates) != 1 {
+		t.Fatalf("expected one payment date")
+	}
+	if payment.Dates[0].Status != PaymentStatusPaid {
+		t.Fatalf("expected paid status for first installment due today: %+v", payment.Dates[0])
+	}
+	if payment.Dates[0].PaidDate == nil {
+		t.Fatalf("expected paid date for first installment due today")
+	}
+	if !isSameDay(*payment.Dates[0].PaidDate, time.Now()) {
+		t.Fatalf("expected paid date to be today")
+	}
+	if !payment.Dates[0].DueDate.Equal(*payment.Dates[0].PaidDate) {
+		t.Fatalf("expected due date to match paid date")
+	}
+}
+
 func TestSalesPaymentAppendNewSalesDateCashFuture(t *testing.T) {
 	payment := NewSalesPayment(PaymentTypeCash)
 	due := time.Now().Add(48 * time.Hour)
