@@ -175,6 +175,7 @@ func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (out
 	query := `SELECT i.id,
    i.type,
    u.name,
+   COUNT(DISTINCT ii.sku_id) AS total_skus,
    COALESCE(SUM(ii.quantity), 0) AS total_quantity,
    COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items,
    (
@@ -192,7 +193,7 @@ GROUP BY i.id, i.type, u.name`
 
 	var lastTransactionDays sql.NullInt64
 
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalQuantity, &summary.ZeroQuantityItems, &lastTransactionDays)
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems, &lastTransactionDays)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return summary, ErrInventoryNotFound

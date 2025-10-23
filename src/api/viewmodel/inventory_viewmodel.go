@@ -169,6 +169,7 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 type GetInventorySummaryByIdViewModel struct {
 	InventoryId         int64   `json:"inventory_id"`
 	InventoryName       string  `json:"inventory_name"`
+	TotalSkus           int64   `json:"total_skus"`
 	TotalQuantity       float64 `json:"total_quantity"`
 	ZeroQuantityItems   int64   `json:"zero_quantity_items"`
 	LastTransactionDays *int64  `json:"last_transaction_days"`
@@ -183,6 +184,7 @@ func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOu
 	return GetInventorySummaryByIdViewModel{
 		InventoryId:         summary.InventoryId,
 		InventoryName:       inventoryName,
+		TotalSkus:           summary.TotalSkus,
 		TotalQuantity:       summary.TotalQuantity,
 		ZeroQuantityItems:   summary.ZeroQuantityItems,
 		LastTransactionDays: summary.LastTransactionDays,

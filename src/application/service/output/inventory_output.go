@@ -48,6 +48,7 @@ type GetInventorySummaryByIdOutput struct {
 	InventoryId         int64
 	InventoryType       domain.InventoryType
 	InventoryUserName   *string
+	TotalSkus           int64
 	TotalQuantity       float64
 	ZeroQuantityItems   int64
 	LastTransactionDays *int64
