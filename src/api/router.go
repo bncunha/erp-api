@@ -92,6 +92,7 @@ func (r *router) setupPrivateRoutes() {
 	inventoryGroup := private.Group("/inventory", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	inventoryGroup.GET("", r.controller.InventoryController.GetAllInventories)
 	inventoryGroup.GET("/summary", r.controller.InventoryController.GetInventoriesSummary)
+	inventoryGroup.GET("/:id/summary", r.controller.InventoryController.GetInventorySummary)
 	inventoryGroup.GET("/:id/items", r.controller.InventoryController.GetInventoryItemsByInventoryId)
 	inventoryGroup.GET("/items", r.controller.InventoryController.GetAllInventoryItems)
 	inventoryGroup.GET("/transaction", r.controller.InventoryController.GetAllInventoryTransactions)

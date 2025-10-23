@@ -43,3 +43,11 @@ type GetInventorySummaryOutput struct {
 	TotalQuantity     float64
 	ZeroQuantityItems int64
 }
+
+type GetInventorySummaryByIdOutput struct {
+	InventoryId       int64
+	InventoryType     domain.InventoryType
+	InventoryUserName *string
+	TotalQuantity     float64
+	ZeroQuantityItems int64
+}

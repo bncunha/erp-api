@@ -22,6 +22,7 @@ type InventoryService interface {
 	GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error)
 	GetAllInventories(ctx context.Context) ([]domain.Inventory, error)
 	GetInventoriesSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error)
+	GetInventorySummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error)
 }
 
 type inventoryService struct {
@@ -97,4 +98,8 @@ func (s *inventoryService) GetAllInventories(ctx context.Context) ([]domain.Inve
 
 func (s *inventoryService) GetInventoriesSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
 	return s.inventoryRepository.GetSummary(ctx)
+}
+
+func (s *inventoryService) GetInventorySummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+	return s.inventoryRepository.GetSummaryById(ctx, id)
 }

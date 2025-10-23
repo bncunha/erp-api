@@ -241,18 +241,20 @@ func (s *stubUserRepository) GetByUsername(ctx context.Context, username string)
 }
 
 type stubInventoryRepository struct {
-	createErr     error
-	created       domain.Inventory
-	getAll        []domain.Inventory
-	getAllErr     error
-	getByUser     domain.Inventory
-	getByUserErr  error
-	getById       domain.Inventory
-	getByIdErr    error
-	getPrimary    domain.Inventory
-	getPrimaryErr error
-	getSummary    []output.GetInventorySummaryOutput
-	getSummaryErr error
+	createErr         error
+	created           domain.Inventory
+	getAll            []domain.Inventory
+	getAllErr         error
+	getByUser         domain.Inventory
+	getByUserErr      error
+	getById           domain.Inventory
+	getByIdErr        error
+	getPrimary        domain.Inventory
+	getPrimaryErr     error
+	getSummary        []output.GetInventorySummaryOutput
+	getSummaryErr     error
+	getSummaryById    output.GetInventorySummaryByIdOutput
+	getSummaryByIdErr error
 }
 
 func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.Inventory) (int64, error) {
@@ -281,6 +283,10 @@ func (s *stubInventoryRepository) GetByUserId(ctx context.Context, userId int64)
 
 func (s *stubInventoryRepository) GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
 	return s.getSummary, s.getSummaryErr
+}
+
+func (s *stubInventoryRepository) GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+	return s.getSummaryById, s.getSummaryByIdErr
 }
 
 type stubInventoryItemRepository struct {
