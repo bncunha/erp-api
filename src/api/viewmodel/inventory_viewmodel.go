@@ -165,3 +165,24 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 		ZeroQuantityItems: summary.ZeroQuantityItems,
 	}
 }
+
+type GetInventorySummaryByIdViewModel struct {
+	InventoryId       int64   `json:"inventory_id"`
+	InventoryName     string  `json:"inventory_name"`
+	TotalQuantity     float64 `json:"total_quantity"`
+	ZeroQuantityItems int64   `json:"zero_quantity_items"`
+}
+
+func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOutput) GetInventorySummaryByIdViewModel {
+	inventoryName := inventoryTypeMap[summary.InventoryType]
+	if summary.InventoryUserName != nil && *summary.InventoryUserName != "" {
+		inventoryName = *summary.InventoryUserName + " - " + inventoryName
+	}
+
+	return GetInventorySummaryByIdViewModel{
+		InventoryId:       summary.InventoryId,
+		InventoryName:     inventoryName,
+		TotalQuantity:     summary.TotalQuantity,
+		ZeroQuantityItems: summary.ZeroQuantityItems,
+	}
+}

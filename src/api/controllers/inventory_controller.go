@@ -104,3 +104,14 @@ func (c *InventoryController) GetInventoriesSummary(context echo.Context) error 
 
 	return context.JSON(_http.StatusOK, summaryViewModels)
 }
+
+func (c *InventoryController) GetInventorySummary(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	summary, err := c.inventoryService.GetInventorySummaryById(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, viewmodel.ToGetInventorySummaryByIdViewModel(summary))
+}

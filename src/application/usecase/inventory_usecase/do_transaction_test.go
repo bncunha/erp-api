@@ -350,6 +350,10 @@ func (r *doTxInventoryRepository) GetSummary(ctx context.Context) ([]output.GetI
 	return nil, nil
 }
 
+func (r *doTxInventoryRepository) GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+	return output.GetInventorySummaryByIdOutput{}, nil
+}
+
 type doTxInventoryItemRepository struct {
 	items          map[int64][]domain.InventoryItem
 	createdItems   []domain.InventoryItem

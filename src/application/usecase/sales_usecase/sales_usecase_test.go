@@ -178,6 +178,10 @@ func (f *fakeInventoryRepository) GetSummary(context.Context) ([]serviceOutput.G
 	return nil, nil
 }
 
+func (f *fakeInventoryRepository) GetSummaryById(context.Context, int64) (serviceOutput.GetInventorySummaryByIdOutput, error) {
+	return serviceOutput.GetInventorySummaryByIdOutput{}, nil
+}
+
 type fakeInventoryItemRepository struct {
 	items    []domain.InventoryItem
 	itemsErr error
