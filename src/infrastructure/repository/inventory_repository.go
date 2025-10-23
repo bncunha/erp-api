@@ -173,17 +173,26 @@ func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (out
 	var userName sql.NullString
 
 	query := `SELECT i.id,
-       i.type,
-       u.name,
-       COALESCE(SUM(ii.quantity), 0) AS total_quantity,
-       COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items
+   i.type,
+   u.name,
+   COALESCE(SUM(ii.quantity), 0) AS total_quantity,
+   COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items,
+   (
+           SELECT DATE_PART('day', NOW() - MAX(it.date))::bigint
+           FROM inventory_transactions it
+           WHERE it.tenant_id = i.tenant_id
+             AND it.deleted_at IS NULL
+             AND (it.inventory_in_id = i.id OR it.inventory_out_id = i.id)
+   ) AS last_transaction_days
 FROM inventories i
 LEFT JOIN users u ON u.id = i.user_id
 LEFT JOIN inventory_items ii ON ii.inventory_id = i.id AND ii.deleted_at IS NULL AND ii.tenant_id = i.tenant_id
 WHERE i.id = $1 AND i.tenant_id = $2 AND i.deleted_at IS NULL
 GROUP BY i.id, i.type, u.name`
 
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalQuantity, &summary.ZeroQuantityItems)
+	var lastTransactionDays sql.NullInt64
+
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalQuantity, &summary.ZeroQuantityItems, &lastTransactionDays)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return summary, ErrInventoryNotFound
@@ -195,6 +204,10 @@ GROUP BY i.id, i.type, u.name`
 	if userName.Valid {
 		name := userName.String
 		summary.InventoryUserName = &name
+	}
+	if lastTransactionDays.Valid {
+		days := lastTransactionDays.Int64
+		summary.LastTransactionDays = &days
 	}
 
 	return summary, nil
