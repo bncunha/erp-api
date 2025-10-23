@@ -144,6 +144,7 @@ func ToGetInventoriesViewModel(inventory domain.Inventory) GetInventoriesViewMod
 }
 
 type GetInventorySummaryViewModel struct {
+	InventoryId       int64   `json:"inventory_id"`
 	InventoryName     string  `json:"inventory_name"`
 	TotalSkus         int64   `json:"total_skus"`
 	TotalQuantity     float64 `json:"total_quantity"`
@@ -157,6 +158,7 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 	}
 
 	return GetInventorySummaryViewModel{
+		InventoryId:       summary.InventoryId,
 		InventoryName:     inventoryName,
 		TotalSkus:         summary.TotalSkus,
 		TotalQuantity:     summary.TotalQuantity,
