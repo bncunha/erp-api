@@ -47,11 +47,11 @@ func TestInventoryServiceGetByInventoryId(t *testing.T) {
 	}
 }
 
-func TestInventoryServiceGetTransactions(t *testing.T) {
-	repo := &stubInventoryTransactionRepository{getAll: []output.GetInventoryTransactionsOutput{{}}}
+func TestInventoryServiceGetTransactionsByInventoryId(t *testing.T) {
+	repo := &stubInventoryTransactionRepository{getByInventoryId: []output.GetInventoryTransactionsOutput{{}}}
 	service := &inventoryService{inventoryTransactionRepo: repo}
 
-	txs, err := service.GetAllInventoryTransactions(context.Background())
+	txs, err := service.GetInventoryTransactionsByInventoryId(context.Background(), 1)
 	if err != nil || len(txs) != 1 {
 		t.Fatalf("unexpected transactions result")
 	}

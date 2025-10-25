@@ -19,7 +19,7 @@ type InventoryService interface {
 	DoTransaction(ctx context.Context, request request.CreateInventoryTransactionRequest) error
 	GetAllInventoryItems(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
 	GetInventoryItemsByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error)
-	GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error)
+	GetInventoryTransactionsByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryTransactionsOutput, error)
 	GetAllInventories(ctx context.Context) ([]domain.Inventory, error)
 	GetInventoriesSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error)
 	GetInventorySummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error)
@@ -88,8 +88,8 @@ func (s *inventoryService) GetInventoryItemsByInventoryId(ctx context.Context, i
 	return s.inventoryItemRepository.GetByInventoryId(ctx, id)
 }
 
-func (s *inventoryService) GetAllInventoryTransactions(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
-	return s.inventoryTransactionRepo.GetAll(ctx)
+func (s *inventoryService) GetInventoryTransactionsByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryTransactionsOutput, error) {
+	return s.inventoryTransactionRepo.GetByInventoryId(ctx, id)
 }
 
 func (s *inventoryService) GetAllInventories(ctx context.Context) ([]domain.Inventory, error) {

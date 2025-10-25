@@ -91,6 +91,10 @@ func (s *stubInventoryTransactionRepository) GetAll(ctx context.Context) ([]outp
 	return nil, nil
 }
 
+func (s *stubInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
+	return nil, nil
+}
+
 func TestDetachIds(t *testing.T) {
 	uc := &inventoryUseCase{}
 	ids := uc.detachIds([]DoTransactionSkusInput{{SkuId: 1}, {SkuId: 2}})
@@ -410,6 +414,10 @@ func (r *doTxInventoryTransactionRepository) Create(ctx context.Context, tx *sql
 }
 
 func (r *doTxInventoryTransactionRepository) GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
+	return nil, nil
+}
+
+func (r *doTxInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
 	return nil, nil
 }
 
