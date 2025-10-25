@@ -145,21 +145,23 @@ func ToGetInventoriesViewModel(inventory domain.Inventory) GetInventoriesViewMod
 
 type GetInventorySummaryViewModel struct {
 	InventoryId       int64   `json:"inventory_id"`
-	InventoryName     string  `json:"inventory_name"`
+	InventoryType     string  `json:"inventory_type"`
+	UserName          *string `json:"user_name"`
 	TotalSkus         int64   `json:"total_skus"`
 	TotalQuantity     float64 `json:"total_quantity"`
 	ZeroQuantityItems int64   `json:"zero_quantity_items"`
 }
 
 func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) GetInventorySummaryViewModel {
-	inventoryName := inventoryTypeMap[summary.InventoryType]
-	if summary.InventoryUserName != nil && *summary.InventoryUserName != "" {
-		inventoryName = *summary.InventoryUserName + " - " + inventoryName
+	inventoryType := inventoryTypeMap[summary.InventoryType]
+	if inventoryType == "" {
+		inventoryType = "Outro"
 	}
 
 	return GetInventorySummaryViewModel{
 		InventoryId:       summary.InventoryId,
-		InventoryName:     inventoryName,
+		InventoryType:     inventoryType,
+		UserName:          summary.InventoryUserName,
 		TotalSkus:         summary.TotalSkus,
 		TotalQuantity:     summary.TotalQuantity,
 		ZeroQuantityItems: summary.ZeroQuantityItems,
@@ -168,7 +170,8 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 
 type GetInventorySummaryByIdViewModel struct {
 	InventoryId         int64   `json:"inventory_id"`
-	InventoryName       string  `json:"inventory_name"`
+	InventoryType       string  `json:"inventory_type"`
+	UserName            *string `json:"user_name"`
 	TotalSkus           int64   `json:"total_skus"`
 	TotalQuantity       float64 `json:"total_quantity"`
 	ZeroQuantityItems   int64   `json:"zero_quantity_items"`
@@ -176,14 +179,15 @@ type GetInventorySummaryByIdViewModel struct {
 }
 
 func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOutput) GetInventorySummaryByIdViewModel {
-	inventoryName := inventoryTypeMap[summary.InventoryType]
-	if summary.InventoryUserName != nil && *summary.InventoryUserName != "" {
-		inventoryName = *summary.InventoryUserName + " - " + inventoryName
+	inventoryType := inventoryTypeMap[summary.InventoryType]
+	if inventoryType == "" {
+		inventoryType = "Outro"
 	}
 
 	return GetInventorySummaryByIdViewModel{
 		InventoryId:         summary.InventoryId,
-		InventoryName:       inventoryName,
+		InventoryType:       inventoryType,
+		UserName:            summary.InventoryUserName,
 		TotalSkus:           summary.TotalSkus,
 		TotalQuantity:       summary.TotalQuantity,
 		ZeroQuantityItems:   summary.ZeroQuantityItems,
