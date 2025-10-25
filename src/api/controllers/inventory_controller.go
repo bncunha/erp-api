@@ -63,8 +63,10 @@ func (c *InventoryController) GetInventoryItemsByInventoryId(context echo.Contex
 	return context.JSON(_http.StatusOK, inventoryItemViewModels)
 }
 
-func (c *InventoryController) GetAllInventoryTransactions(context echo.Context) error {
-	inventoryTransactions, err := c.inventoryService.GetAllInventoryTransactions(context.Request().Context())
+func (c *InventoryController) GetInventoryTransactionsByInventoryId(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	inventoryTransactions, err := c.inventoryService.GetInventoryTransactionsByInventoryId(context.Request().Context(), id)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
