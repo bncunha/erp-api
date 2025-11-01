@@ -1,6 +1,8 @@
 package viewmodel
 
 import (
+	"time"
+
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -113,9 +115,11 @@ func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventor
 		transactionType = inventoryTransactionTypeMap[inventoryTransaction.Type]
 	}
 
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
+
 	return GetInventoryTransactionsViewModel{
 		Id:            inventoryTransaction.Id,
-		Date:          inventoryTransaction.Date.Format("02/01/2006 15:04"),
+		Date:          inventoryTransaction.Date.In(loc).Format("02/01/2006 15:04"),
 		Type:          transactionType,
 		Quantity:      inventoryTransaction.Quantity,
 		ProductName:   productName,
