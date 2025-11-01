@@ -241,16 +241,20 @@ func (s *stubUserRepository) GetByUsername(ctx context.Context, username string)
 }
 
 type stubInventoryRepository struct {
-	createErr     error
-	created       domain.Inventory
-	getAll        []domain.Inventory
-	getAllErr     error
-	getByUser     domain.Inventory
-	getByUserErr  error
-	getById       domain.Inventory
-	getByIdErr    error
-	getPrimary    domain.Inventory
-	getPrimaryErr error
+	createErr         error
+	created           domain.Inventory
+	getAll            []domain.Inventory
+	getAllErr         error
+	getByUser         domain.Inventory
+	getByUserErr      error
+	getById           domain.Inventory
+	getByIdErr        error
+	getPrimary        domain.Inventory
+	getPrimaryErr     error
+	getSummary        []output.GetInventorySummaryOutput
+	getSummaryErr     error
+	getSummaryById    output.GetInventorySummaryByIdOutput
+	getSummaryByIdErr error
 }
 
 func (s *stubInventoryRepository) Create(ctx context.Context, inventory domain.Inventory) (int64, error) {
@@ -275,6 +279,14 @@ func (s *stubInventoryRepository) GetAll(ctx context.Context) ([]domain.Inventor
 
 func (s *stubInventoryRepository) GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error) {
 	return s.getByUser, s.getByUserErr
+}
+
+func (s *stubInventoryRepository) GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
+	return s.getSummary, s.getSummaryErr
+}
+
+func (s *stubInventoryRepository) GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+	return s.getSummaryById, s.getSummaryByIdErr
 }
 
 type stubInventoryItemRepository struct {
@@ -313,8 +325,10 @@ func (s *stubInventoryItemRepository) GetByManySkuIdsAndInventoryId(ctx context.
 }
 
 type stubInventoryTransactionRepository struct {
-	getAll    []output.GetInventoryTransactionsOutput
-	getAllErr error
+	getAll            []output.GetInventoryTransactionsOutput
+	getAllErr         error
+	getByInventoryId  []output.GetInventoryTransactionsOutput
+	getByInventoryErr error
 }
 
 func (s *stubInventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction domain.InventoryTransaction) (int64, error) {
@@ -322,6 +336,16 @@ func (s *stubInventoryTransactionRepository) Create(ctx context.Context, tx *sql
 }
 
 func (s *stubInventoryTransactionRepository) GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
+	return s.getAll, s.getAllErr
+}
+
+func (s *stubInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
+	if s.getByInventoryErr != nil {
+		return nil, s.getByInventoryErr
+	}
+	if s.getByInventoryId != nil {
+		return s.getByInventoryId, nil
+	}
 	return s.getAll, s.getAllErr
 }
 

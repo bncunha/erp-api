@@ -47,11 +47,11 @@ func TestInventoryServiceGetByInventoryId(t *testing.T) {
 	}
 }
 
-func TestInventoryServiceGetTransactions(t *testing.T) {
-	repo := &stubInventoryTransactionRepository{getAll: []output.GetInventoryTransactionsOutput{{}}}
+func TestInventoryServiceGetTransactionsByInventoryId(t *testing.T) {
+	repo := &stubInventoryTransactionRepository{getByInventoryId: []output.GetInventoryTransactionsOutput{{}}}
 	service := &inventoryService{inventoryTransactionRepo: repo}
 
-	txs, err := service.GetAllInventoryTransactions(context.Background())
+	txs, err := service.GetInventoryTransactionsByInventoryId(context.Background(), 1)
 	if err != nil || len(txs) != 1 {
 		t.Fatalf("unexpected transactions result")
 	}
@@ -64,6 +64,27 @@ func TestInventoryServiceGetInventories(t *testing.T) {
 	inventories, err := service.GetAllInventories(context.Background())
 	if err != nil || len(inventories) != 1 {
 		t.Fatalf("unexpected inventories result")
+	}
+}
+
+func TestInventoryServiceGetInventoriesSummary(t *testing.T) {
+	repo := &stubInventoryRepository{getSummary: []output.GetInventorySummaryOutput{{}}}
+	service := &inventoryService{inventoryRepository: repo}
+
+	summaries, err := service.GetInventoriesSummary(context.Background())
+	if err != nil || len(summaries) != 1 {
+		t.Fatalf("unexpected summary result")
+	}
+}
+
+func TestInventoryServiceGetInventorySummaryById(t *testing.T) {
+	expected := output.GetInventorySummaryByIdOutput{InventoryId: 1}
+	repo := &stubInventoryRepository{getSummaryById: expected}
+	service := &inventoryService{inventoryRepository: repo}
+
+	summary, err := service.GetInventorySummaryById(context.Background(), 1)
+	if err != nil || summary.InventoryId != expected.InventoryId {
+		t.Fatalf("unexpected summary by id result")
 	}
 }
 

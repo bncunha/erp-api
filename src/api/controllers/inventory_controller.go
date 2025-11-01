@@ -63,8 +63,10 @@ func (c *InventoryController) GetInventoryItemsByInventoryId(context echo.Contex
 	return context.JSON(_http.StatusOK, inventoryItemViewModels)
 }
 
-func (c *InventoryController) GetAllInventoryTransactions(context echo.Context) error {
-	inventoryTransactions, err := c.inventoryService.GetAllInventoryTransactions(context.Request().Context())
+func (c *InventoryController) GetInventoryTransactionsByInventoryId(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	inventoryTransactions, err := c.inventoryService.GetInventoryTransactionsByInventoryId(context.Request().Context(), id)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
@@ -89,4 +91,29 @@ func (c *InventoryController) GetAllInventories(context echo.Context) error {
 	}
 
 	return context.JSON(_http.StatusOK, inventoryViewModels)
+}
+
+func (c *InventoryController) GetInventoriesSummary(context echo.Context) error {
+	summaries, err := c.inventoryService.GetInventoriesSummary(context.Request().Context())
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	summaryViewModels := make([]viewmodel.GetInventorySummaryViewModel, 0, len(summaries))
+	for _, summary := range summaries {
+		summaryViewModels = append(summaryViewModels, viewmodel.ToGetInventorySummaryViewModel(summary))
+	}
+
+	return context.JSON(_http.StatusOK, summaryViewModels)
+}
+
+func (c *InventoryController) GetInventorySummary(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+
+	summary, err := c.inventoryService.GetInventorySummaryById(context.Request().Context(), id)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, viewmodel.ToGetInventorySummaryByIdViewModel(summary))
 }

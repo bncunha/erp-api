@@ -91,6 +91,10 @@ func (s *stubInventoryTransactionRepository) GetAll(ctx context.Context) ([]outp
 	return nil, nil
 }
 
+func (s *stubInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
+	return nil, nil
+}
+
 func TestDetachIds(t *testing.T) {
 	uc := &inventoryUseCase{}
 	ids := uc.detachIds([]DoTransactionSkusInput{{SkuId: 1}, {SkuId: 2}})
@@ -346,6 +350,14 @@ func (r *doTxInventoryRepository) GetPrimaryInventory(ctx context.Context) (doma
 	return domain.Inventory{}, nil
 }
 
+func (r *doTxInventoryRepository) GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
+	return nil, nil
+}
+
+func (r *doTxInventoryRepository) GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+	return output.GetInventorySummaryByIdOutput{}, nil
+}
+
 type doTxInventoryItemRepository struct {
 	items          map[int64][]domain.InventoryItem
 	createdItems   []domain.InventoryItem
@@ -402,6 +414,10 @@ func (r *doTxInventoryTransactionRepository) Create(ctx context.Context, tx *sql
 }
 
 func (r *doTxInventoryTransactionRepository) GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
+	return nil, nil
+}
+
+func (r *doTxInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
 	return nil, nil
 }
 
