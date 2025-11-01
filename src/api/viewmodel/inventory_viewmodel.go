@@ -1,8 +1,6 @@
 package viewmodel
 
 import (
-	"time"
-
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -115,11 +113,9 @@ func ToGetInventoryTransactionsViewModel(inventoryTransaction output.GetInventor
 		transactionType = inventoryTransactionTypeMap[inventoryTransaction.Type]
 	}
 
-	loc, _ := time.LoadLocation("America/Sao_Paulo")
-
 	return GetInventoryTransactionsViewModel{
 		Id:            inventoryTransaction.Id,
-		Date:          inventoryTransaction.Date.In(loc).Format("02/01/2006 15:04"),
+		Date:          inventoryTransaction.Date.Format("02/01/2006 15:04"),
 		Type:          transactionType,
 		Quantity:      inventoryTransaction.Quantity,
 		ProductName:   productName,
@@ -149,21 +145,23 @@ func ToGetInventoriesViewModel(inventory domain.Inventory) GetInventoriesViewMod
 
 type GetInventorySummaryViewModel struct {
 	InventoryId       int64   `json:"inventory_id"`
-	InventoryName     string  `json:"inventory_name"`
+	InventoryType     string  `json:"inventory_type"`
+	UserName          *string `json:"user_name"`
 	TotalSkus         int64   `json:"total_skus"`
 	TotalQuantity     float64 `json:"total_quantity"`
 	ZeroQuantityItems int64   `json:"zero_quantity_items"`
 }
 
 func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) GetInventorySummaryViewModel {
-	inventoryName := inventoryTypeMap[summary.InventoryType]
-	if summary.InventoryUserName != nil && *summary.InventoryUserName != "" {
-		inventoryName = *summary.InventoryUserName + " - " + inventoryName
+	inventoryType := inventoryTypeMap[summary.InventoryType]
+	if inventoryType == "" {
+		inventoryType = "Outro"
 	}
 
 	return GetInventorySummaryViewModel{
 		InventoryId:       summary.InventoryId,
-		InventoryName:     inventoryName,
+		InventoryType:     inventoryType,
+		UserName:          summary.InventoryUserName,
 		TotalSkus:         summary.TotalSkus,
 		TotalQuantity:     summary.TotalQuantity,
 		ZeroQuantityItems: summary.ZeroQuantityItems,
@@ -171,22 +169,28 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 }
 
 type GetInventorySummaryByIdViewModel struct {
-	InventoryId       int64   `json:"inventory_id"`
-	InventoryName     string  `json:"inventory_name"`
-	TotalQuantity     float64 `json:"total_quantity"`
-	ZeroQuantityItems int64   `json:"zero_quantity_items"`
+	InventoryId         int64   `json:"inventory_id"`
+	InventoryType       string  `json:"inventory_type"`
+	UserName            *string `json:"user_name"`
+	TotalSkus           int64   `json:"total_skus"`
+	TotalQuantity       float64 `json:"total_quantity"`
+	ZeroQuantityItems   int64   `json:"zero_quantity_items"`
+	LastTransactionDays *int64  `json:"last_transaction_days"`
 }
 
 func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOutput) GetInventorySummaryByIdViewModel {
-	inventoryName := inventoryTypeMap[summary.InventoryType]
-	if summary.InventoryUserName != nil && *summary.InventoryUserName != "" {
-		inventoryName = *summary.InventoryUserName + " - " + inventoryName
+	inventoryType := inventoryTypeMap[summary.InventoryType]
+	if inventoryType == "" {
+		inventoryType = "Outro"
 	}
 
 	return GetInventorySummaryByIdViewModel{
-		InventoryId:       summary.InventoryId,
-		InventoryName:     inventoryName,
-		TotalQuantity:     summary.TotalQuantity,
-		ZeroQuantityItems: summary.ZeroQuantityItems,
+		InventoryId:         summary.InventoryId,
+		InventoryType:       inventoryType,
+		UserName:            summary.InventoryUserName,
+		TotalSkus:           summary.TotalSkus,
+		TotalQuantity:       summary.TotalQuantity,
+		ZeroQuantityItems:   summary.ZeroQuantityItems,
+		LastTransactionDays: summary.LastTransactionDays,
 	}
 }
