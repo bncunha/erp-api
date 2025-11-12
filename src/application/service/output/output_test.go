@@ -33,3 +33,27 @@ func TestLoginOutput(t *testing.T) {
 		t.Fatalf("unexpected login output: %+v", out)
 	}
 }
+
+func TestGetSalesOutputGetSummary(t *testing.T) {
+	sales := []GetSalesItemOutput{
+		{ReceivedValue: 10, FutureRevenue: 5, TotalItems: 2, TotalValue: 20},
+		{ReceivedValue: 5, FutureRevenue: 10, TotalItems: 1, TotalValue: 10},
+	}
+	out := GetSalesOutput{Sales: sales}
+	summary := out.GetSummary()
+
+	if summary.TotalSales != 2 || summary.AverageTicket != 15 {
+		t.Fatalf("unexpected summary calculation: %+v", summary)
+	}
+	if summary.ReceivedValue != 15 || summary.FutureRevenue != 15 || summary.TotalItems != 3 {
+		t.Fatalf("unexpected aggregate values: %+v", summary)
+	}
+}
+
+func TestGetSalesOutputGetSummaryEmpty(t *testing.T) {
+	out := GetSalesOutput{}
+	summary := out.GetSummary()
+	if summary.TotalSales != 0 || summary.AverageTicket != 0 || summary.TotalItems != 0 {
+		t.Fatalf("expected zeroed summary, got %+v", summary)
+	}
+}

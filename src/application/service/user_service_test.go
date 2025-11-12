@@ -107,6 +107,35 @@ func TestUserServiceGetters(t *testing.T) {
 	}
 }
 
+func TestUserServiceGetByIdError(t *testing.T) {
+	userRepo := &stubUserRepository{getByIdErr: errors.New("fail")}
+	service := &userService{userRepository: userRepo, inventoryRepository: &stubInventoryRepository{}}
+	if _, err := service.GetById(context.Background(), 1); err == nil || err.Error() != "fail" {
+		t.Fatalf("expected repository error")
+	}
+}
+
+func TestUserServiceGetAllWithRoleFilter(t *testing.T) {
+	filterRole := domain.Role("ADMIN")
+	userRepo := &stubUserRepository{getAll: []domain.User{{Id: 1}}}
+	service := &userService{userRepository: userRepo, inventoryRepository: &stubInventoryRepository{}}
+
+	if _, err := service.GetAll(context.Background(), request.GetAllUserRequest{Role: filterRole}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if userRepo.getAllInput.Role == nil || *userRepo.getAllInput.Role != filterRole {
+		t.Fatalf("expected role filter to be forwarded, got %+v", userRepo.getAllInput.Role)
+	}
+}
+
+func TestUserServiceGetAllError(t *testing.T) {
+	userRepo := &stubUserRepository{getAllErr: errors.New("fail")}
+	service := &userService{userRepository: userRepo, inventoryRepository: &stubInventoryRepository{}}
+	if _, err := service.GetAll(context.Background(), request.GetAllUserRequest{}); err == nil || err.Error() != "fail" {
+		t.Fatalf("expected repository error")
+	}
+}
+
 func TestUserServiceInactivate(t *testing.T) {
 	userRepo := &stubUserRepository{}
 	service := &userService{userRepository: userRepo, inventoryRepository: &stubInventoryRepository{}}

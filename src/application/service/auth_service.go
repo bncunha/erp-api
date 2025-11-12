@@ -16,10 +16,14 @@ type AuthService interface {
 
 type authService struct {
 	userRepository domain.UserRepository
+	generateToken  func(username string, tenantID int64, role string, userID int64) (string, error)
 }
 
 func NewAuthService(userRepository domain.UserRepository) AuthService {
-	return &authService{userRepository}
+	return &authService{
+		userRepository: userRepository,
+		generateToken:  helper.GenerateJWT,
+	}
 }
 
 func (s *authService) Login(ctx context.Context, input request.LoginRequest) (out output.LoginOutput, err error) {
@@ -37,7 +41,12 @@ func (s *authService) Login(ctx context.Context, input request.LoginRequest) (ou
 		return out, errors.New("senha incorreta")
 	}
 
-	token, err := helper.GenerateJWT(user.Username, user.TenantId, user.Role, user.Id)
+	tokenFn := s.generateToken
+	if tokenFn == nil {
+		tokenFn = helper.GenerateJWT
+	}
+
+	token, err := tokenFn(user.Username, user.TenantId, user.Role, user.Id)
 	if err != nil {
 		return out, err
 	}

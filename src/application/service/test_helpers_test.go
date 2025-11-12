@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/bncunha/erp-api/src/application/service/input"
@@ -12,14 +15,105 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 )
 
+var fakeDriverCounter int64
+
+type fakeSQLTx struct {
+	committed   bool
+	rolledBack  bool
+	commitErr   error
+	rollbackErr error
+}
+
+func (f *fakeSQLTx) Commit() error {
+	f.committed = true
+	return f.commitErr
+}
+
+func (f *fakeSQLTx) Rollback() error {
+	f.rolledBack = true
+	return f.rollbackErr
+}
+
+type fakeDriver struct {
+	tx *fakeSQLTx
+}
+
+func (d *fakeDriver) Open(name string) (driver.Conn, error) {
+	return &fakeConn{tx: d.tx}, nil
+}
+
+type fakeConn struct {
+	tx *fakeSQLTx
+}
+
+func (c *fakeConn) Prepare(query string) (driver.Stmt, error) { return fakeStmt{}, nil }
+func (c *fakeConn) Close() error                              { return nil }
+func (c *fakeConn) Begin() (driver.Tx, error)                 { return c.tx, nil }
+func (c *fakeConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	return c.tx, nil
+}
+
+type fakeStmt struct{}
+
+func (fakeStmt) Close() error                                    { return nil }
+func (fakeStmt) NumInput() int                                   { return 0 }
+func (fakeStmt) Exec(args []driver.Value) (driver.Result, error) { return nil, nil }
+func (fakeStmt) Query(args []driver.Value) (driver.Rows, error)  { return nil, nil }
+
+func newTestSQLTx() (*sql.Tx, *fakeSQLTx, func()) {
+	driverName := fmt.Sprintf("fake-sql-%d", atomic.AddInt64(&fakeDriverCounter, 1))
+	fake := &fakeSQLTx{}
+	sql.Register(driverName, &fakeDriver{tx: fake})
+	db, _ := sql.Open(driverName, "")
+	tx, _ := db.Begin()
+	cleanup := func() { db.Close() }
+	return tx, fake, cleanup
+}
+
+type stubTxManager struct {
+	tx  *sql.Tx
+	err error
+}
+
+func (s *stubTxManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.tx, nil
+}
+
+type stubEncrypto struct {
+	encryptErr  error
+	compareErr  error
+	compareResp bool
+}
+
+func (s *stubEncrypto) Encrypt(text string) (string, error) {
+	if s.encryptErr != nil {
+		return "", s.encryptErr
+	}
+	return "encrypted:" + text, nil
+}
+
+func (s *stubEncrypto) Compare(hash string, text string) (bool, error) {
+	if s.compareErr != nil {
+		return false, s.compareErr
+	}
+	if s.compareResp {
+		return s.compareResp, nil
+	}
+	return hash == "encrypted:"+text, nil
+}
+
 type stubProductRepository struct {
-	created    domain.Product
-	createErr  error
-	editErr    error
-	getById    domain.Product
-	getByIdErr error
-	getAll     []output.GetAllProductsOutput
-	getAllErr  error
+	created     domain.Product
+	createErr   error
+	editErr     error
+	getById     domain.Product
+	getByIdErr  error
+	getAll      []output.GetAllProductsOutput
+	getAllErr   error
+	getAllInput input.GetProductsInput
 }
 
 func (s *stubProductRepository) Create(ctx context.Context, product domain.Product) (int64, error) {
@@ -42,7 +136,8 @@ func (s *stubProductRepository) GetById(ctx context.Context, id int64) (domain.P
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubProductRepository) GetAll(ctx context.Context, _ input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
+func (s *stubProductRepository) GetAll(ctx context.Context, in input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
+	s.getAllInput = in
 	return s.getAll, s.getAllErr
 }
 
@@ -203,6 +298,7 @@ type stubUserRepository struct {
 	getByIdErr       error
 	getAll           []domain.User
 	getAllErr        error
+	getAllInput      input.GetAllUserInput
 	inactivateErr    error
 	getByUsername    domain.User
 	getByUsernameErr error
@@ -228,7 +324,8 @@ func (s *stubUserRepository) GetById(ctx context.Context, id int64) (domain.User
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubUserRepository) GetAll(ctx context.Context, _ input.GetAllUserInput) ([]domain.User, error) {
+func (s *stubUserRepository) GetAll(ctx context.Context, in input.GetAllUserInput) ([]domain.User, error) {
+	s.getAllInput = in
 	return s.getAll, s.getAllErr
 }
 

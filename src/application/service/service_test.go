@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 
+	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/usecase"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
@@ -11,7 +12,7 @@ import (
 func TestNewApplicationService(t *testing.T) {
 	repos := &repository.Repository{}
 	useCases := &usecase.ApplicationUseCase{}
-	service := NewApplicationService(repos, useCases)
+	service := NewApplicationService(repos, useCases, ports.NewPorts(&stubEncrypto{}))
 	if service == nil {
 		t.Fatalf("expected service to be created")
 	}
@@ -31,7 +32,7 @@ func TestApplicationServiceSetup(t *testing.T) {
 		InventoryUseCase: inventory_usecase.NewInventoryUseCase(nil, repos.InventoryRepository, repos.InventoryItemRepository, repos.InventoryTransactionRepository, repos.SkuRepository),
 	}
 
-	service := NewApplicationService(repos, useCases)
+	service := NewApplicationService(repos, useCases, ports.NewPorts(&stubEncrypto{}))
 	service.SetupServices()
 
 	if service.ProductService == nil || service.InventoryService == nil {
