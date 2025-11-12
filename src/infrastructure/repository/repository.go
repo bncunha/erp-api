@@ -3,19 +3,21 @@ package repository
 import (
 	"context"
 	"database/sql"
+
+	"github.com/bncunha/erp-api/src/domain"
 )
 
 type Repository struct {
 	db                             *sql.DB
-	ProductRepository              ProductRepository
-	CategoryRepository             CategoryRepository
-	SkuRepository                  SkuRepository
-	UserRepository                 UserRepository
-	InventoryRepository            InventoryRepository
-	InventoryItemRepository        InventoryItemRepository
-	InventoryTransactionRepository InventoryTransactionRepository
-	SalesRepository                SalesRepository
-	CustomerRepository             CustomerRepository
+	ProductRepository              domain.ProductRepository
+	CategoryRepository             domain.CategoryRepository
+	SkuRepository                  domain.SkuRepository
+	UserRepository                 domain.UserRepository
+	InventoryRepository            domain.InventoryRepository
+	InventoryItemRepository        domain.InventoryItemRepository
+	InventoryTransactionRepository domain.InventoryTransactionRepository
+	SalesRepository                domain.SalesRepository
+	CustomerRepository             domain.CustomerRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {

@@ -6,29 +6,14 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
-
-var (
-	ErrInventoryNotFound = errors.New("Inventário não encontrado")
-)
-
-type InventoryRepository interface {
-	Create(ctx context.Context, inventory domain.Inventory) (int64, error)
-	GetById(ctx context.Context, id int64) (domain.Inventory, error)
-	GetAll(ctx context.Context) ([]domain.Inventory, error)
-	GetByUserId(ctx context.Context, userId int64) (domain.Inventory, error)
-	GetPrimaryInventory(ctx context.Context) (domain.Inventory, error)
-	GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error)
-	GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error)
-}
 
 type inventoryRepository struct {
 	db *sql.DB
 }
 
-func NewInventoryRepository(db *sql.DB) InventoryRepository {
+func NewInventoryRepository(db *sql.DB) domain.InventoryRepository {
 	return &inventoryRepository{db}
 }
 
@@ -49,7 +34,7 @@ func (r *inventoryRepository) GetById(ctx context.Context, id int64) (domain.Inv
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&inventory.Id, &inventory.TenantId, &inventory.Type)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventory, ErrInventoryNotFound
+			return inventory, domain.ErrInventoryNotFound
 		}
 		return inventory, err
 	}
@@ -99,7 +84,7 @@ func (r *inventoryRepository) GetByUserId(ctx context.Context, userId int64) (do
 	err := r.db.QueryRowContext(ctx, query, userId, ctx.Value(constants.TENANT_KEY)).Scan(&inventory.Id, &inventory.User.Id, &inventory.User.Name, &inventory.TenantId, &inventory.Type)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventory, ErrInventoryNotFound
+			return inventory, domain.ErrInventoryNotFound
 		}
 		return inventory, err
 	}
@@ -115,16 +100,16 @@ func (r *inventoryRepository) GetPrimaryInventory(ctx context.Context) (domain.I
 	err := r.db.QueryRowContext(ctx, query, ctx.Value(constants.TENANT_KEY), domain.InventoryTypePrimary).Scan(&inventory.Id, &inventory.TenantId, &inventory.Type)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventory, ErrInventoryNotFound
+			return inventory, domain.ErrInventoryNotFound
 		}
 		return inventory, err
 	}
 	return inventory, nil
 }
 
-func (r *inventoryRepository) GetSummary(ctx context.Context) ([]output.GetInventorySummaryOutput, error) {
+func (r *inventoryRepository) GetSummary(ctx context.Context) ([]domain.GetInventorySummaryOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	summaries := make([]output.GetInventorySummaryOutput, 0)
+	summaries := make([]domain.GetInventorySummaryOutput, 0)
 
 	query := `SELECT i.id,
        i.type,
@@ -146,7 +131,7 @@ ORDER BY i.id ASC`
 	defer rows.Close()
 
 	for rows.Next() {
-		var summary output.GetInventorySummaryOutput
+		var summary domain.GetInventorySummaryOutput
 		var inventoryType string
 		var userName sql.NullString
 
@@ -166,9 +151,9 @@ ORDER BY i.id ASC`
 	return summaries, nil
 }
 
-func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (output.GetInventorySummaryByIdOutput, error) {
+func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (domain.GetInventorySummaryByIdOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var summary output.GetInventorySummaryByIdOutput
+	var summary domain.GetInventorySummaryByIdOutput
 	var inventoryType string
 	var userName sql.NullString
 
@@ -196,7 +181,7 @@ GROUP BY i.id, i.type, u.name`
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems, &lastTransactionDays)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return summary, ErrInventoryNotFound
+			return summary, domain.ErrInventoryNotFound
 		}
 		return summary, err
 	}

@@ -6,24 +6,14 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 )
-
-type UserRepository interface {
-	GetByUsername(ctx context.Context, username string) (domain.User, error)
-	Create(ctx context.Context, user domain.User) (int64, error)
-	Update(ctx context.Context, user domain.User) error
-	Inactivate(ctx context.Context, id int64) error
-	GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error)
-	GetById(ctx context.Context, id int64) (domain.User, error)
-}
 
 type userRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) UserRepository {
+func NewUserRepository(db *sql.DB) domain.UserRepository {
 	return &userRepository{db}
 }
 
@@ -101,7 +91,7 @@ func (r *userRepository) Inactivate(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *userRepository) GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error) {
+func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInput) ([]domain.User, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var users []domain.User
 

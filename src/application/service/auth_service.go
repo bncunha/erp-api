@@ -7,7 +7,7 @@ import (
 	request "github.com/bncunha/erp-api/src/api/requests"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service/output"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
+	"github.com/bncunha/erp-api/src/domain"
 )
 
 type AuthService interface {
@@ -15,10 +15,10 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepository repository.UserRepository
+	userRepository domain.UserRepository
 }
 
-func NewAuthService(userRepository repository.UserRepository) AuthService {
+func NewAuthService(userRepository domain.UserRepository) AuthService {
 	return &authService{userRepository}
 }
 

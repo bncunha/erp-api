@@ -7,7 +7,6 @@ import (
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 func TestUserServiceCreateReseller(t *testing.T) {
@@ -46,7 +45,7 @@ func TestUserServiceCreateRepositoryError(t *testing.T) {
 
 func TestUserServiceUpdateResellerCreatesInventory(t *testing.T) {
 	userRepo := &stubUserRepository{}
-	inventoryRepo := &stubInventoryRepository{getByUserErr: repository.ErrInventoryNotFound}
+	inventoryRepo := &stubInventoryRepository{getByUserErr: domain.ErrInventoryNotFound}
 	service := &userService{userRepository: userRepo, inventoryRepository: inventoryRepo}
 
 	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller)}

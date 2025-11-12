@@ -7,7 +7,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type UserService interface {
@@ -19,11 +18,11 @@ type UserService interface {
 }
 
 type userService struct {
-	userRepository      repository.UserRepository
-	inventoryRepository repository.InventoryRepository
+	userRepository      domain.UserRepository
+	inventoryRepository domain.InventoryRepository
 }
 
-func NewUserService(userRepository repository.UserRepository, inventoryRepository repository.InventoryRepository) UserService {
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository) UserService {
 	return &userService{userRepository, inventoryRepository}
 }
 
@@ -87,11 +86,11 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 
 	if request.Role == string(domain.InventoryTypeReseller) {
 		_, err := s.inventoryRepository.GetByUserId(ctx, userId)
-		if err != nil && !errors.Is(err, repository.ErrInventoryNotFound) {
+		if err != nil && !errors.Is(err, domain.ErrInventoryNotFound) {
 			return err
 		}
 
-		if err != nil && errors.Is(err, repository.ErrInventoryNotFound) {
+		if err != nil && errors.Is(err, domain.ErrInventoryNotFound) {
 			inventory := domain.Inventory{
 				User: domain.User{Id: userId},
 				Type: domain.InventoryTypeReseller,

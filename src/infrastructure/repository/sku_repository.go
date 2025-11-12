@@ -8,27 +8,15 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/lib/pq"
 )
-
-type SkuRepository interface {
-	Create(ctx context.Context, sku domain.Sku, productId int64) (int64, error)
-	CreateMany(ctx context.Context, skus []domain.Sku, productId int64) ([]int64, error)
-	GetByProductId(ctx context.Context, productId int64) ([]domain.Sku, error)
-	Update(ctx context.Context, sku domain.Sku) error
-	GetById(ctx context.Context, id int64) (domain.Sku, error)
-	GetByManyIds(ctx context.Context, ids []int64) ([]domain.Sku, error)
-	GetAll(ctx context.Context, input input.GetSkusInput) ([]domain.Sku, error)
-	Inactivate(ctx context.Context, id int64) error
-}
 
 type skuRepository struct {
 	db *sql.DB
 }
 
-func NewSkuRepository(db *sql.DB) SkuRepository {
+func NewSkuRepository(db *sql.DB) domain.SkuRepository {
 	return &skuRepository{db}
 }
 
@@ -158,7 +146,7 @@ func (r *skuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]domain
 	return skus, err
 }
 
-func (r *skuRepository) GetAll(ctx context.Context, input input.GetSkusInput) ([]domain.Sku, error) {
+func (r *skuRepository) GetAll(ctx context.Context, input domain.GetSkusInput) ([]domain.Sku, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var skus []domain.Sku
 
