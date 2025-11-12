@@ -3,8 +3,10 @@ package main
 import (
 	router "github.com/bncunha/erp-api/src/api"
 	controller "github.com/bncunha/erp-api/src/api/controllers"
+	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/application/usecase"
+	"github.com/bncunha/erp-api/src/infrastructure/bcrypt"
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
 	"github.com/bncunha/erp-api/src/infrastructure/observability"
 	"github.com/bncunha/erp-api/src/infrastructure/persistence"
@@ -14,6 +16,7 @@ import (
 )
 
 func main() {
+	bcrypt := bcrypt.NewBcrypt()
 	logs.NewLogs()
 	logs.Logger.Infof("Iniciando aplicação")
 
@@ -43,7 +46,9 @@ func main() {
 	useCase := usecase.NewApplicationUseCase(repository)
 	useCase.SetupUseCases()
 
-	service := service.NewApplicationService(repository, useCase)
+	ports := ports.NewPorts(bcrypt)
+
+	service := service.NewApplicationService(repository, useCase, ports)
 	service.SetupServices()
 
 	controller := controller.NewController(service)

@@ -5,6 +5,7 @@ import (
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -20,10 +21,11 @@ type UserService interface {
 type userService struct {
 	userRepository      domain.UserRepository
 	inventoryRepository domain.InventoryRepository
+	encrypto            ports.Encrypto
 }
 
-func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository) UserService {
-	return &userService{userRepository, inventoryRepository}
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto ports.Encrypto) UserService {
+	return &userService{userRepository, inventoryRepository, encrypto}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -36,7 +38,6 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 		Username:    request.Username,
 		Name:        request.Name,
 		PhoneNumber: request.PhoneNumber,
-		Password:    request.Password,
 		Role:        request.Role,
 	}
 

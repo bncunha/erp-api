@@ -40,9 +40,9 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (do
 
 func (r *userRepository) Create(ctx context.Context, user domain.User) (int64, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `INSERT INTO users (username, name, phone_number, password, role, tenant_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	query := `INSERT INTO users (username, name, phone_number, role, tenant_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`
 	var id int64
-	err := r.db.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Password, user.Role, tenantId).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Role, tenantId).Scan(&id)
 	if err != nil {
 		return id, err
 	}
@@ -53,15 +53,8 @@ func (r *userRepository) Update(ctx context.Context, user domain.User) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var err error
 	query := `UPDATE users SET name = $1, phone_number = $2, role = $3, username = $4 WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL`
-	if user.Password != "" {
-		query = `UPDATE users SET name = $1, phone_number = $2, password = $3, role = $4, username = $5 WHERE id = $6 AND tenant_id = $7 AND deleted_at IS NULL`
-	}
 
-	if user.Password == "" {
-		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Role, user.Username, user.Id, tenantId)
-	} else {
-		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Password, user.Role, user.Username, user.Id, tenantId)
-	}
+	_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Role, user.Username, user.Id, tenantId)
 	if err != nil {
 		return err
 	}
