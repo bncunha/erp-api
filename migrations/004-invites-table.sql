@@ -1,0 +1,20 @@
+CREATE TYPE user_token_type AS ENUM ('invite', 'reset_password');
+
+CREATE TABLE user_tokens (
+  id           BIGSERIAL PRIMARY KEY,
+  user_id      BIGINT NOT NULL REFERENCES users(id),
+  tenant_id    BIGINT NOT NULL REFERENCES companies(id),
+
+  type         user_token_type NOT NULL,  -- 'invite' ou 'reset_password'
+  code_hash    TEXT NOT NULL,
+  expires_at   TIMESTAMPTZ NOT NULL,
+  used_at      TIMESTAMPTZ NULL,
+
+  created_by   BIGINT NULL REFERENCES users(id), -- quem gerou (admin no invite, próprio user no reset, etc.)
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX user_tokens_user_type_idx ON user_tokens(user_id, type);
+CREATE UNIQUE INDEX user_tokens_code_hash_idx ON user_tokens(code_hash);
+
+ALTER TABLE users ADD COLUMN password_set BOOLEAN DEFAULT FALSE NOT NULL;
