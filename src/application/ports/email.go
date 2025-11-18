@@ -1,6 +1,5 @@
-package service
+package ports
 
-type EmailService interface {
+type EmailPort interface {
 	Send(to string, subject string, body string) error
 }
-

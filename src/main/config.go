@@ -15,10 +15,11 @@ type Config struct {
 	DB_NAME        string
 	APP_ENV        string
 	NR_LICENSE_KEY string
-	SMTP_HOST string
-	SMTP_PORT int64
-	SMTP_USERNAME string
-	SMTP_PASSWORD string
+	SMTP_HOST      string
+	SMTP_PORT      int64
+	SMTP_USERNAME  string
+	SMTP_PASSWORD  string
+	FRONTEND_URL   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -39,9 +40,10 @@ func LoadConfig() (*Config, error) {
 		DB_NAME:        os.Getenv("DB_NAME"),
 		APP_ENV:        os.Getenv("APP_ENV"),
 		NR_LICENSE_KEY: os.Getenv("NR_LICENSE_KEY"),
-		SMTP_HOST: os.Getenv("SMTP_HOST"),
-		SMTP_PORT: smtpPort,
-		SMTP_USERNAME: os.Getenv("SMTP_USERNAME"),
-		SMTP_PASSWORD: os.Getenv("SMTP_PASSWORD"),
+		SMTP_HOST:      os.Getenv("SMTP_HOST"),
+		SMTP_PORT:      smtpPort,
+		SMTP_USERNAME:  os.Getenv("SMTP_USERNAME"),
+		SMTP_PASSWORD:  os.Getenv("SMTP_PASSWORD"),
+		FRONTEND_URL:   os.Getenv("FRONTEND_URL"),
 	}, nil
 }

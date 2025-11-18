@@ -1,13 +1,16 @@
 package ports
 
 type Ports struct {
-	Encrypto Encrypto
+	Encrypto  Encrypto
+	EmailPort EmailPort
 }
 
 func NewPorts(
 	encrypto Encrypto,
+	emailPort EmailPort,
 ) *Ports {
 	return &Ports{
-		Encrypto: encrypto,
+		Encrypto:  encrypto,
+		EmailPort: emailPort,
 	}
 }

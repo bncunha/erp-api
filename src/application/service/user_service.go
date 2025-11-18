@@ -4,10 +4,13 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/service/input"
+	emailusecase "github.com/bncunha/erp-api/src/application/usecase/email_usecase"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/bncunha/erp-api/src/infrastructure/logs"
 )
 
 type UserService interface {
@@ -22,10 +25,12 @@ type userService struct {
 	userRepository      domain.UserRepository
 	inventoryRepository domain.InventoryRepository
 	encrypto            ports.Encrypto
+	userTokenService    UserTokenService
+	emailUsecase        emailusecase.EmailUseCase
 }
 
-func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto ports.Encrypto) UserService {
-	return &userService{userRepository, inventoryRepository, encrypto}
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto ports.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase) UserService {
+	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -34,18 +39,38 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 		return err
 	}
 
-	user := domain.User{
+	user := domain.NewUser(domain.CreateUserParams{
 		Username:    request.Username,
 		Name:        request.Name,
 		PhoneNumber: request.PhoneNumber,
 		Role:        request.Role,
-	}
+		Email:       request.Email,
+	})
 
 	userId, err := s.userRepository.Create(ctx, user)
 	if err != nil {
 		if errors.IsDuplicated(err) {
 			return errors.New("Usuário já cadastrado!")
 		}
+		return err
+	}
+
+	user, err = s.userRepository.GetById(ctx, userId)
+	if err != nil {
+		return err
+	}
+
+	adminUser, err := s.userRepository.GetById(ctx, int64(ctx.Value(constants.USERID_KEY).(float64)))
+	if err != nil {
+		return err
+	}
+
+	userToken, err := s.userTokenService.Create(ctx, input.CreateUserTokenInput{
+		User:      user,
+		CreatedBy: adminUser,
+		Type:      domain.UserTokenTypeInvite,
+	})
+	if err != nil {
 		return err
 	}
 
@@ -59,6 +84,14 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 			return err
 		}
 	}
+
+	go func() {
+		err := s.emailUsecase.SendInvite(ctx, user, userToken.CodeHash)
+		if err != nil {
+			logs.Logger.Errorf("Erro ao enviar email de convite para o usuário %d: %v", userId, err)
+		}
+	}()
+
 	return nil
 }
 
@@ -102,6 +135,7 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 			}
 		}
 	}
+
 	return nil
 }
 

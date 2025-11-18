@@ -15,24 +15,24 @@ type ApplicationService struct {
 	InventoryService InventoryService
 	SalesService     SalesService
 	CustomerService  CustomerService
-	EmailService		EmailService
+	UserTokenService UserTokenService
 	repositories     *repository.Repository
 	useCases         *usecase.ApplicationUseCase
-	ports *ports.Ports
+	ports            *ports.Ports
 }
 
 func NewApplicationService(repositories *repository.Repository, useCases *usecase.ApplicationUseCase, ports *ports.Ports) *ApplicationService {
 	return &ApplicationService{repositories: repositories, useCases: useCases, ports: ports}
 }
 
-func (s *ApplicationService) SetupServices(emailService EmailService) {
+func (s *ApplicationService) SetupServices() {
+	s.UserTokenService = NewUserTokenService(s.repositories.UserTokenRepository)
 	s.ProductService = NewProductService(s.repositories.ProductRepository, s.repositories.CategoryRepository, s.repositories.SkuRepository)
 	s.SkuService = NewSkuService(s.repositories.SkuRepository, s.useCases.InventoryUseCase, s.repositories.ProductRepository, s.repositories)
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
 	s.AuthService = NewAuthService(s.repositories.UserRepository)
-	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository, s.ports.Encrypto)
+	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository, s.ports.Encrypto, s.UserTokenService, s.useCases.EmailUseCase)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
 	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
-	s.EmailService = emailService
 }

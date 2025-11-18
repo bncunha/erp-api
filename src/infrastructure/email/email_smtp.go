@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"github.com/bncunha/erp-api/src/application/service"
+	"github.com/bncunha/erp-api/src/application/ports"
 )
 
 type EmailSmtpConfig struct {
@@ -18,7 +18,7 @@ type emailSmtp struct {
 	config EmailSmtpConfig
 }
 
-func NewEmailSmtp(config EmailSmtpConfig) service.EmailService {
+func NewEmailSmtp(config EmailSmtpConfig) ports.EmailPort {
 	return &emailSmtp{
 		config: config,
 	}

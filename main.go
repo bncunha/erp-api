@@ -46,13 +46,13 @@ func main() {
 	repository := repository.NewRepository(db)
 	repository.SetupRepositories()
 
-	useCase := usecase.NewApplicationUseCase(repository)
+	ports := ports.NewPorts(bcrypt, emailSmtp)
+
+	useCase := usecase.NewApplicationUseCase(repository, config, ports)
 	useCase.SetupUseCases()
 
-	ports := ports.NewPorts(bcrypt)
-
 	service := service.NewApplicationService(repository, useCase, ports)
-	service.SetupServices(emailSmtp)
+	service.SetupServices()
 
 	controller := controller.NewController(service)
 	controller.SetupControllers()
