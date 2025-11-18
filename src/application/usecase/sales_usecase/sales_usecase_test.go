@@ -93,6 +93,10 @@ func (f *fakeUserRepository) GetById(context.Context, int64) (domain.User, error
 	return f.user, f.err
 }
 
+func (f *fakeUserRepository) UpdatePassword(context.Context, domain.User, string) error {
+	return nil
+}
+
 type fakeCustomerRepository struct {
 	customer domain.Customer
 	err      error

@@ -1,0 +1,49 @@
+package emailusecase
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/bncunha/erp-api/src/domain"
+	config "github.com/bncunha/erp-api/src/main"
+)
+
+type stubEmailPort struct {
+	to      string
+	subject string
+	body    string
+	err     error
+}
+
+func (s *stubEmailPort) Send(to string, subject string, body string) error {
+	s.to = to
+	s.subject = subject
+	s.body = body
+	return s.err
+}
+
+func TestEmailUseCaseSendInvite(t *testing.T) {
+	cfg := &config.Config{FRONTEND_URL: "http://frontend"}
+	emailPort := &stubEmailPort{}
+	usecase := NewEmailUseCase(cfg, emailPort)
+
+	user := domain.User{Name: "Tester", Email: "tester@example.com"}
+	if err := usecase.SendInvite(context.Background(), user, "code123", "uuid456"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedLink := "http://frontend/redefinir-senha?code=code123&uuid=uuid456"
+	if emailPort.to != user.Email || emailPort.subject != InviteSubject {
+		t.Fatalf("expected invite email to be sent to user, got %+v", emailPort)
+	}
+	if !strings.Contains(emailPort.body, expectedLink) {
+		t.Fatalf("expected body to contain link %s, got %s", expectedLink, emailPort.body)
+	}
+}
+
+func TestEmailUseCaseSendRecoverPassword(t *testing.T) {
+	usecase := NewEmailUseCase(&config.Config{}, &stubEmailPort{})
+	if err := usecase.SendRecoverPassword("user@example.com", "code"); err != nil {
+		t.Fatalf("expected recover email to succeed, got %v", err)
+	}
+}
