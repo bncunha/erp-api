@@ -18,3 +18,8 @@ CREATE INDEX user_tokens_user_type_idx ON user_tokens(user_id, type);
 CREATE UNIQUE INDEX user_tokens_code_hash_idx ON user_tokens(code_hash);
 
 ALTER TABLE users ADD COLUMN password_set BOOLEAN DEFAULT FALSE NOT NULL;
+
+ALTER TABLE users ADD COLUMN email VARCHAR(255);
+UPDATE users SET email = CONCAT('user', id, '@example.com') WHERE email IS NULL;
+ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);

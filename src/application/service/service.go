@@ -15,6 +15,7 @@ type ApplicationService struct {
 	InventoryService InventoryService
 	SalesService     SalesService
 	CustomerService  CustomerService
+	EmailService		EmailService
 	repositories     *repository.Repository
 	useCases         *usecase.ApplicationUseCase
 	ports *ports.Ports
@@ -24,7 +25,7 @@ func NewApplicationService(repositories *repository.Repository, useCases *usecas
 	return &ApplicationService{repositories: repositories, useCases: useCases, ports: ports}
 }
 
-func (s *ApplicationService) SetupServices() {
+func (s *ApplicationService) SetupServices(emailService EmailService) {
 	s.ProductService = NewProductService(s.repositories.ProductRepository, s.repositories.CategoryRepository, s.repositories.SkuRepository)
 	s.SkuService = NewSkuService(s.repositories.SkuRepository, s.useCases.InventoryUseCase, s.repositories.ProductRepository, s.repositories)
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
@@ -33,4 +34,5 @@ func (s *ApplicationService) SetupServices() {
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
 	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
+	s.EmailService = emailService
 }

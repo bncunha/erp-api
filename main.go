@@ -7,6 +7,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/application/usecase"
 	"github.com/bncunha/erp-api/src/infrastructure/bcrypt"
+	"github.com/bncunha/erp-api/src/infrastructure/email"
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
 	"github.com/bncunha/erp-api/src/infrastructure/observability"
 	"github.com/bncunha/erp-api/src/infrastructure/persistence"
@@ -40,6 +41,8 @@ func main() {
 	}
 	defer persistence.CloseConnection(db)
 
+	emailSmtp := email.NewEmailSmtp(email.EmailSmtpConfig{Host: config.SMTP_HOST, Port: config.SMTP_PORT, Username: config.SMTP_USERNAME, Password: config.SMTP_PASSWORD})
+
 	repository := repository.NewRepository(db)
 	repository.SetupRepositories()
 
@@ -49,7 +52,7 @@ func main() {
 	ports := ports.NewPorts(bcrypt)
 
 	service := service.NewApplicationService(repository, useCase, ports)
-	service.SetupServices()
+	service.SetupServices(emailSmtp)
 
 	controller := controller.NewController(service)
 	controller.SetupControllers()
