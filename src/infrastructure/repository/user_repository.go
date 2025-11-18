@@ -130,3 +130,22 @@ func (r *userRepository) GetById(ctx context.Context, id int64) (domain.User, er
 	}
 	return user, nil
 }
+
+func (r *userRepository) UpdatePassword(ctx context.Context, user domain.User, newPassword string) error {
+	query := `UPDATE users SET password = $1 WHERE id = $2`
+	result, err := r.db.ExecContext(ctx, query, newPassword, user.Id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("Usuário não encontrado")
+	}
+
+	return nil
+}

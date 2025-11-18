@@ -1,12 +1,14 @@
 package ports
 
+import "github.com/bncunha/erp-api/src/domain"
+
 type Ports struct {
-	Encrypto  Encrypto
+	Encrypto  domain.Encrypto
 	EmailPort EmailPort
 }
 
 func NewPorts(
-	encrypto Encrypto,
+	encrypto domain.Encrypto,
 	emailPort EmailPort,
 ) *Ports {
 	return &Ports{

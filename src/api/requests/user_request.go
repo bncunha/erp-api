@@ -40,3 +40,17 @@ func (r *EditUserRequest) Validate() error {
 type GetAllUserRequest struct {
 	Role domain.Role `json:"role"`
 }
+
+type ResetPasswordRequest struct {
+	Code     string `json:"code" validate:"required"`
+	Uuid     string `json:"uuid" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+func (r *ResetPasswordRequest) Validate() error {
+	err := validator.Validate(r)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -1,4 +1,4 @@
-package ports
+package domain
 
 type Encrypto interface {
 	Encrypt(text string) (string, error)

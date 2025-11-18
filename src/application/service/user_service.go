@@ -6,7 +6,6 @@ import (
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/service/input"
 	emailusecase "github.com/bncunha/erp-api/src/application/usecase/email_usecase"
 	"github.com/bncunha/erp-api/src/domain"
@@ -19,18 +18,20 @@ type UserService interface {
 	GetById(ctx context.Context, userId int64) (domain.User, error)
 	GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error)
 	Inactivate(ctx context.Context, id int64) error
+	ResetPassword(ctx context.Context, request request.ResetPasswordRequest) error
 }
 
 type userService struct {
 	userRepository      domain.UserRepository
 	inventoryRepository domain.InventoryRepository
-	encrypto            ports.Encrypto
+	encrypto            domain.Encrypto
 	userTokenService    UserTokenService
 	emailUsecase        emailusecase.EmailUseCase
+	userTokenRepository domain.UserTokenRepository
 }
 
-func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto ports.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase) UserService {
-	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase}
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto domain.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase, userTokenRepository domain.UserTokenRepository) UserService {
+	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase, userTokenRepository}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -73,6 +74,7 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 	if err != nil {
 		return err
 	}
+	code := userToken.Code
 
 	if request.Role == string(domain.InventoryTypeReseller) {
 		inventory := domain.Inventory{
@@ -86,7 +88,7 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 	}
 
 	go func() {
-		err := s.emailUsecase.SendInvite(ctx, user, userToken.CodeHash)
+		err := s.emailUsecase.SendInvite(ctx, user, code, userToken.Uuid)
 		if err != nil {
 			logs.Logger.Errorf("Erro ao enviar email de convite para o usuário %d: %v", userId, err)
 		}
@@ -162,4 +164,38 @@ func (s *userService) GetAll(ctx context.Context, request request.GetAllUserRequ
 
 func (s *userService) Inactivate(ctx context.Context, id int64) error {
 	return s.userRepository.Inactivate(ctx, id)
+}
+
+func (s *userService) ResetPassword(ctx context.Context, request request.ResetPasswordRequest) error {
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	userToken, err := s.userTokenRepository.GetLastActiveByUuid(ctx, request.Uuid)
+	if err != nil {
+		logs.Logger.Errorf("Erro ao recuperar token de reset: %v", err)
+		return errors.New("Código expirado ou inválido! Solicite um novo código para o administrador.")
+	}
+	if isValid, err := userToken.IsValid(s.encrypto, request.Code); err != nil || !isValid {
+		logs.Logger.Errorf("Erro ao recuperar token de reset: %v", err)
+		return errors.New("Código expirado ou inválido! Solicite um novo código para o administrador.")
+	}
+
+	newPassword, err := s.encrypto.Encrypt(request.Password)
+	if err != nil {
+		return err
+	}
+
+	err = s.userRepository.UpdatePassword(ctx, userToken.User, newPassword)
+	if err != nil {
+		return err
+	}
+
+	userToken.SetUsedAt()
+	err = s.userTokenRepository.SetUsedToken(ctx, userToken)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

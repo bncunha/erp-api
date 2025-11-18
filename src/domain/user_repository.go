@@ -13,4 +13,5 @@ type UserRepository interface {
 	Inactivate(ctx context.Context, id int64) error
 	GetAll(ctx context.Context, input GetAllUserInput) ([]User, error)
 	GetById(ctx context.Context, id int64) (User, error)
+	UpdatePassword(ctx context.Context, user User, newPassword string) error
 }

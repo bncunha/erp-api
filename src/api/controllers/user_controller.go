@@ -89,3 +89,17 @@ func (c *UserController) Inactivate(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, nil)
 }
+
+func (c *UserController) ResetPassword(context echo.Context) error {
+	var resetPasswordRequest request.ResetPasswordRequest
+	if err := context.Bind(&resetPasswordRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	err := c.userService.ResetPassword(context.Request().Context(), resetPasswordRequest)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
+}

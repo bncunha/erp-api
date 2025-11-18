@@ -20,7 +20,7 @@ func NewUserTokenRepository(db *sql.DB) domain.UserTokenRepository {
 func (r *userTokenRepository) Create(ctx context.Context, userToken domain.UserToken) (int64, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 
-	query := `INSERT INTO user_tokens (user_id, tenant_id, type, code_hash, expires_at, used_at, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	query := `INSERT INTO user_tokens (user_id, tenant_id, type, code_hash, expires_at, used_at, created_by, uuid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
 	var id int64
 	err := r.db.QueryRowContext(
 		ctx,
@@ -32,6 +32,7 @@ func (r *userTokenRepository) Create(ctx context.Context, userToken domain.UserT
 		userToken.ExpiresAt,
 		userToken.UsedAt,
 		userToken.CreatedBy.Id,
+		userToken.Uuid,
 	).Scan(&id)
 	if err != nil {
 		return id, err
@@ -39,23 +40,24 @@ func (r *userTokenRepository) Create(ctx context.Context, userToken domain.UserT
 	return id, nil
 }
 
-func (r *userTokenRepository) GetLastActiveByCodeHash(ctx context.Context, codeHash string) (domain.UserToken, error) {
-	tenantId := ctx.Value(constants.TENANT_KEY)
+func (r *userTokenRepository) GetLastActiveByUuid(ctx context.Context, uuid string) (domain.UserToken, error) {
 	var userToken domain.UserToken
 	var userID int64
 	usedAt := sql.NullTime{}
 	createdBy := sql.NullInt64{}
 
-	query := `SELECT id, user_id, type, code_hash, expires_at, used_at, created_by
-		FROM user_tokens
-		WHERE code_hash = $1
-			AND tenant_id = $2
-			AND used_at IS NULL
-			AND expires_at >= NOW()
-		ORDER BY created_at DESC
+	query := `
+		SELECT ut.id, ut.user_id, ut.type, ut.code_hash, ut.expires_at, ut.used_at, ut.created_by,
+			u.username, u.name, u.phone_number, u.role, u.tenant_id, u.email, ut.uuid
+		FROM user_tokens ut
+		INNER JOIN users u ON u.id = ut.user_id
+		WHERE ut.uuid = $1
+			AND ut.used_at IS NULL
+			AND ut.expires_at >= NOW()
+		ORDER BY ut.created_at DESC
 		LIMIT 1`
 
-	err := r.db.QueryRowContext(ctx, query, codeHash, tenantId).Scan(
+	err := r.db.QueryRowContext(ctx, query, uuid).Scan(
 		&userToken.Id,
 		&userID,
 		&userToken.Type,
@@ -63,11 +65,15 @@ func (r *userTokenRepository) GetLastActiveByCodeHash(ctx context.Context, codeH
 		&userToken.ExpiresAt,
 		&usedAt,
 		&createdBy,
+		&userToken.User.Username,
+		&userToken.User.Name,
+		&userToken.User.PhoneNumber,
+		&userToken.User.Role,
+		&userToken.User.TenantId,
+		&userToken.User.Email,
+		&userToken.Uuid,
 	)
 	if err != nil {
-		if errors.IsNoRowsFinded(err) {
-			return userToken, errors.New("Token inválido ou expirado")
-		}
 		return userToken, err
 	}
 
@@ -81,10 +87,9 @@ func (r *userTokenRepository) GetLastActiveByCodeHash(ctx context.Context, codeH
 	return userToken, nil
 }
 
-func (r *userTokenRepository) SetUsedToken(ctx context.Context, codeHash string) error {
-	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `UPDATE user_tokens SET used_at = NOW() WHERE code_hash = $1 AND used_at IS NULL AND tenant_id = $2`
-	result, err := r.db.ExecContext(ctx, query, codeHash, tenantId)
+func (r *userTokenRepository) SetUsedToken(ctx context.Context, userToken domain.UserToken) error {
+	query := `UPDATE user_tokens SET used_at = $2 WHERE id = $1 AND user_id = $3 AND used_at IS NULL`
+	result, err := r.db.ExecContext(ctx, query, userToken.Id, userToken.UsedAt, userToken.User.Id)
 	if err != nil {
 		return err
 	}
@@ -108,7 +113,7 @@ func (r *userTokenRepository) GetById(ctx context.Context, id int64) (domain.Use
 	usedAt := sql.NullTime{}
 	createdBy := sql.NullInt64{}
 
-	query := `SELECT id, user_id, type, code_hash, expires_at, used_at, created_by
+	query := `SELECT id, user_id, type, code_hash, expires_at, used_at, created_by, uuid
 		FROM user_tokens
 		WHERE id = $1 AND tenant_id = $2`
 
@@ -120,6 +125,7 @@ func (r *userTokenRepository) GetById(ctx context.Context, id int64) (domain.Use
 		&userToken.ExpiresAt,
 		&usedAt,
 		&createdBy,
+		&userToken.Uuid,
 	)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {

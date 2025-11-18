@@ -1,14 +1,14 @@
 package bcrypt
 
 import (
-	"github.com/bncunha/erp-api/src/application/ports"
+	"github.com/bncunha/erp-api/src/domain"
 	_bcrypt "golang.org/x/crypto/bcrypt"
 )
 
 type bcrypt struct {
 }
 
-func NewBcrypt() ports.Encrypto {
+func NewBcrypt() domain.Encrypto {
 	return &bcrypt{}
 }
 

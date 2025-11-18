@@ -9,7 +9,7 @@ import (
 )
 
 type EmailUseCase interface {
-	SendInvite(ctx context.Context, user domain.User, code string) error
+	SendInvite(ctx context.Context, user domain.User, code string, uuid string) error
 	SendRecoverPassword(to string, code string) error
 }
 
