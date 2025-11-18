@@ -19,6 +19,7 @@ type UserService interface {
 	GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error)
 	Inactivate(ctx context.Context, id int64) error
 	ResetPassword(ctx context.Context, request request.ResetPasswordRequest) error
+	ForgotPassword(ctx context.Context, request request.ForgotPasswordRequest) error
 }
 
 type userService struct {
@@ -196,6 +197,45 @@ func (s *userService) ResetPassword(ctx context.Context, request request.ResetPa
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (s *userService) ForgotPassword(ctx context.Context, request request.ForgotPasswordRequest) error {
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	user, err := s.userRepository.GetByEmail(ctx, request.Email)
+	if err != nil {
+		logs.Logger.Errorf("Erro ao recuperar usuário por email: %v", err)
+		return nil
+	}
+
+	userToken := domain.NewUserToken(domain.CreateUserTokenParams{
+		User:      user,
+		CreatedBy: user,
+		Type:      domain.UserTokenTypeResetPass,
+	}, s.encrypto)
+	code := userToken.Code
+	userTokenId, err := s.userTokenRepository.Create(ctx, userToken)
+	if err != nil {
+		logs.Logger.Errorf("Erro ao criar token de recuperação de senha: %v", err)
+		return nil
+	}
+
+	userToken, err = s.userTokenRepository.GetById(ctx, userTokenId)
+	if err != nil {
+		logs.Logger.Errorf("Erro ao recuperar token de recuperação de senha: %v", err)
+		return nil
+	}
+
+	go func() {
+		err := s.emailUsecase.SendRecoverPassword(ctx, user, code, userToken.Uuid)
+		if err != nil {
+			logs.Logger.Errorf("Erro ao enviar email de recuperação de senha para o usuário %d: %v", user.Id, err)
+		}
+	}()
 
 	return nil
 }

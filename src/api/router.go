@@ -50,7 +50,8 @@ func (r *router) SetupRoutes() {
 
 func (r *router) setupPublicRoutes() {
 	r.echo.POST("/login", r.controller.AuthController.Login)
-	r.echo.POST("/reset-password", r.controller.UserController.ResetPassword)
+	r.echo.POST("/forgot-password", r.controller.UserController.ForgotPassword)
+	r.echo.POST("/change-password", r.controller.UserController.ChangePassword)
 	r.echo.GET("/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})

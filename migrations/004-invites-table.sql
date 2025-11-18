@@ -2,7 +2,7 @@ CREATE TABLE user_tokens (
   id           BIGSERIAL PRIMARY KEY,
   uuid         TEXT NOT NULL UNIQUE,
   user_id      BIGINT NOT NULL REFERENCES users(id),
-  tenant_id    BIGINT NOT NULL REFERENCES companies(id),
+  tenant_id    BIGINT NULL REFERENCES companies(id),
 
   type         TEXT NOT NULL,  -- 'invite' ou 'reset_password'
   code_hash    TEXT NOT NULL,

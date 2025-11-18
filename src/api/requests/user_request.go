@@ -54,3 +54,15 @@ func (r *ResetPasswordRequest) Validate() error {
 	}
 	return nil
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+func (r *ForgotPasswordRequest) Validate() error {
+	err := validator.Validate(r)
+	if err != nil {
+		return err
+	}
+	return nil
+}

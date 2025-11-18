@@ -149,3 +149,24 @@ func (r *userRepository) UpdatePassword(ctx context.Context, user domain.User, n
 
 	return nil
 }
+
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	var user domain.User
+	query := `SELECT id, username, name, phone_number, role, tenant_id, email FROM users WHERE email = $1 AND deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, email).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Name,
+		&user.PhoneNumber,
+		&user.Role,
+		&user.TenantId,
+		&user.Email,
+	)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return user, errors.New("Usuário não encontrado")
+		}
+		return user, err
+	}
+	return user, nil
+}

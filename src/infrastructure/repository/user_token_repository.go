@@ -115,7 +115,7 @@ func (r *userTokenRepository) GetById(ctx context.Context, id int64) (domain.Use
 
 	query := `SELECT id, user_id, type, code_hash, expires_at, used_at, created_by, uuid
 		FROM user_tokens
-		WHERE id = $1 AND tenant_id = $2`
+		WHERE id = $1 AND ($2::bigint IS NULL OR tenant_id = $2::bigint)`
 
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(
 		&userToken.Id,
