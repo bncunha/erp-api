@@ -5,6 +5,7 @@ import (
 	"net/smtp"
 
 	"github.com/bncunha/erp-api/src/application/ports"
+	"github.com/bncunha/erp-api/src/infrastructure/logs"
 )
 
 type EmailSmtpConfig struct {
@@ -37,5 +38,6 @@ func (e *emailSmtp) Send(to string, subject string, body string) error {
 		"Content-Type: text/html; charset=\"UTF-8\";\r\n"+
 		"\r\n"+
 		"%s\r\n", to, subject, body)
+	logs.Logger.Infof("%s - %s - %s", host, e.config.Username, msg)
 	return smtp.SendMail(host, auth, e.config.Username, []string{to}, []byte(msg))
 }
