@@ -42,8 +42,14 @@ func TestEmailUseCaseSendInvite(t *testing.T) {
 }
 
 func TestEmailUseCaseSendRecoverPassword(t *testing.T) {
-	usecase := NewEmailUseCase(&config.Config{}, &stubEmailPort{})
-	if err := usecase.SendRecoverPassword("user@example.com", "code"); err != nil {
+	cfg := &config.Config{FRONTEND_URL: "http://frontend"}
+	port := &stubEmailPort{}
+	usecase := NewEmailUseCase(cfg, port)
+	user := domain.User{Name: "User", Email: "user@example.com"}
+	if err := usecase.SendRecoverPassword(context.Background(), user, "code", "uuid"); err != nil {
 		t.Fatalf("expected recover email to succeed, got %v", err)
+	}
+	if !strings.Contains(port.body, "code=code&uuid=uuid") {
+		t.Fatalf("expected recover link in body, got %s", port.body)
 	}
 }

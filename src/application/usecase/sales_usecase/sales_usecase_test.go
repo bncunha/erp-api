@@ -97,6 +97,10 @@ func (f *fakeUserRepository) UpdatePassword(context.Context, domain.User, string
 	return nil
 }
 
+func (f *fakeUserRepository) GetByEmail(context.Context, string) (domain.User, error) {
+	return f.user, f.err
+}
+
 type fakeCustomerRepository struct {
 	customer domain.Customer
 	err      error

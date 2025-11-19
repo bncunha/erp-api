@@ -154,9 +154,11 @@ type stubEmailUseCase struct {
 		uuid string
 	}
 	lastRecover struct {
-		to   string
+		user domain.User
 		code string
+		uuid string
 	}
+	recoverCh chan struct{}
 }
 
 func (s *stubEmailUseCase) SendInvite(ctx context.Context, user domain.User, code string, uuid string) error {
@@ -169,12 +171,16 @@ func (s *stubEmailUseCase) SendInvite(ctx context.Context, user domain.User, cod
 	return s.inviteErr
 }
 
-func (s *stubEmailUseCase) SendRecoverPassword(to string, code string) error {
+func (s *stubEmailUseCase) SendRecoverPassword(ctx context.Context, user domain.User, code string, uuid string) error {
 	s.recoverCalls++
 	s.lastRecover = struct {
-		to   string
+		user domain.User
 		code string
-	}{to: to, code: code}
+		uuid string
+	}{user: user, code: code, uuid: uuid}
+	if s.recoverCh != nil {
+		s.recoverCh <- struct{}{}
+	}
 	return s.recoverErr
 }
 
@@ -418,6 +424,8 @@ type stubUserRepository struct {
 	inactivateErr     error
 	getByUsername     domain.User
 	getByUsernameErr  error
+	getByEmail        domain.User
+	getByEmailErr     error
 	getByIdResponses  map[int64]domain.User
 	getByIdErrors     map[int64]error
 	updatePasswordReq struct {
@@ -467,6 +475,10 @@ func (s *stubUserRepository) Inactivate(ctx context.Context, id int64) error {
 
 func (s *stubUserRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
 	return s.getByUsername, s.getByUsernameErr
+}
+
+func (s *stubUserRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	return s.getByEmail, s.getByEmailErr
 }
 
 func (s *stubUserRepository) UpdatePassword(ctx context.Context, user domain.User, newPassword string) error {

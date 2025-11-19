@@ -250,6 +250,53 @@ func TestUserServiceResetPasswordInvalidToken(t *testing.T) {
 	}
 }
 
+func TestUserServiceForgotPasswordValidationError(t *testing.T) {
+	service, _, _, _ := newUserServiceTest(&stubUserRepository{}, &stubInventoryRepository{})
+	if err := service.ForgotPassword(context.Background(), request.ForgotPasswordRequest{}); err == nil {
+		t.Fatalf("expected validation error")
+	}
+}
+
+func TestUserServiceForgotPasswordLookupError(t *testing.T) {
+	userRepo := &stubUserRepository{getByEmailErr: errors.New("fail")}
+	service, _, emailUsecase, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	if err := service.ForgotPassword(context.Background(), request.ForgotPasswordRequest{Email: "user@test.com"}); err != nil {
+		t.Fatalf("expected nil error even when lookup fails, got %v", err)
+	}
+	if tokenRepo.createInput.User.Id != 0 || emailUsecase.recoverCalls != 0 {
+		t.Fatalf("expected no token creation or email send")
+	}
+}
+
+func TestUserServiceForgotPasswordSuccess(t *testing.T) {
+	user := domain.User{Id: 5, Email: "user@test.com", Name: "User"}
+	userRepo := &stubUserRepository{getByEmail: user}
+	service, _, emailUsecase, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.createID = 1
+	tokenRepo.getById = domain.UserToken{Uuid: "uuid-123"}
+	emailUsecase.recoverCh = make(chan struct{}, 1)
+	if err := service.ForgotPassword(context.Background(), request.ForgotPasswordRequest{Email: user.Email}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	select {
+	case <-emailUsecase.recoverCh:
+	case <-time.After(50 * time.Millisecond):
+		t.Fatalf("expected recover email to be sent")
+	}
+	if tokenRepo.createInput.Type != domain.UserTokenTypeResetPass {
+		t.Fatalf("expected reset pass token, got %s", tokenRepo.createInput.Type)
+	}
+	if emailUsecase.recoverCalls != 1 {
+		t.Fatalf("expected recover email to be sent")
+	}
+	if emailUsecase.lastRecover.user.Id != user.Id || emailUsecase.lastRecover.uuid != "uuid-123" {
+		t.Fatalf("unexpected recover payload: %+v", emailUsecase.lastRecover)
+	}
+	if emailUsecase.lastRecover.code == "" {
+		t.Fatalf("expected non-empty recovery code")
+	}
+}
+
 func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInventoryRepository) (*userService, *stubUserTokenService, *stubEmailUseCase, *stubUserTokenRepository) {
 	if userRepo == nil {
 		userRepo = &stubUserRepository{}
