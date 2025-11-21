@@ -93,7 +93,6 @@ func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInpu
 		username, 
 		name, 
 		phone_number, 
-		password, 
 		role, 
 		tenant_id 
 	FROM users 
@@ -107,7 +106,7 @@ func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInpu
 
 	for rows.Next() {
 		var user domain.User
-		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Password, &user.Role, &user.TenantId)
+		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Role, &user.TenantId)
 		if err != nil {
 			return users, err
 		}
