@@ -62,7 +62,7 @@ func TestUserServiceUpdateResellerCreatesInventory(t *testing.T) {
 	inventoryRepo := &stubInventoryRepository{getByUserErr: domain.ErrInventoryNotFound}
 	service, _, _, _ := newUserServiceTest(userRepo, inventoryRepo)
 
-	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller)}
+	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller), Email: "user@test.com"}
 	if err := service.Update(context.Background(), req, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestUserServiceUpdateResellerCreatesInventory(t *testing.T) {
 func TestUserServiceUpdateDuplicated(t *testing.T) {
 	userRepo := &stubUserRepository{updateErr: errors.New("duplicate key value violates unique constraint")}
 	service, _, _, _ := newUserServiceTest(userRepo, &stubInventoryRepository{})
-	req := request.EditUserRequest{Username: "user", Name: "User", Role: "ADMIN"}
+	req := request.EditUserRequest{Username: "user", Name: "User", Role: "ADMIN", Email: "user@test.com"}
 
 	err := service.Update(context.Background(), req, 1)
 	if err == nil || err.Error() != "Usuário já cadastrado!" {
@@ -85,7 +85,7 @@ func TestUserServiceUpdateDuplicated(t *testing.T) {
 func TestUserServiceUpdateExistingInventory(t *testing.T) {
 	inventoryRepo := &stubInventoryRepository{getByUser: domain.Inventory{Id: 1}}
 	service, _, _, _ := newUserServiceTest(&stubUserRepository{}, inventoryRepo)
-	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller)}
+	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller), Email: "user@test.com"}
 	if err := service.Update(context.Background(), req, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestUserServiceUpdateValidationError(t *testing.T) {
 func TestUserServiceUpdateInventoryError(t *testing.T) {
 	inventoryRepo := &stubInventoryRepository{getByUserErr: errors.New("fail")}
 	service, _, _, _ := newUserServiceTest(&stubUserRepository{}, inventoryRepo)
-	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller)}
+	req := request.EditUserRequest{Username: "user", Name: "User", Role: string(domain.InventoryTypeReseller), Email: "user@test.com"}
 
 	if err := service.Update(context.Background(), req, 1); err == nil || err.Error() != "fail" {
 		t.Fatalf("expected inventory error")
