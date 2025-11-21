@@ -10,14 +10,20 @@ import (
 )
 
 type stubEmailPort struct {
-	to      string
-	subject string
-	body    string
-	err     error
+	senderEmail string
+	senderName  string
+	toEmail     string
+	toName      string
+	subject     string
+	body        string
+	err         error
 }
 
-func (s *stubEmailPort) Send(to string, subject string, body string) error {
-	s.to = to
+func (s *stubEmailPort) Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error {
+	s.senderEmail = senderEmail
+	s.senderName = senderName
+	s.toEmail = toEmail
+	s.toName = toName
 	s.subject = subject
 	s.body = body
 	return s.err
@@ -33,7 +39,7 @@ func TestEmailUseCaseSendInvite(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	expectedLink := "http://frontend/redefinir-senha?code=code123&uuid=uuid456"
-	if emailPort.to != user.Email || emailPort.subject != InviteSubject {
+	if emailPort.toEmail != user.Email || emailPort.toName != user.Name || emailPort.subject != InviteSubject {
 		t.Fatalf("expected invite email to be sent to user, got %+v", emailPort)
 	}
 	if !strings.Contains(emailPort.body, expectedLink) {

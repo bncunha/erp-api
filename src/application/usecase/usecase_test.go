@@ -17,7 +17,9 @@ func (fakeEncrypto) Compare(hash string, text string) (bool, error) {
 
 type fakeEmailPort struct{}
 
-func (fakeEmailPort) Send(to string, subject string, body string) error { return nil }
+func (fakeEmailPort) Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error {
+	return nil
+}
 
 func newTestPorts() *ports.Ports {
 	return ports.NewPorts(fakeEncrypto{}, fakeEmailPort{})

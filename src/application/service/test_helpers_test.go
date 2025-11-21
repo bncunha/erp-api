@@ -107,19 +107,32 @@ func (s *stubEncrypto) Compare(hash string, text string) (bool, error) {
 
 type stubEmailPort struct {
 	sent []struct {
-		to      string
-		subject string
-		body    string
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
 	}
 	err error
 }
 
-func (s *stubEmailPort) Send(to string, subject string, body string) error {
+func (s *stubEmailPort) Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error {
 	s.sent = append(s.sent, struct {
-		to      string
-		subject string
-		body    string
-	}{to: to, subject: subject, body: body})
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
+	}{
+		senderEmail: senderEmail,
+		senderName:  senderName,
+		toEmail:     toEmail,
+		toName:      toName,
+		subject:     subject,
+		body:        body,
+	})
 	if s.err != nil {
 		return s.err
 	}

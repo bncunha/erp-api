@@ -11,18 +11,31 @@ func (fakeEncrypto) Compare(hash string, text string) (bool, error) {
 
 type fakeEmailPort struct {
 	last struct {
-		to      string
-		subject string
-		body    string
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
 	}
 }
 
-func (f *fakeEmailPort) Send(to string, subject string, body string) error {
+func (f *fakeEmailPort) Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error {
 	f.last = struct {
-		to      string
-		subject string
-		body    string
-	}{to: to, subject: subject, body: body}
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
+	}{
+		senderEmail: senderEmail,
+		senderName:  senderName,
+		toEmail:     toEmail,
+		toName:      toName,
+		subject:     subject,
+		body:        body,
+	}
 	return nil
 }
 
@@ -40,7 +53,7 @@ func TestNewPorts(t *testing.T) {
 	if ports.EmailPort == nil {
 		t.Fatalf("expected email port to be set")
 	}
-	if err := ports.EmailPort.Send("to@example.com", "subject", "body"); err != nil {
+	if err := ports.EmailPort.Send("sender@example.com", "Sender", "to@example.com", "To", "subject", "body"); err != nil {
 		t.Fatalf("expected email port to be callable")
 	}
 }
