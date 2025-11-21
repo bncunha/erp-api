@@ -26,6 +26,7 @@ type EditUserRequest struct {
 	Name        string `json:"name" validate:"required,max=100"`
 	PhoneNumber string `json:"phone_number" validate:"max=20"`
 	Role        string `json:"role" validate:"required,max=100"`
+	Email       string `json:"email" validate:"required,email,max=250"`
 }
 
 func (r *EditUserRequest) Validate() error {

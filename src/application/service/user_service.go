@@ -110,6 +110,7 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 		Name:        request.Name,
 		PhoneNumber: request.PhoneNumber,
 		Role:        request.Role,
+		Email:       request.Email,
 	}
 
 	err = s.userRepository.Update(ctx, user)
