@@ -13,7 +13,7 @@ const (
 )
 
 func (e *emailUseCase) SendInvite(ctx context.Context, user domain.User, code string, uuid string) error {
-	frontEndLink := fmt.Sprintf("%s/redefinir-senha?code=%s&uuid=%s", e.config.FRONTEND_URL, code, uuid)
+	frontEndLink := fmt.Sprintf("%s/redefinir-senha?code=%s&uuid=%s&new_user=true", e.config.FRONTEND_URL, code, uuid)
 	body := fmt.Sprintf(InviteBodyTemplate, user.Name, frontEndLink, "Clique aqui para definir sua senha de acesso!", frontEndLink)
 	return e.emailPort.Send(SenderEmail, SenderName, user.Email, user.Name, InviteSubject, body)
 }
