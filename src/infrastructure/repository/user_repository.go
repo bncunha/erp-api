@@ -94,7 +94,8 @@ func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInpu
 		name, 
 		phone_number, 
 		role, 
-		tenant_id 
+		tenant_id,
+		email
 	FROM users 
 	WHERE tenant_id = $1 AND deleted_at IS NULL AND ($2::text IS NULL OR role = $2)
 	ORDER BY id ASC`
@@ -106,7 +107,7 @@ func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInpu
 
 	for rows.Next() {
 		var user domain.User
-		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Role, &user.TenantId)
+		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Role, &user.TenantId, &user.Email)
 		if err != nil {
 			return users, err
 		}
