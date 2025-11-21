@@ -7,7 +7,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/application/usecase"
 	"github.com/bncunha/erp-api/src/infrastructure/bcrypt"
-	"github.com/bncunha/erp-api/src/infrastructure/email"
+	email_brevo "github.com/bncunha/erp-api/src/infrastructure/email/brevo"
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
 	"github.com/bncunha/erp-api/src/infrastructure/observability"
 	"github.com/bncunha/erp-api/src/infrastructure/persistence"
@@ -41,12 +41,12 @@ func main() {
 	}
 	defer persistence.CloseConnection(db)
 
-	emailSmtp := email.NewEmailSmtp(email.EmailSmtpConfig{Host: config.SMTP_HOST, Port: config.SMTP_PORT, Username: config.SMTP_USERNAME, Password: config.SMTP_PASSWORD})
+	emailBrevo := email_brevo.NewEmailBrevo(email_brevo.EmailBrevoConfig{ApiKey: config.BREVO_API_KEY})
 
 	repository := repository.NewRepository(db)
 	repository.SetupRepositories()
 
-	ports := ports.NewPorts(bcrypt, emailSmtp)
+	ports := ports.NewPorts(bcrypt, emailBrevo)
 
 	useCase := usecase.NewApplicationUseCase(repository, config, ports)
 	useCase.SetupUseCases()

@@ -1,5 +1,5 @@
 package ports
 
 type EmailPort interface {
-	Send(to string, subject string, body string) error
+	Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error
 }

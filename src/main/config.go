@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 
-	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/joho/godotenv"
 )
 
@@ -15,10 +14,7 @@ type Config struct {
 	DB_NAME        string
 	APP_ENV        string
 	NR_LICENSE_KEY string
-	SMTP_HOST      string
-	SMTP_PORT      int64
-	SMTP_USERNAME  string
-	SMTP_PASSWORD  string
+	BREVO_API_KEY  string
 	FRONTEND_URL   string
 }
 
@@ -30,8 +26,6 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
-	smtpPort := helper.ParseInt64(os.Getenv("SMTP_PORT"))
-
 	return &Config{
 		DB_PASS:        os.Getenv("DB_PASS"),
 		DB_USER:        os.Getenv("DB_USER"),
@@ -40,10 +34,7 @@ func LoadConfig() (*Config, error) {
 		DB_NAME:        os.Getenv("DB_NAME"),
 		APP_ENV:        os.Getenv("APP_ENV"),
 		NR_LICENSE_KEY: os.Getenv("NR_LICENSE_KEY"),
-		SMTP_HOST:      os.Getenv("SMTP_HOST"),
-		SMTP_PORT:      smtpPort,
-		SMTP_USERNAME:  os.Getenv("SMTP_USERNAME"),
-		SMTP_PASSWORD:  os.Getenv("SMTP_PASSWORD"),
+		BREVO_API_KEY:  os.Getenv("BREVO_API_KEY"),
 		FRONTEND_URL:   os.Getenv("FRONTEND_URL"),
 	}, nil
 }

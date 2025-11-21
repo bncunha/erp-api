@@ -15,5 +15,5 @@ const (
 func (e *emailUseCase) SendRecoverPassword(ctx context.Context, user domain.User, code string, uuid string) error {
 	frontEndLink := fmt.Sprintf("%s/redefinir-senha?code=%s&uuid=%s", e.config.FRONTEND_URL, code, uuid)
 	body := fmt.Sprintf(RecoverPasswordBodyTemplate, user.Name, frontEndLink, "Clique aqui para redefinir sua senha de acesso!", frontEndLink)
-	return e.emailPort.Send(user.Email, RecoverPassword, body)
+	return e.emailPort.Send(SenderEmail, SenderName, user.Email, user.Name, RecoverPassword, body)
 }
