@@ -4,6 +4,7 @@ import (
 	"context"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -27,10 +28,17 @@ func (s *customerService) Create(ctx context.Context, input request.CreateCustom
 	if err := input.Validate(); err != nil {
 		return 0, err
 	}
-	return s.customerRepository.Create(ctx, domain.Customer{
+	id, err := s.customerRepository.Create(ctx, domain.Customer{
 		Name:        input.Name,
 		PhoneNumber: input.Cellphone,
 	})
+	if err != nil {
+		if errors.IsDuplicated(err) {
+			return 0, errors.ParseDuplicatedMessage("Cliente", err)
+		}
+		return 0, err
+	}
+	return id, nil
 }
 
 func (s *customerService) GetAll(ctx context.Context) ([]domain.Customer, error) {
@@ -58,6 +66,9 @@ func (s *customerService) Edit(ctx context.Context, input request.EditCustomerRe
 		PhoneNumber: input.Cellphone,
 	}, input.Id)
 	if err != nil {
+		if errors.IsDuplicated(err) {
+			return errors.ParseDuplicatedMessage("Cliente", err)
+		}
 		return err
 	}
 	return nil

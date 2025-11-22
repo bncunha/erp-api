@@ -22,3 +22,5 @@ UPDATE users SET email = CONCAT('user', id, '@example.com') WHERE email IS NULL;
 ALTER TABLE users ALTER COLUMN email SET NOT NULL;
 ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
 ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+CREATE UNIQUE INDEX usuarios_phonenumber_unique_notnull ON users (phone_number) WHERE email IS NOT NULL;
+ALTER TABLE customers ADD CONSTRAINT customers_phonenumber_unique_key UNIQUE (phone_number);

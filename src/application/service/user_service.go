@@ -52,7 +52,7 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 	userId, err := s.userRepository.Create(ctx, user)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.New("Usuário já cadastrado!")
+			return errors.ParseDuplicatedMessage("Usuário", err)
 		}
 		return err
 	}
@@ -116,7 +116,7 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 	err = s.userRepository.Update(ctx, user)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.New("Usuário já cadastrado!")
+			return errors.ParseDuplicatedMessage("Usuário", err)
 		}
 		return err
 	}
