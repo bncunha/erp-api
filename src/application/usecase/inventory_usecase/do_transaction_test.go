@@ -95,6 +95,14 @@ func (s *stubInventoryTransactionRepository) GetByInventoryId(ctx context.Contex
 	return nil, nil
 }
 
+func TestNewInventoryUseCase(t *testing.T) {
+	repo := &repository.Repository{}
+	uc := NewInventoryUseCase(repo, nil, nil, nil, nil)
+	if uc == nil {
+		t.Fatalf("expected inventory use case instance")
+	}
+}
+
 func TestDetachIds(t *testing.T) {
 	uc := &inventoryUseCase{}
 	ids := uc.detachIds([]DoTransactionSkusInput{{SkuId: 1}, {SkuId: 2}})
@@ -163,6 +171,15 @@ func TestValidateInventoryTransaction(t *testing.T) {
 	}
 }
 
+func TestValidateInventoryTransactionOutType(t *testing.T) {
+	uc := &inventoryUseCase{}
+	items := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 5}}
+	skus := []domain.Sku{{Id: 1, Quantity: 2}}
+	if err := uc.validateInventoryTransaction(domain.Inventory{}, domain.Inventory{Id: 1}, items, nil, skus, domain.InventoryTransactionTypeOut); err != nil {
+		t.Fatalf("unexpected error validating out transaction: %v", err)
+	}
+}
+
 func TestValidateExistingInventoryItemOut(t *testing.T) {
 	uc := &inventoryUseCase{}
 	err := uc.validateExistingInventoryItemOut([]domain.InventoryItem{}, []domain.Sku{{Id: 1}})
@@ -222,6 +239,30 @@ func TestTransferQuantity(t *testing.T) {
 	}
 }
 
+func TestTransferQuantityErrorOnSubQuantity(t *testing.T) {
+	repo := &stubInventoryItemRepository{}
+	uc := &inventoryUseCase{inventoryItemRepository: repo}
+	out := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1}}
+	in := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 0}}
+	skus := []domain.Sku{{Id: 1, Quantity: 5}}
+
+	if err := uc.transferQuantity(context.Background(), nil, out, in, skus); err == nil || err != ErrQuantityInsufficient {
+		t.Fatalf("expected quantity insufficient error, got %v", err)
+	}
+}
+
+func TestTransferQuantityErrorOnAddQuantity(t *testing.T) {
+	repo := &stubInventoryItemRepository{}
+	uc := &inventoryUseCase{inventoryItemRepository: repo}
+	out := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 5}}
+	in := []domain.InventoryItem{} // missing destination item triggers add error
+	skus := []domain.Sku{{Id: 1, Quantity: 2}}
+
+	if err := uc.transferQuantity(context.Background(), nil, out, in, skus); err == nil || err.Error() == "" {
+		t.Fatalf("expected error when destination inventory item missing")
+	}
+}
+
 func TestAddQuantity(t *testing.T) {
 	repo := &stubInventoryItemRepository{}
 	uc := &inventoryUseCase{inventoryItemRepository: repo}
@@ -238,6 +279,16 @@ func TestAddQuantity(t *testing.T) {
 
 	if err := uc.addQuantity(context.Background(), tx, nil, skus); err == nil {
 		t.Fatalf("expected error for missing inventory item")
+	}
+}
+
+func TestAddQuantityUpdateError(t *testing.T) {
+	repo := &stubInventoryItemRepository{updateErr: errors.New("fail")}
+	uc := &inventoryUseCase{inventoryItemRepository: repo}
+	items := []domain.InventoryItem{{Sku: domain.Sku{Id: 1}, Quantity: 1}}
+	skus := []domain.Sku{{Id: 1, Quantity: 1}}
+	if err := uc.addQuantity(context.Background(), nil, items, skus); err == nil || err.Error() != "fail" {
+		t.Fatalf("expected update error")
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 
 func TestAuthServiceLoginSuccess(t *testing.T) {
 	userRepo := &stubUserRepository{getByUsername: domain.User{Username: "user", Password: "password", Name: "User", TenantId: 1}}
-	service := &authService{userRepository: userRepo}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}}
 
 	output, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
 	if err != nil {
@@ -24,7 +24,7 @@ func TestAuthServiceLoginSuccess(t *testing.T) {
 
 func TestAuthServiceLoginInvalidPassword(t *testing.T) {
 	userRepo := &stubUserRepository{getByUsername: domain.User{Username: "user", Password: "password"}}
-	service := &authService{userRepository: userRepo}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}}
 
 	_, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "wrong"})
 	if err == nil {
@@ -33,7 +33,7 @@ func TestAuthServiceLoginInvalidPassword(t *testing.T) {
 }
 
 func TestAuthServiceLoginValidationError(t *testing.T) {
-	service := &authService{}
+	service := &authService{encrypt: &stubEncrypto{}}
 	if _, err := service.Login(context.Background(), request.LoginRequest{}); err == nil {
 		t.Fatalf("expected validation error")
 	}
@@ -41,8 +41,22 @@ func TestAuthServiceLoginValidationError(t *testing.T) {
 
 func TestAuthServiceLoginRepositoryError(t *testing.T) {
 	userRepo := &stubUserRepository{getByUsernameErr: errors.New("fail")}
-	service := &authService{userRepository: userRepo}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}}
 	if _, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"}); err == nil || err.Error() != "fail" {
 		t.Fatalf("expected repository error")
+	}
+}
+
+func TestAuthServiceLoginTokenGenerationError(t *testing.T) {
+	userRepo := &stubUserRepository{getByUsername: domain.User{Username: "user", Password: "secret"}}
+	service := &authService{
+		userRepository: userRepo,
+		encrypt:        &stubEncrypto{},
+		generateToken: func(username string, tenantID int64, role string, userID int64) (string, error) {
+			return "", errors.New("token fail")
+		},
+	}
+	if _, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "secret"}); err == nil || err.Error() != "token fail" {
+		t.Fatalf("expected token generation error")
 	}
 }

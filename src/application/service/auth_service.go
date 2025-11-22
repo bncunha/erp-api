@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service/output"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
+	"github.com/bncunha/erp-api/src/domain"
+	"github.com/bncunha/erp-api/src/infrastructure/logs"
 )
 
 type AuthService interface {
@@ -15,11 +17,17 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepository repository.UserRepository
+	userRepository domain.UserRepository
+	encrypt        domain.Encrypto
+	generateToken  func(username string, tenantID int64, role string, userID int64) (string, error)
 }
 
-func NewAuthService(userRepository repository.UserRepository) AuthService {
-	return &authService{userRepository}
+func NewAuthService(userRepository domain.UserRepository, encrypt domain.Encrypto) AuthService {
+	return &authService{
+		userRepository: userRepository,
+		generateToken:  helper.GenerateJWT,
+		encrypt:        encrypt,
+	}
 }
 
 func (s *authService) Login(ctx context.Context, input request.LoginRequest) (out output.LoginOutput, err error) {
@@ -33,11 +41,32 @@ func (s *authService) Login(ctx context.Context, input request.LoginRequest) (ou
 		return out, err
 	}
 
-	if user.Password != input.Password {
-		return out, errors.New("senha incorreta")
+	isBcrypt := strings.HasPrefix(user.Password, "$2") && len(user.Password) > 20
+	if isBcrypt {
+		if match, err := s.encrypt.Compare(user.Password, input.Password); err != nil || !match {
+			return out, errors.New("senha incorreta")
+		}
+	} else {
+		if user.Password != input.Password {
+			return out, errors.New("senha incorreta")
+		} else {
+			hashedPassword, err := s.encrypt.Encrypt(user.Password)
+			if err != nil {
+				logs.Logger.Errorf("Erro ao atualizar a senha do usuário %d para bcrypt: %v", user.Id, err)
+			}
+			err = s.userRepository.UpdatePassword(ctx, user, hashedPassword)
+			if err != nil {
+				logs.Logger.Errorf("Erro ao atualizar usuario %d para bcrypt: %v", user.Id, err)
+			}
+		}
 	}
 
-	token, err := helper.GenerateJWT(user.Username, user.TenantId, user.Role, user.Id)
+	tokenFn := s.generateToken
+	if tokenFn == nil {
+		tokenFn = helper.GenerateJWT
+	}
+
+	token, err := tokenFn(user.Username, user.TenantId, user.Role, user.Id)
 	if err != nil {
 		return out, err
 	}

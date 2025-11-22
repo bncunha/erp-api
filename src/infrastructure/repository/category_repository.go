@@ -9,20 +9,11 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 )
 
-type CategoryRepository interface {
-	Create(ctx context.Context, category domain.Category) (int64, error)
-	GetById(ctx context.Context, id int64) (domain.Category, error)
-	GetByName(ctx context.Context, name string) (domain.Category, error)
-	Update(ctx context.Context, category domain.Category) error
-	Delete(ctx context.Context, id int64) error
-	GetAll(ctx context.Context) ([]domain.Category, error)
-}
-
 type categoryRepository struct {
 	db *sql.DB
 }
 
-func NewCategoryRepository(db *sql.DB) CategoryRepository {
+func NewCategoryRepository(db *sql.DB) domain.CategoryRepository {
 	return &categoryRepository{db}
 }
 

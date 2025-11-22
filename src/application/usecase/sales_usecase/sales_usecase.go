@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
+	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
@@ -12,23 +13,23 @@ type SalesUseCase interface {
 }
 
 type salesUseCase struct {
-	userRepository          repository.UserRepository
-	customerRepository      repository.CustomerRepository
-	skuRepository           repository.SkuRepository
-	saleRepository          repository.SalesRepository
+	userRepository          domain.UserRepository
+	customerRepository      domain.CustomerRepository
+	skuRepository           domain.SkuRepository
+	saleRepository          domain.SalesRepository
 	inventoryUseCase        inventory_usecase.InventoryUseCase
-	inventoryRepository     repository.InventoryRepository
-	inventoryItemRepository repository.InventoryItemRepository
+	inventoryRepository     domain.InventoryRepository
+	inventoryItemRepository domain.InventoryItemRepository
 	repository              *repository.Repository
 }
 
-func NewSalesUseCase(userRepository repository.UserRepository,
-	customerRepository repository.CustomerRepository,
-	skuRepository repository.SkuRepository,
-	saleRepository repository.SalesRepository,
+func NewSalesUseCase(userRepository domain.UserRepository,
+	customerRepository domain.CustomerRepository,
+	skuRepository domain.SkuRepository,
+	saleRepository domain.SalesRepository,
 	inventoryUseCase inventory_usecase.InventoryUseCase,
-	inventoryRepository repository.InventoryRepository,
-	inventoryItemRepository repository.InventoryItemRepository,
+	inventoryRepository domain.InventoryRepository,
+	inventoryItemRepository domain.InventoryItemRepository,
 	repository *repository.Repository) SalesUseCase {
 	return &salesUseCase{
 		userRepository:          userRepository,

@@ -10,7 +10,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/validator"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type ProductService interface {
@@ -23,12 +22,12 @@ type ProductService interface {
 }
 
 type productService struct {
-	productRepository  repository.ProductRepository
-	categoryRepository repository.CategoryRepository
-	skuRepository      repository.SkuRepository
+	productRepository  domain.ProductRepository
+	categoryRepository domain.CategoryRepository
+	skuRepository      domain.SkuRepository
 }
 
-func NewProductService(productRepository repository.ProductRepository, categoryRepository repository.CategoryRepository, skuRepositoy repository.SkuRepository) ProductService {
+func NewProductService(productRepository domain.ProductRepository, categoryRepository domain.CategoryRepository, skuRepositoy domain.SkuRepository) ProductService {
 	return &productService{productRepository, categoryRepository, skuRepositoy}
 }
 

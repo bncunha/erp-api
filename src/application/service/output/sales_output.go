@@ -39,29 +39,8 @@ type GetSalesSummaryOutput struct {
 	AverageTicket float64
 }
 
-type GetSalesItemOutput struct {
-	Id            int
-	Date          string
-	SellerName    string
-	CustomerName  string
-	TotalValue    float64
-	ReceivedValue float64
-	FutureRevenue float64
-	TotalItems    float64
-	Status        domain.PaymentStatus
-}
-
-type GetSaleByIdOutput struct {
-	Id            int
-	Code          string
-	Date          time.Time
-	TotalValue    float64
-	SellerName    string
-	CustomerName  string
-	ReceivedValue float64
-	FutureRevenue float64
-	PaymentStatus domain.PaymentStatus
-}
+type GetSalesItemOutput = domain.GetSalesItemOutput
+type GetSaleByIdOutput = domain.GetSaleByIdOutput
 
 type GetSaleByIdPayment struct {
 	InstallmentNumber int64
@@ -79,24 +58,11 @@ type GetSaleByIdItem struct {
 	TotalValue  float64
 }
 
-type GetSalesPaymentOutput struct {
-	Id                int64
-	InstallmentNumber int64
-	InstallmentValue  float64
-	DueDate           time.Time
-	PaidDate          *time.Time
-	PaymentStatus     domain.PaymentStatus
-	PaymentType       domain.PaymentType
-}
+type GetSalesPaymentOutput = domain.GetSalesPaymentOutput
 
 type GetSalesPaymentGroupOutput struct {
 	PaymentType  domain.PaymentType
 	Installments []GetSalesPaymentOutput
 }
 
-type GetItemsOutput struct {
-	Sku        domain.Sku
-	Quantity   float64
-	UnitPrice  float64
-	TotalValue float64
-}
+type GetItemsOutput = domain.GetItemsOutput

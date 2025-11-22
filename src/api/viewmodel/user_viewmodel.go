@@ -8,6 +8,7 @@ type UserViewModel struct {
 	Name        string `json:"name"`
 	PhoneNumber string `json:"phone_number"`
 	Role        string `json:"role"`
+	Email       string `json:"email"`
 }
 
 func ToUserViewModel(user domain.User) UserViewModel {
@@ -17,5 +18,6 @@ func ToUserViewModel(user domain.User) UserViewModel {
 		Name:        user.Name,
 		PhoneNumber: user.PhoneNumber,
 		Role:        user.Role,
+		Email:       user.Email,
 	}
 }

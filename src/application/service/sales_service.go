@@ -12,7 +12,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/usecase/sales_usecase"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 var (
@@ -28,10 +27,10 @@ type SalesService interface {
 
 type salesService struct {
 	salesUsecase    sales_usecase.SalesUseCase
-	salesRepository repository.SalesRepository
+	salesRepository domain.SalesRepository
 }
 
-func NewSalesService(salesUsecase sales_usecase.SalesUseCase, salesRepository repository.SalesRepository) SalesService {
+func NewSalesService(salesUsecase sales_usecase.SalesUseCase, salesRepository domain.SalesRepository) SalesService {
 	return &salesService{
 		salesUsecase,
 		salesRepository,

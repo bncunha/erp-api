@@ -3,8 +3,11 @@ package main
 import (
 	router "github.com/bncunha/erp-api/src/api"
 	controller "github.com/bncunha/erp-api/src/api/controllers"
+	"github.com/bncunha/erp-api/src/application/ports"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/application/usecase"
+	"github.com/bncunha/erp-api/src/infrastructure/bcrypt"
+	email_brevo "github.com/bncunha/erp-api/src/infrastructure/email/brevo"
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
 	"github.com/bncunha/erp-api/src/infrastructure/observability"
 	"github.com/bncunha/erp-api/src/infrastructure/persistence"
@@ -14,6 +17,7 @@ import (
 )
 
 func main() {
+	bcrypt := bcrypt.NewBcrypt()
 	logs.NewLogs()
 	logs.Logger.Infof("Iniciando aplicação")
 
@@ -37,13 +41,17 @@ func main() {
 	}
 	defer persistence.CloseConnection(db)
 
+	emailBrevo := email_brevo.NewEmailBrevo(email_brevo.EmailBrevoConfig{ApiKey: config.BREVO_API_KEY})
+
 	repository := repository.NewRepository(db)
 	repository.SetupRepositories()
 
-	useCase := usecase.NewApplicationUseCase(repository)
+	ports := ports.NewPorts(bcrypt, emailBrevo)
+
+	useCase := usecase.NewApplicationUseCase(repository, config, ports)
 	useCase.SetupUseCases()
 
-	service := service.NewApplicationService(repository, useCase)
+	service := service.NewApplicationService(repository, useCase, ports)
 	service.SetupServices()
 
 	controller := controller.NewController(service)

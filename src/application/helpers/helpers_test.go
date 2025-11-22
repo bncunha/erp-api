@@ -23,3 +23,17 @@ func TestGetRole(t *testing.T) {
 		t.Fatalf("expected admin role, got %s", role)
 	}
 }
+
+func TestParseFloat(t *testing.T) {
+	value, err := ParseFloat("12.50")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if value != 12.50 {
+		t.Fatalf("expected 12.50, got %v", value)
+	}
+
+	if _, err := ParseFloat("invalid"); err == nil {
+		t.Fatalf("expected error for invalid float")
+	}
+}

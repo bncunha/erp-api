@@ -1,5 +1,5 @@
 package input
 
-type GetSkusInput struct {
-	SellerId *float64
-}
+import "github.com/bncunha/erp-api/src/domain"
+
+type GetSkusInput = domain.GetSkusInput

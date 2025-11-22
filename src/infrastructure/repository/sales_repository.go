@@ -9,31 +9,15 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/input"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/lib/pq"
 )
-
-type SalesRepository interface {
-	CreateSale(ctx context.Context, tx *sql.Tx, sale domain.Sales) (int64, error)
-	CreateManySaleItem(ctx context.Context, tx *sql.Tx, sale domain.Sales, saleItems []domain.SalesItem) ([]int64, error)
-	CreatePayment(ctx context.Context, tx *sql.Tx, sale domain.Sales, payment domain.SalesPayment) (int64, error)
-	CreateManyPaymentDates(ctx context.Context, tx *sql.Tx, payment domain.SalesPayment, paymentDates []domain.SalesPaymentDates) ([]int64, error)
-	GetSales(ctx context.Context, input input.GetSalesInput) ([]output.GetSalesItemOutput, error)
-	GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error)
-	GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error)
-	GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error)
-	ChangePaymentStatus(ctx context.Context, id int64, status domain.PaymentStatus) (int64, error)
-	ChangePaymentDate(ctx context.Context, id int64, date *time.Time) (int64, error)
-	GetPaymentDatesBySaleIdAndPaymentDateId(ctx context.Context, id int64, paymentDateId int64) (domain.SalesPaymentDates, error)
-}
 
 type salesRepository struct {
 	db *sql.DB
 }
 
-func NewSalesRepository(db *sql.DB) SalesRepository {
+func NewSalesRepository(db *sql.DB) domain.SalesRepository {
 	return &salesRepository{db}
 }
 
@@ -133,9 +117,9 @@ func (r *salesRepository) CreateManyPaymentDates(ctx context.Context, tx *sql.Tx
 	return ids, nil
 }
 
-func (r *salesRepository) GetSales(ctx context.Context, input input.GetSalesInput) ([]output.GetSalesItemOutput, error) {
+func (r *salesRepository) GetSales(ctx context.Context, input domain.GetSalesInput) ([]domain.GetSalesItemOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var sales []output.GetSalesItemOutput
+	var sales []domain.GetSalesItemOutput
 
 	query := `
 SELECT
@@ -207,7 +191,7 @@ ORDER BY s.date DESC, s.id DESC;
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sale output.GetSalesItemOutput
+		var sale domain.GetSalesItemOutput
 		if err := rows.Scan(&sale.Id, &sale.Date, &sale.CustomerName, &sale.SellerName, &sale.TotalValue, &sale.ReceivedValue, &sale.FutureRevenue, &sale.TotalItems, &sale.Status); err != nil {
 			return nil, err
 		}
@@ -216,9 +200,9 @@ ORDER BY s.date DESC, s.id DESC;
 	return sales, nil
 }
 
-func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (output.GetSaleByIdOutput, error) {
+func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (domain.GetSaleByIdOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var output output.GetSaleByIdOutput
+	var output domain.GetSaleByIdOutput
 
 	query := `
 	SELECT
@@ -271,9 +255,9 @@ GROUP BY
 	return output, nil
 }
 
-func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]output.GetSalesPaymentOutput, error) {
+func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]domain.GetSalesPaymentOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var o []output.GetSalesPaymentOutput
+	var o []domain.GetSalesPaymentOutput
 
 	query := `
 	SELECT 
@@ -299,7 +283,7 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var payment output.GetSalesPaymentOutput
+		var payment domain.GetSalesPaymentOutput
 		if err := rows.Scan(&payment.Id, &payment.InstallmentNumber, &payment.InstallmentValue, &payment.DueDate, &payment.PaidDate, &payment.PaymentType, &payment.PaymentStatus); err != nil {
 			return nil, err
 		}
@@ -308,9 +292,9 @@ func (r *salesRepository) GetPaymentsBySaleId(ctx context.Context, id int64) ([]
 	return o, nil
 }
 
-func (r *salesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error) {
+func (r *salesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]domain.GetItemsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var items []output.GetItemsOutput
+	var items []domain.GetItemsOutput
 
 	query := `
 	SELECT
@@ -335,7 +319,7 @@ func (r *salesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]out
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var item output.GetItemsOutput
+		var item domain.GetItemsOutput
 		if err := rows.Scan(&item.Quantity, &item.Sku.Id, &item.Sku.Price, &item.Sku.Id, &item.Sku.Code, &item.Sku.Color, &item.Sku.Size, &item.Sku.Product.Name, &item.Sku.Product.Description); err != nil {
 			return nil, err
 		}

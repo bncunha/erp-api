@@ -93,6 +93,14 @@ func (f *fakeUserRepository) GetById(context.Context, int64) (domain.User, error
 	return f.user, f.err
 }
 
+func (f *fakeUserRepository) UpdatePassword(context.Context, domain.User, string) error {
+	return nil
+}
+
+func (f *fakeUserRepository) GetByEmail(context.Context, string) (domain.User, error) {
+	return f.user, f.err
+}
+
 type fakeCustomerRepository struct {
 	customer domain.Customer
 	err      error
@@ -424,7 +432,7 @@ func TestSalesUseCaseDoSaleUserError(t *testing.T) {
 func TestSalesUseCaseDoSaleInventoryFallback(t *testing.T) {
 	env := newSaleTestEnv(t)
 	env.userRepo.user.Role = string(domain.UserRoleAdmin)
-	env.inventoryRepo.byUserErr = repository.ErrInventoryNotFound
+	env.inventoryRepo.byUserErr = domain.ErrInventoryNotFound
 	env.inventoryRepo.primary = domain.Inventory{Id: 9}
 	env.inventoryItemRepo.items = []domain.InventoryItem{{Id: 10, InventoryId: 9, Sku: env.skuRepo.skus[0], Quantity: 5}}
 	env.input.Items = []DoSaleItemsInput{{SkuId: env.skuRepo.skus[0].Id, Quantity: 1}}

@@ -107,3 +107,66 @@ func TestInventoryServiceDoTransactionUseCaseError(t *testing.T) {
 		t.Fatalf("expected error from use case")
 	}
 }
+
+func TestInventoryServiceDoTransactionTxBeginError(t *testing.T) {
+	service := &inventoryService{
+		inventoryUseCase: &stubInventoryUseCase{},
+		txManager:        &stubTxManager{err: errors.New("begin fail")},
+	}
+	req := request.CreateInventoryTransactionRequest{
+		Type:                   domain.InventoryTransactionTypeIn,
+		InventoryDestinationId: 1,
+		Skus:                   []request.CreateInventoryTransactionSkusRequest{{SkuId: 1, Quantity: 1}},
+	}
+	if err := service.DoTransaction(context.Background(), req); err == nil || err.Error() != "begin fail" {
+		t.Fatalf("expected begin transaction error")
+	}
+}
+
+func TestInventoryServiceDoTransactionCommitsTransaction(t *testing.T) {
+	sqlTx, fakeTx, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	service := &inventoryService{
+		inventoryUseCase: &stubInventoryUseCase{},
+		txManager:        &stubTxManager{tx: sqlTx},
+	}
+	req := request.CreateInventoryTransactionRequest{
+		Type:                   domain.InventoryTransactionTypeIn,
+		InventoryDestinationId: 1,
+		Skus:                   []request.CreateInventoryTransactionSkusRequest{{SkuId: 1, Quantity: 1}},
+	}
+	if err := service.DoTransaction(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !fakeTx.committed {
+		t.Fatalf("expected transaction to be committed")
+	}
+	if fakeTx.rolledBack {
+		t.Fatalf("did not expect rollback on success")
+	}
+}
+
+func TestInventoryServiceDoTransactionRollsBackOnError(t *testing.T) {
+	sqlTx, fakeTx, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	service := &inventoryService{
+		inventoryUseCase: &stubInventoryUseCase{err: errors.New("fail")},
+		txManager:        &stubTxManager{tx: sqlTx},
+	}
+	req := request.CreateInventoryTransactionRequest{
+		Type:                   domain.InventoryTransactionTypeIn,
+		InventoryDestinationId: 1,
+		Skus:                   []request.CreateInventoryTransactionSkusRequest{{SkuId: 1, Quantity: 1}},
+	}
+	if err := service.DoTransaction(context.Background(), req); err == nil || err.Error() != "fail" {
+		t.Fatalf("expected use case error")
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected rollback when use case fails")
+	}
+	if fakeTx.committed {
+		t.Fatalf("did not expect commit when failing")
+	}
+}

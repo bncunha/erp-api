@@ -6,24 +6,14 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/domain"
 )
-
-type UserRepository interface {
-	GetByUsername(ctx context.Context, username string) (domain.User, error)
-	Create(ctx context.Context, user domain.User) (int64, error)
-	Update(ctx context.Context, user domain.User) error
-	Inactivate(ctx context.Context, id int64) error
-	GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error)
-	GetById(ctx context.Context, id int64) (domain.User, error)
-}
 
 type userRepository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) UserRepository {
+func NewUserRepository(db *sql.DB) domain.UserRepository {
 	return &userRepository{db}
 }
 
@@ -50,9 +40,9 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (do
 
 func (r *userRepository) Create(ctx context.Context, user domain.User) (int64, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `INSERT INTO users (username, name, phone_number, password, role, tenant_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	query := `INSERT INTO users (username, name, phone_number, role, tenant_id, email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	var id int64
-	err := r.db.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Password, user.Role, tenantId).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Role, tenantId, user.Email).Scan(&id)
 	if err != nil {
 		return id, err
 	}
@@ -62,16 +52,9 @@ func (r *userRepository) Create(ctx context.Context, user domain.User) (int64, e
 func (r *userRepository) Update(ctx context.Context, user domain.User) error {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var err error
-	query := `UPDATE users SET name = $1, phone_number = $2, role = $3, username = $4 WHERE id = $5 AND tenant_id = $6 AND deleted_at IS NULL`
-	if user.Password != "" {
-		query = `UPDATE users SET name = $1, phone_number = $2, password = $3, role = $4, username = $5 WHERE id = $6 AND tenant_id = $7 AND deleted_at IS NULL`
-	}
+	query := `UPDATE users SET name = $1, phone_number = $2, role = $3, username = $4, email = $7 WHERE id = $5 AND tenant_id = $6`
 
-	if user.Password == "" {
-		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Role, user.Username, user.Id, tenantId)
-	} else {
-		_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Password, user.Role, user.Username, user.Id, tenantId)
-	}
+	_, err = r.db.ExecContext(ctx, query, user.Name, user.PhoneNumber, user.Role, user.Username, user.Id, tenantId, user.Email)
 	if err != nil {
 		return err
 	}
@@ -101,7 +84,7 @@ func (r *userRepository) Inactivate(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *userRepository) GetAll(ctx context.Context, input input.GetAllUserInput) ([]domain.User, error) {
+func (r *userRepository) GetAll(ctx context.Context, input domain.GetAllUserInput) ([]domain.User, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var users []domain.User
 
@@ -110,9 +93,9 @@ func (r *userRepository) GetAll(ctx context.Context, input input.GetAllUserInput
 		username, 
 		name, 
 		phone_number, 
-		password, 
 		role, 
-		tenant_id 
+		tenant_id,
+		email
 	FROM users 
 	WHERE tenant_id = $1 AND deleted_at IS NULL AND ($2::text IS NULL OR role = $2)
 	ORDER BY id ASC`
@@ -124,7 +107,7 @@ func (r *userRepository) GetAll(ctx context.Context, input input.GetAllUserInput
 
 	for rows.Next() {
 		var user domain.User
-		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Password, &user.Role, &user.TenantId)
+		err = rows.Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Role, &user.TenantId, &user.Email)
 		if err != nil {
 			return users, err
 		}
@@ -137,8 +120,48 @@ func (r *userRepository) GetById(ctx context.Context, id int64) (domain.User, er
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var user domain.User
 
-	query := `SELECT id, username, name, phone_number, password, role, tenant_id FROM users WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Password, &user.Role, &user.TenantId)
+	query := `SELECT id, username, name, phone_number, role, tenant_id, email FROM users WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&user.Id, &user.Username, &user.Name, &user.PhoneNumber, &user.Role, &user.TenantId, &user.Email)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return user, errors.New("Usuário não encontrado")
+		}
+		return user, err
+	}
+	return user, nil
+}
+
+func (r *userRepository) UpdatePassword(ctx context.Context, user domain.User, newPassword string) error {
+	query := `UPDATE users SET password = $1 WHERE id = $2`
+	result, err := r.db.ExecContext(ctx, query, newPassword, user.Id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("Usuário não encontrado")
+	}
+
+	return nil
+}
+
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	var user domain.User
+	query := `SELECT id, username, name, phone_number, role, tenant_id, email FROM users WHERE email = $1 AND deleted_at IS NULL`
+	err := r.db.QueryRowContext(ctx, query, email).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Name,
+		&user.PhoneNumber,
+		&user.Role,
+		&user.TenantId,
+		&user.Email,
+	)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return user, errors.New("Usuário não encontrado")

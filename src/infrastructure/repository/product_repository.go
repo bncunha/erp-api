@@ -6,24 +6,14 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/input"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
-
-type ProductRepository interface {
-	Create(ctx context.Context, product domain.Product) (int64, error)
-	Edit(ctx context.Context, product domain.Product, id int64) (int64, error)
-	GetById(ctx context.Context, id int64) (domain.Product, error)
-	GetAll(ctx context.Context, input input.GetProductsInput) ([]output.GetAllProductsOutput, error)
-	Inactivate(ctx context.Context, id int64) error
-}
 
 type productRepository struct {
 	db *sql.DB
 }
 
-func NewProductRepository(db *sql.DB) ProductRepository {
+func NewProductRepository(db *sql.DB) domain.ProductRepository {
 	return &productRepository{db}
 }
 
@@ -84,9 +74,9 @@ func (r *productRepository) GetById(ctx context.Context, id int64) (domain.Produ
 	return product, nil
 }
 
-func (r *productRepository) GetAll(ctx context.Context, input input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
+func (r *productRepository) GetAll(ctx context.Context, input domain.GetProductsInput) ([]domain.GetAllProductsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var products []output.GetAllProductsOutput
+	var products []domain.GetAllProductsOutput
 
 	query := `
 		SELECT p.id, p.name, p.description, c.name AS category_name, c.id AS category_id, sum(inv_item.quantity) 
@@ -124,10 +114,7 @@ func (r *productRepository) GetAll(ctx context.Context, input input.GetProductsI
 		if categoryName.Valid {
 			product.Category.Name = categoryName.String
 		}
-		products = append(products, output.GetAllProductsOutput{
-			Product:  product,
-			Quantity: quantity.Float64,
-		})
+		products = append(products, domain.GetAllProductsOutput{Product: product, Quantity: quantity.Float64})
 	}
 	return products, err
 }

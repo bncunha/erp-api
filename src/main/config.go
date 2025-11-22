@@ -14,6 +14,8 @@ type Config struct {
 	DB_NAME        string
 	APP_ENV        string
 	NR_LICENSE_KEY string
+	BREVO_API_KEY  string
+	FRONTEND_URL   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -32,5 +34,7 @@ func LoadConfig() (*Config, error) {
 		DB_NAME:        os.Getenv("DB_NAME"),
 		APP_ENV:        os.Getenv("APP_ENV"),
 		NR_LICENSE_KEY: os.Getenv("NR_LICENSE_KEY"),
+		BREVO_API_KEY:  os.Getenv("BREVO_API_KEY"),
+		FRONTEND_URL:   os.Getenv("FRONTEND_URL"),
 	}, nil
 }

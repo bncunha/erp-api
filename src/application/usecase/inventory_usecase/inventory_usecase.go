@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/bncunha/erp-api/src/application/errors"
+	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
@@ -24,12 +25,12 @@ type InventoryUseCase interface {
 
 type inventoryUseCase struct {
 	repository               *repository.Repository
-	inventoryRepository      repository.InventoryRepository
-	inventoryItemRepository  repository.InventoryItemRepository
-	inventoryTransactionRepo repository.InventoryTransactionRepository
-	skuRepository            repository.SkuRepository
+	inventoryRepository      domain.InventoryRepository
+	inventoryItemRepository  domain.InventoryItemRepository
+	inventoryTransactionRepo domain.InventoryTransactionRepository
+	skuRepository            domain.SkuRepository
 }
 
-func NewInventoryUseCase(repository *repository.Repository, inventoryRepository repository.InventoryRepository, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, skuRepository repository.SkuRepository) InventoryUseCase {
+func NewInventoryUseCase(repository *repository.Repository, inventoryRepository domain.InventoryRepository, inventoryItemRepository domain.InventoryItemRepository, inventoryTransactionRepo domain.InventoryTransactionRepository, skuRepository domain.SkuRepository) InventoryUseCase {
 	return &inventoryUseCase{repository, inventoryRepository, inventoryItemRepository, inventoryTransactionRepo, skuRepository}
 }

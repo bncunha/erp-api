@@ -113,6 +113,19 @@ func TestSalesValidateSalePaymentOrderInvalid(t *testing.T) {
 	}
 }
 
+func TestSalesValidateSalePaymentDateValidationError(t *testing.T) {
+	payment := SalesPayment{PaymentType: PaymentTypeCash, Dates: []SalesPaymentDates{{
+		DueDate:           time.Now().Add(-24 * time.Hour),
+		InstallmentNumber: 1,
+		InstallmentValue:  10,
+	}}}
+	sale := Sales{Items: []SalesItem{{Sku: Sku{Price: 10, Quantity: 5}, Quantity: 1}}, Payments: []SalesPayment{payment}}
+
+	if err := sale.ValidateSale(); err == nil || err != ErrPaymentDatesPast {
+		t.Fatalf("expected payment dates validation error, got %v", err)
+	}
+}
+
 func TestSalesPaymentDatesQuantityValid(t *testing.T) {
 	payment := SalesPayment{PaymentType: PaymentTypeCash, Dates: []SalesPaymentDates{{}, {}}}
 	if payment.isPaymentDatesQuantityValid() {
@@ -220,6 +233,23 @@ func TestSalesPaymentAppendNewSalesDateCashSameDayWithoutDateInformed(t *testing
 	}
 	if payment.Dates[0].Status != PaymentStatusPending || payment.Dates[0].PaidDate != nil {
 		t.Fatalf("expected pending status without informed date for cash on same day: %+v", payment.Dates[0])
+	}
+}
+
+func TestSalesPaymentAppendNewSalesDateDefaultBranch(t *testing.T) {
+	payment := NewSalesPayment(PaymentTypeCreditCard)
+	due := time.Now().Add(72 * time.Hour)
+	payment.AppendNewSalesDate(due, 1, 20, false)
+
+	if len(payment.Dates) != 1 {
+		t.Fatalf("expected one payment date")
+	}
+	date := payment.Dates[0]
+	if date.Status != PaymentStatusPaid || date.PaidDate == nil {
+		t.Fatalf("expected paid status for credit card payment: %+v", date)
+	}
+	if !date.DueDate.Equal(*date.PaidDate) {
+		t.Fatalf("expected due date to be replaced by paid date")
 	}
 }
 

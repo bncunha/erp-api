@@ -9,19 +9,11 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 )
 
-type CustomerRepository interface {
-	GetById(ctx context.Context, id int64) (domain.Customer, error)
-	GetAll(ctx context.Context) ([]domain.Customer, error)
-	Create(ctx context.Context, customer domain.Customer) (int64, error)
-	Edit(ctx context.Context, customer domain.Customer, id int64) (int64, error)
-	Inactivate(ctx context.Context, id int64) error
-}
-
 type customerRepository struct {
 	db *sql.DB
 }
 
-func NewCustomerRepository(db *sql.DB) CustomerRepository {
+func NewCustomerRepository(db *sql.DB) domain.CustomerRepository {
 	return &customerRepository{db}
 }
 

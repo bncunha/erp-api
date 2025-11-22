@@ -213,6 +213,13 @@ func TestProductServiceEditError(t *testing.T) {
 	}
 }
 
+func TestProductServiceEditValidationError(t *testing.T) {
+	service := &productService{}
+	if err := service.Edit(context.Background(), request.EditProductRequest{}); err == nil {
+		t.Fatalf("expected validation error")
+	}
+}
+
 func TestProductServiceGetByIdError(t *testing.T) {
 	productRepo := &stubProductRepository{getByIdErr: errors.New("fail")}
 	service := &productService{productRepository: productRepo}
@@ -231,6 +238,15 @@ func TestProductServiceGetSkusError(t *testing.T) {
 	}
 }
 
+func TestProductServiceGetByIdSkuError(t *testing.T) {
+	productRepo := &stubProductRepository{getById: domain.Product{Id: 1}}
+	skuRepo := &stubSkuRepository{getByProductErr: errors.New("fail")}
+	service := &productService{productRepository: productRepo, skuRepository: skuRepo}
+	if _, err := service.GetById(context.Background(), 1); err == nil || err.Error() != "fail" {
+		t.Fatalf("expected sku repository error")
+	}
+}
+
 func TestProductServiceGetAllError(t *testing.T) {
 	productRepo := &stubProductRepository{getAllErr: errors.New("fail")}
 	service := &productService{productRepository: productRepo}
@@ -238,6 +254,21 @@ func TestProductServiceGetAllError(t *testing.T) {
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
 	if _, err := service.GetAll(ctx); err == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func TestProductServiceGetAllNonAdminUsesLoggedSeller(t *testing.T) {
+	productRepo := &stubProductRepository{getAll: []output.GetAllProductsOutput{{}}}
+	service := &productService{productRepository: productRepo}
+
+	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleReseller))
+	ctx = context.WithValue(ctx, constants.USERID_KEY, float64(7))
+
+	if _, err := service.GetAll(ctx); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if productRepo.getAllInput.SellerId == nil || *productRepo.getAllInput.SellerId != 7 {
+		t.Fatalf("expected seller id to be forwarded, got %+v", productRepo.getAllInput.SellerId)
 	}
 }
 
