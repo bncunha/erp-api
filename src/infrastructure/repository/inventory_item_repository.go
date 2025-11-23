@@ -155,3 +155,32 @@ func (r *inventoryItemRepository) GetByInventoryId(ctx context.Context, id int64
 	}
 	return inventoryItems, err
 }
+
+func (r *inventoryItemRepository) GetBySkuId(ctx context.Context, skuId int64) ([]domain.GetSkuInventoryOutput, error) {
+	tenantId := ctx.Value(constants.TENANT_KEY)
+	inventories := make([]domain.GetSkuInventoryOutput, 0)
+
+	query := `SELECT inv.id, inv.type, u.name, inv_items.quantity
+        FROM inventory_items inv_items
+        INNER JOIN inventories inv ON inv.id = inv_items.inventory_id
+        LEFT JOIN users u ON u.id = inv.user_id
+        WHERE inv_items.sku_id = $1 AND inv_items.tenant_id = $2 AND inv_items.deleted_at IS NULL
+        ORDER BY inv.id ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, skuId, tenantId)
+	if err != nil {
+		return inventories, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var inventory domain.GetSkuInventoryOutput
+		err = rows.Scan(&inventory.InventoryId, &inventory.InventoryType, &inventory.UserName, &inventory.Quantity)
+		if err != nil {
+			return inventories, err
+		}
+		inventories = append(inventories, inventory)
+	}
+
+	return inventories, err
+}

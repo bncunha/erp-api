@@ -9,6 +9,7 @@ import (
 	"github.com/bncunha/erp-api/src/application/errors"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service/input"
+	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -19,17 +20,28 @@ type SkuService interface {
 	GetById(ctx context.Context, skuId int64) (domain.Sku, error)
 	GetAll(ctx context.Context, filters GetSkusFilters) ([]domain.Sku, error)
 	Inactivate(ctx context.Context, id int64) error
+	GetInventory(ctx context.Context, skuId int64) ([]output.GetSkuInventoryOutput, error)
+	GetTransactions(ctx context.Context, skuId int64) ([]output.GetInventoryTransactionsOutput, error)
 }
 
 type skuService struct {
-	skuRepository     domain.SkuRepository
-	inventoryUseCase  inventory_usecase.InventoryUseCase
-	productRepository domain.ProductRepository
-	txManager         transactionManager
+	skuRepository                  domain.SkuRepository
+	inventoryUseCase               inventory_usecase.InventoryUseCase
+	productRepository              domain.ProductRepository
+	inventoryItemRepository        domain.InventoryItemRepository
+	inventoryTransactionRepository domain.InventoryTransactionRepository
+	txManager                      transactionManager
 }
 
-func NewSkuService(skuRepository domain.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository domain.ProductRepository, txManager transactionManager) SkuService {
-	return &skuService{skuRepository, inventoryUseCase, productRepository, txManager}
+func NewSkuService(
+	skuRepository domain.SkuRepository,
+	inventoryUseCase inventory_usecase.InventoryUseCase,
+	productRepository domain.ProductRepository,
+	inventoryItemRepository domain.InventoryItemRepository,
+	inventoryTransactionRepository domain.InventoryTransactionRepository,
+	txManager transactionManager,
+) SkuService {
+	return &skuService{skuRepository, inventoryUseCase, productRepository, inventoryItemRepository, inventoryTransactionRepository, txManager}
 }
 
 type GetSkusFilters struct {
@@ -145,4 +157,22 @@ func (s *skuService) GetAll(ctx context.Context, filters GetSkusFilters) ([]doma
 
 func (s *skuService) Inactivate(ctx context.Context, id int64) error {
 	return s.skuRepository.Inactivate(ctx, id)
+}
+
+func (s *skuService) GetInventory(ctx context.Context, skuId int64) ([]output.GetSkuInventoryOutput, error) {
+	_, err := s.skuRepository.GetById(ctx, skuId)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.inventoryItemRepository.GetBySkuId(ctx, skuId)
+}
+
+func (s *skuService) GetTransactions(ctx context.Context, skuId int64) ([]output.GetInventoryTransactionsOutput, error) {
+	_, err := s.skuRepository.GetById(ctx, skuId)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.inventoryTransactionRepository.GetBySkuId(ctx, skuId)
 }

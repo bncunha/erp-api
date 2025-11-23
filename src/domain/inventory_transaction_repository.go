@@ -27,4 +27,5 @@ type InventoryTransactionRepository interface {
 	Create(ctx context.Context, tx *sql.Tx, transaction InventoryTransaction) (int64, error)
 	GetAll(ctx context.Context) ([]GetInventoryTransactionsOutput, error)
 	GetByInventoryId(ctx context.Context, inventoryId int64) ([]GetInventoryTransactionsOutput, error)
+	GetBySkuId(ctx context.Context, skuId int64) ([]GetInventoryTransactionsOutput, error)
 }
