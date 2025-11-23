@@ -220,7 +220,11 @@ func (f *fakeInventoryItemRepository) GetAll(context.Context) ([]serviceOutput.G
 }
 
 func (f *fakeInventoryItemRepository) GetByInventoryId(context.Context, int64) ([]serviceOutput.GetInventoryItemsOutput, error) {
-	return nil, nil
+        return nil, nil
+}
+
+func (f *fakeInventoryItemRepository) GetBySkuId(context.Context, int64) ([]domain.GetSkuInventoryOutput, error) {
+        return nil, nil
 }
 
 type fakeSalesRepository struct {
