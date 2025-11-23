@@ -20,6 +20,13 @@ type GetInventoryItemsOutput struct {
 	Quantity        float64
 }
 
+type GetSkuInventoryOutput struct {
+	InventoryId   int64
+	InventoryType *InventoryType
+	UserName      *string
+	Quantity      float64
+}
+
 type InventoryItemRepository interface {
 	Create(ctx context.Context, tx *sql.Tx, inventoryItem InventoryItem) (int64, error)
 	UpdateQuantity(ctx context.Context, tx *sql.Tx, inventoryItem InventoryItem) error
@@ -28,4 +35,5 @@ type InventoryItemRepository interface {
 	GetByManySkuIdsAndInventoryId(ctx context.Context, skuIds []int64, inventoryId int64) ([]InventoryItem, error)
 	GetAll(ctx context.Context) ([]GetInventoryItemsOutput, error)
 	GetByInventoryId(ctx context.Context, id int64) ([]GetInventoryItemsOutput, error)
+	GetBySkuId(ctx context.Context, skuId int64) ([]GetSkuInventoryOutput, error)
 }
