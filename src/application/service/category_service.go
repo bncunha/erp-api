@@ -5,7 +5,6 @@ import (
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type CategoryService interface {
@@ -17,10 +16,10 @@ type CategoryService interface {
 }
 
 type categoryService struct {
-	categoryRepository repository.CategoryRepository
+	categoryRepository domain.CategoryRepository
 }
 
-func NewCategoryService(categoryRepository repository.CategoryRepository) CategoryService {
+func NewCategoryService(categoryRepository domain.CategoryRepository) CategoryService {
 	return &categoryService{categoryRepository}
 }
 
@@ -47,7 +46,7 @@ func (s *categoryService) Edit(ctx context.Context, input request.EditCategoryRe
 	}
 
 	err = s.categoryRepository.Update(ctx, domain.Category{
-		Id: input.Id,
+		Id:   input.Id,
 		Name: input.Name,
 	})
 	if err != nil {

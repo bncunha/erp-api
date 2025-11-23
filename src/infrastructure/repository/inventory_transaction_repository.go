@@ -5,22 +5,15 @@ import (
 	"database/sql"
 
 	"github.com/bncunha/erp-api/src/application/constants"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
-type InventoryTransactionRepository interface {
-	Create(ctx context.Context, tx *sql.Tx, transaction domain.InventoryTransaction) (int64, error)
-	GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error)
-	GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error)
-}
-
 type inventoryTransactionRepository struct {
 	db                      *sql.DB
-	intentoryItemRepository InventoryItemRepository
+	intentoryItemRepository domain.InventoryItemRepository
 }
 
-func NewInventoryTransactionRepository(db *sql.DB, inventoryItemRepository InventoryItemRepository) InventoryTransactionRepository {
+func NewInventoryTransactionRepository(db *sql.DB, inventoryItemRepository domain.InventoryItemRepository) domain.InventoryTransactionRepository {
 	return &inventoryTransactionRepository{db, inventoryItemRepository}
 }
 
@@ -48,9 +41,9 @@ func (r *inventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx,
 	return insertedID, err
 }
 
-func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
+func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]domain.GetInventoryTransactionsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var inventoryTransactions []output.GetInventoryTransactionsOutput
+	var inventoryTransactions []domain.GetInventoryTransactionsOutput
 
 	query := `SELECT
 	inv_transactions.id,
@@ -85,7 +78,7 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	defer rows.Close()
 
 	for rows.Next() {
-		var inventoryTransaction output.GetInventoryTransactionsOutput
+		var inventoryTransaction domain.GetInventoryTransactionsOutput
 		saleId := sql.NullInt64{}
 		saleDate := sql.NullTime{}
 
@@ -101,9 +94,9 @@ func (r *inventoryTransactionRepository) GetAll(ctx context.Context) ([]output.G
 	return inventoryTransactions, err
 }
 
-func (r *inventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
+func (r *inventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]domain.GetInventoryTransactionsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var inventoryTransactions []output.GetInventoryTransactionsOutput
+	var inventoryTransactions []domain.GetInventoryTransactionsOutput
 
 	query := `SELECT
         inv_transactions.id,
@@ -145,7 +138,7 @@ func (r *inventoryTransactionRepository) GetByInventoryId(ctx context.Context, i
 	defer rows.Close()
 
 	for rows.Next() {
-		var inventoryTransaction output.GetInventoryTransactionsOutput
+		var inventoryTransaction domain.GetInventoryTransactionsOutput
 		saleId := sql.NullInt64{}
 		saleDate := sql.NullTime{}
 

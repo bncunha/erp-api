@@ -8,7 +8,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 var (
@@ -38,10 +37,10 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 	}
 
 	inventoryOrigin, err := s.inventoryRepository.GetByUserId(ctx, user.Id)
-	if err != nil && !errors.Is(err, repository.ErrInventoryNotFound) {
+	if err != nil && !errors.Is(err, domain.ErrInventoryNotFound) {
 		return err
 	}
-	if err != nil && errors.Is(err, repository.ErrInventoryNotFound) && user.Role == string(domain.UserRoleAdmin) {
+	if err != nil && errors.Is(err, domain.ErrInventoryNotFound) && user.Role == string(domain.UserRoleAdmin) {
 		inventoryOrigin, err = s.inventoryRepository.GetPrimaryInventory(ctx)
 		if err != nil {
 			return err

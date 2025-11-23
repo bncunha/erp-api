@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/bncunha/erp-api/src/application/service/input"
@@ -12,14 +15,239 @@ import (
 	"github.com/bncunha/erp-api/src/domain"
 )
 
+var fakeDriverCounter int64
+
+type fakeSQLTx struct {
+	committed   bool
+	rolledBack  bool
+	commitErr   error
+	rollbackErr error
+}
+
+func (f *fakeSQLTx) Commit() error {
+	f.committed = true
+	return f.commitErr
+}
+
+func (f *fakeSQLTx) Rollback() error {
+	f.rolledBack = true
+	return f.rollbackErr
+}
+
+type fakeDriver struct {
+	tx *fakeSQLTx
+}
+
+func (d *fakeDriver) Open(name string) (driver.Conn, error) {
+	return &fakeConn{tx: d.tx}, nil
+}
+
+type fakeConn struct {
+	tx *fakeSQLTx
+}
+
+func (c *fakeConn) Prepare(query string) (driver.Stmt, error) { return fakeStmt{}, nil }
+func (c *fakeConn) Close() error                              { return nil }
+func (c *fakeConn) Begin() (driver.Tx, error)                 { return c.tx, nil }
+func (c *fakeConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+	return c.tx, nil
+}
+
+type fakeStmt struct{}
+
+func (fakeStmt) Close() error                                    { return nil }
+func (fakeStmt) NumInput() int                                   { return 0 }
+func (fakeStmt) Exec(args []driver.Value) (driver.Result, error) { return nil, nil }
+func (fakeStmt) Query(args []driver.Value) (driver.Rows, error)  { return nil, nil }
+
+func newTestSQLTx() (*sql.Tx, *fakeSQLTx, func()) {
+	driverName := fmt.Sprintf("fake-sql-%d", atomic.AddInt64(&fakeDriverCounter, 1))
+	fake := &fakeSQLTx{}
+	sql.Register(driverName, &fakeDriver{tx: fake})
+	db, _ := sql.Open(driverName, "")
+	tx, _ := db.Begin()
+	cleanup := func() { db.Close() }
+	return tx, fake, cleanup
+}
+
+type stubTxManager struct {
+	tx  *sql.Tx
+	err error
+}
+
+func (s *stubTxManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.tx, nil
+}
+
+type stubEncrypto struct {
+	encryptErr  error
+	compareErr  error
+	compareResp bool
+}
+
+func (s *stubEncrypto) Encrypt(text string) (string, error) {
+	if s.encryptErr != nil {
+		return "", s.encryptErr
+	}
+	return "encrypted:" + text, nil
+}
+
+func (s *stubEncrypto) Compare(hash string, text string) (bool, error) {
+	if s.compareErr != nil {
+		return false, s.compareErr
+	}
+	if s.compareResp {
+		return s.compareResp, nil
+	}
+	return hash == "encrypted:"+text, nil
+}
+
+type stubEmailPort struct {
+	sent []struct {
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
+	}
+	err error
+}
+
+func (s *stubEmailPort) Send(senderEmail string, senderName string, toEmail string, toName string, subject string, body string) error {
+	s.sent = append(s.sent, struct {
+		senderEmail string
+		senderName  string
+		toEmail     string
+		toName      string
+		subject     string
+		body        string
+	}{
+		senderEmail: senderEmail,
+		senderName:  senderName,
+		toEmail:     toEmail,
+		toName:      toName,
+		subject:     subject,
+		body:        body,
+	})
+	if s.err != nil {
+		return s.err
+	}
+	return nil
+}
+
+type stubUserTokenService struct {
+	createdInput input.CreateUserTokenInput
+	output       domain.UserToken
+	err          error
+}
+
+func (s *stubUserTokenService) Create(ctx context.Context, in input.CreateUserTokenInput) (domain.UserToken, error) {
+	s.createdInput = in
+	if s.err != nil {
+		return domain.UserToken{}, s.err
+	}
+	if s.output.Code == "" {
+		return domain.UserToken{Code: "code", Uuid: "uuid"}, nil
+	}
+	return s.output, nil
+}
+
+type stubEmailUseCase struct {
+	inviteErr    error
+	recoverErr   error
+	inviteCalls  int
+	recoverCalls int
+	lastInvite   struct {
+		user domain.User
+		code string
+		uuid string
+	}
+	lastRecover struct {
+		user domain.User
+		code string
+		uuid string
+	}
+	recoverCh chan struct{}
+}
+
+func (s *stubEmailUseCase) SendInvite(ctx context.Context, user domain.User, code string, uuid string) error {
+	s.inviteCalls++
+	s.lastInvite = struct {
+		user domain.User
+		code string
+		uuid string
+	}{user: user, code: code, uuid: uuid}
+	return s.inviteErr
+}
+
+func (s *stubEmailUseCase) SendRecoverPassword(ctx context.Context, user domain.User, code string, uuid string) error {
+	s.recoverCalls++
+	s.lastRecover = struct {
+		user domain.User
+		code string
+		uuid string
+	}{user: user, code: code, uuid: uuid}
+	if s.recoverCh != nil {
+		s.recoverCh <- struct{}{}
+	}
+	return s.recoverErr
+}
+
+type stubUserTokenRepository struct {
+	createInput   domain.UserToken
+	createErr     error
+	createID      int64
+	getById       domain.UserToken
+	getByIdErr    error
+	lastActive    domain.UserToken
+	lastActiveErr error
+	setUsedToken  domain.UserToken
+	setUsedErr    error
+}
+
+func (s *stubUserTokenRepository) Create(ctx context.Context, userToken domain.UserToken) (int64, error) {
+	if s.createErr != nil {
+		return 0, s.createErr
+	}
+	s.createInput = userToken
+	if s.createID != 0 {
+		return s.createID, nil
+	}
+	return 1, nil
+}
+
+func (s *stubUserTokenRepository) GetLastActiveByUuid(ctx context.Context, uuid string) (domain.UserToken, error) {
+	if s.lastActiveErr != nil {
+		return domain.UserToken{}, s.lastActiveErr
+	}
+	return s.lastActive, nil
+}
+
+func (s *stubUserTokenRepository) SetUsedToken(ctx context.Context, userToken domain.UserToken) error {
+	s.setUsedToken = userToken
+	if s.setUsedErr != nil {
+		return s.setUsedErr
+	}
+	return nil
+}
+
+func (s *stubUserTokenRepository) GetById(ctx context.Context, id int64) (domain.UserToken, error) {
+	return s.getById, s.getByIdErr
+}
+
 type stubProductRepository struct {
-	created    domain.Product
-	createErr  error
-	editErr    error
-	getById    domain.Product
-	getByIdErr error
-	getAll     []output.GetAllProductsOutput
-	getAllErr  error
+	created     domain.Product
+	createErr   error
+	editErr     error
+	getById     domain.Product
+	getByIdErr  error
+	getAll      []output.GetAllProductsOutput
+	getAllErr   error
+	getAllInput input.GetProductsInput
 }
 
 func (s *stubProductRepository) Create(ctx context.Context, product domain.Product) (int64, error) {
@@ -42,7 +270,8 @@ func (s *stubProductRepository) GetById(ctx context.Context, id int64) (domain.P
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubProductRepository) GetAll(ctx context.Context, _ input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
+func (s *stubProductRepository) GetAll(ctx context.Context, in input.GetProductsInput) ([]output.GetAllProductsOutput, error) {
+	s.getAllInput = in
 	return s.getAll, s.getAllErr
 }
 
@@ -196,16 +425,26 @@ func (s *stubSkuRepository) Inactivate(ctx context.Context, id int64) error {
 }
 
 type stubUserRepository struct {
-	created          domain.User
-	createErr        error
-	updateErr        error
-	getById          domain.User
-	getByIdErr       error
-	getAll           []domain.User
-	getAllErr        error
-	inactivateErr    error
-	getByUsername    domain.User
-	getByUsernameErr error
+	created           domain.User
+	createErr         error
+	updateErr         error
+	updatePasswordErr error
+	getById           domain.User
+	getByIdErr        error
+	getAll            []domain.User
+	getAllErr         error
+	getAllInput       input.GetAllUserInput
+	inactivateErr     error
+	getByUsername     domain.User
+	getByUsernameErr  error
+	getByEmail        domain.User
+	getByEmailErr     error
+	getByIdResponses  map[int64]domain.User
+	getByIdErrors     map[int64]error
+	updatePasswordReq struct {
+		user        domain.User
+		newPassword string
+	}
 }
 
 func (s *stubUserRepository) Create(ctx context.Context, user domain.User) (int64, error) {
@@ -225,10 +464,21 @@ func (s *stubUserRepository) Update(ctx context.Context, user domain.User) error
 }
 
 func (s *stubUserRepository) GetById(ctx context.Context, id int64) (domain.User, error) {
+	if s.getByIdResponses != nil {
+		if user, ok := s.getByIdResponses[id]; ok {
+			if s.getByIdErrors != nil {
+				if err, ok := s.getByIdErrors[id]; ok && err != nil {
+					return domain.User{}, err
+				}
+			}
+			return user, nil
+		}
+	}
 	return s.getById, s.getByIdErr
 }
 
-func (s *stubUserRepository) GetAll(ctx context.Context, _ input.GetAllUserInput) ([]domain.User, error) {
+func (s *stubUserRepository) GetAll(ctx context.Context, in input.GetAllUserInput) ([]domain.User, error) {
+	s.getAllInput = in
 	return s.getAll, s.getAllErr
 }
 
@@ -238,6 +488,21 @@ func (s *stubUserRepository) Inactivate(ctx context.Context, id int64) error {
 
 func (s *stubUserRepository) GetByUsername(ctx context.Context, username string) (domain.User, error) {
 	return s.getByUsername, s.getByUsernameErr
+}
+
+func (s *stubUserRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	return s.getByEmail, s.getByEmailErr
+}
+
+func (s *stubUserRepository) UpdatePassword(ctx context.Context, user domain.User, newPassword string) error {
+	if s.updatePasswordErr != nil {
+		return s.updatePasswordErr
+	}
+	s.updatePasswordReq = struct {
+		user        domain.User
+		newPassword string
+	}{user: user, newPassword: newPassword}
+	return nil
 }
 
 type stubInventoryRepository struct {

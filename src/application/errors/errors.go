@@ -36,3 +36,17 @@ func IsDuplicated(err error) bool {
 func Is(err error, target error) bool {
 	return errors.Is(err, target)
 }
+
+func ParseDuplicatedMessage(title string, err error) error {
+	pqError, ok := err.(*pq.Error)
+	if !ok {
+		return errors.New(title + " já cadastrado!")
+	}
+	if strings.Contains(pqError.Detail, "phone_number") {
+		return errors.New(title + " já cadastrado com este telefone!")
+	}
+	if strings.Contains(pqError.Detail, "email") {
+		return errors.New(title + " já cadastrado com este email!")
+	}
+	return errors.New(title + " já cadastrado!")
+}

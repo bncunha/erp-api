@@ -8,7 +8,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type transactionManager interface {
@@ -27,13 +26,13 @@ type InventoryService interface {
 
 type inventoryService struct {
 	inventoryUseCase         inventory_usecase.InventoryUseCase
-	inventoryItemRepository  repository.InventoryItemRepository
-	inventoryTransactionRepo repository.InventoryTransactionRepository
-	inventoryRepository      repository.InventoryRepository
+	inventoryItemRepository  domain.InventoryItemRepository
+	inventoryTransactionRepo domain.InventoryTransactionRepository
+	inventoryRepository      domain.InventoryRepository
 	txManager                transactionManager
 }
 
-func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository repository.InventoryItemRepository, inventoryTransactionRepo repository.InventoryTransactionRepository, inventoryRepository repository.InventoryRepository, txManager transactionManager) InventoryService {
+func NewInventoryService(inventoryUseCase inventory_usecase.InventoryUseCase, inventoryItemRepository domain.InventoryItemRepository, inventoryTransactionRepo domain.InventoryTransactionRepository, inventoryRepository domain.InventoryRepository, txManager transactionManager) InventoryService {
 	return &inventoryService{inventoryUseCase, inventoryItemRepository, inventoryTransactionRepo, inventoryRepository, txManager}
 }
 

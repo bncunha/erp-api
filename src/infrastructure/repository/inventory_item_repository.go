@@ -6,30 +6,15 @@ import (
 
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
-	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/lib/pq"
 )
-
-var (
-	ErrInventoryItemNotFound = errors.New("Item de estoque não encontrado")
-)
-
-type InventoryItemRepository interface {
-	Create(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem) (int64, error)
-	UpdateQuantity(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem) error
-	GetById(ctx context.Context, id int64) (domain.InventoryItem, error)
-	GetByIdWithTransaction(ctx context.Context, tx *sql.Tx, id int64) (domain.InventoryItem, error)
-	GetByManySkuIdsAndInventoryId(ctx context.Context, skuIds []int64, inventoryId int64) ([]domain.InventoryItem, error)
-	GetAll(ctx context.Context) ([]output.GetInventoryItemsOutput, error)
-	GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error)
-}
 
 type inventoryItemRepository struct {
 	db *sql.DB
 }
 
-func NewInventoryItemRepository(db *sql.DB) InventoryItemRepository {
+func NewInventoryItemRepository(db *sql.DB) domain.InventoryItemRepository {
 	return &inventoryItemRepository{db}
 }
 
@@ -61,7 +46,7 @@ func (r *inventoryItemRepository) GetById(ctx context.Context, id int64) (domain
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.Quantity, &tenantId, &inventoryItem.Sku.Id, &inventoryItem.Sku.Code, &inventoryItem.Sku.Color, &inventoryItem.Sku.Size, &inventoryItem.Sku.Cost, &inventoryItem.Sku.Price, &inventoryItem.Sku.Product.Name)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventoryItem, ErrInventoryItemNotFound
+			return inventoryItem, domain.ErrInventoryItemNotFound
 		}
 		return inventoryItem, err
 	}
@@ -107,16 +92,16 @@ func (r *inventoryItemRepository) GetByIdWithTransaction(ctx context.Context, tx
 	err := tx.QueryRowContext(ctx, query, id, tenantId).Scan(&inventoryItem.Id, &inventoryItem.InventoryId, &inventoryItem.Quantity, &tenantId, &inventoryItem.Sku.Id, &inventoryItem.Sku.Code, &inventoryItem.Sku.Color, &inventoryItem.Sku.Size, &inventoryItem.Sku.Cost, &inventoryItem.Sku.Price, &inventoryItem.Sku.Product.Name)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
-			return inventoryItem, ErrInventoryItemNotFound
+			return inventoryItem, domain.ErrInventoryItemNotFound
 		}
 		return inventoryItem, err
 	}
 	return inventoryItem, nil
 }
 
-func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInventoryItemsOutput, error) {
+func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]domain.GetInventoryItemsOutput, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	var inventoryItems []output.GetInventoryItemsOutput
+	var inventoryItems []domain.GetInventoryItemsOutput
 
 	query := ` SELECT inv_items.id, sku.code, sku.color, sku.size, p.name, inv.type, u.name, inv_items.quantity, sku.id
 	FROM inventory_items inv_items 
@@ -132,7 +117,7 @@ func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInven
 	defer rows.Close()
 
 	for rows.Next() {
-		var inventoryItem output.GetInventoryItemsOutput
+		var inventoryItem domain.GetInventoryItemsOutput
 
 		err = rows.Scan(&inventoryItem.InventoryItemId, &inventoryItem.SkuCode, &inventoryItem.SkuColor, &inventoryItem.SkuSize, &inventoryItem.ProductName, &inventoryItem.InventoryType, &inventoryItem.UserName, &inventoryItem.Quantity, &inventoryItem.SkuId)
 		if err != nil {
@@ -143,8 +128,8 @@ func (r *inventoryItemRepository) GetAll(ctx context.Context) ([]output.GetInven
 	return inventoryItems, err
 }
 
-func (r *inventoryItemRepository) GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error) {
-	inventoryItems := make([]output.GetInventoryItemsOutput, 0)
+func (r *inventoryItemRepository) GetByInventoryId(ctx context.Context, id int64) ([]domain.GetInventoryItemsOutput, error) {
+	inventoryItems := make([]domain.GetInventoryItemsOutput, 0)
 
 	query := `SELECT inv_items.id, sku.code, sku.color, sku.size, p.name, inv.type, u.name, inv_items.quantity, sku.id
 	FROM inventory_items inv_items 
@@ -160,7 +145,7 @@ func (r *inventoryItemRepository) GetByInventoryId(ctx context.Context, id int64
 	defer rows.Close()
 
 	for rows.Next() {
-		var inventoryItem output.GetInventoryItemsOutput
+		var inventoryItem domain.GetInventoryItemsOutput
 
 		err = rows.Scan(&inventoryItem.InventoryItemId, &inventoryItem.SkuCode, &inventoryItem.SkuColor, &inventoryItem.SkuSize, &inventoryItem.ProductName, &inventoryItem.InventoryType, &inventoryItem.UserName, &inventoryItem.Quantity, &inventoryItem.SkuId)
 		if err != nil {

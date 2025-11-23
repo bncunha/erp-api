@@ -233,3 +233,67 @@ func TestSkuServiceCreateProductLookupError(t *testing.T) {
 		t.Fatalf("expected product lookup error")
 	}
 }
+
+func TestSkuServiceCreateTxBeginError(t *testing.T) {
+	service := &skuService{
+		skuRepository:     &stubSkuRepository{},
+		productRepository: &stubProductRepository{getById: domain.Product{Id: 1}},
+		txManager:         &stubTxManager{err: errors.New("begin fail")},
+	}
+	cost := 1.0
+	price := 2.0
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}
+	if err := service.Create(context.Background(), req, 1); err == nil || err.Error() != "begin fail" {
+		t.Fatalf("expected begin tx error")
+	}
+}
+
+func TestSkuServiceCreateCommitsTransaction(t *testing.T) {
+	sqlTx, fakeTx, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	service := &skuService{
+		skuRepository:     &stubSkuRepository{},
+		productRepository: &stubProductRepository{getById: domain.Product{Id: 1}},
+		txManager:         &stubTxManager{tx: sqlTx},
+	}
+	cost := 1.0
+	price := 2.0
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Cost: &cost, Price: price}
+	if err := service.Create(context.Background(), req, 1); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !fakeTx.committed {
+		t.Fatalf("expected commit to be called")
+	}
+	if fakeTx.rolledBack {
+		t.Fatalf("did not expect rollback on success")
+	}
+}
+
+func TestSkuServiceCreateRollsBackOnInventoryError(t *testing.T) {
+	sqlTx, fakeTx, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	qty := 1.0
+	dest := int64(1)
+	cost := 1.0
+	price := 2.0
+	service := &skuService{
+		skuRepository:     &stubSkuRepository{},
+		productRepository: &stubProductRepository{getById: domain.Product{Id: 1}},
+		inventoryUseCase:  &stubInventoryUseCase{err: errors.New("fail")},
+		txManager:         &stubTxManager{tx: sqlTx},
+	}
+	req := request.CreateSkuRequest{Code: "code", Color: "red", Size: "M", Quantity: &qty, DestinationId: &dest, Cost: &cost, Price: price}
+	err := service.Create(context.Background(), req, 1)
+	if err == nil || err.Error() != "Operação realizada parcialmente! Erro ao atualizar a quantidade de itens no estoque!" {
+		t.Fatalf("expected partial operation error")
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected rollback when inventory update fails")
+	}
+	if fakeTx.committed {
+		t.Fatalf("did not expect commit on failure")
+	}
+}

@@ -11,7 +11,6 @@ import (
 	"github.com/bncunha/erp-api/src/application/service/input"
 	"github.com/bncunha/erp-api/src/application/usecase/inventory_usecase"
 	"github.com/bncunha/erp-api/src/domain"
-	"github.com/bncunha/erp-api/src/infrastructure/repository"
 )
 
 type SkuService interface {
@@ -23,13 +22,13 @@ type SkuService interface {
 }
 
 type skuService struct {
-	skuRepository     repository.SkuRepository
+	skuRepository     domain.SkuRepository
 	inventoryUseCase  inventory_usecase.InventoryUseCase
-	productRepository repository.ProductRepository
+	productRepository domain.ProductRepository
 	txManager         transactionManager
 }
 
-func NewSkuService(skuRepository repository.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository repository.ProductRepository, txManager transactionManager) SkuService {
+func NewSkuService(skuRepository domain.SkuRepository, inventoryUseCase inventory_usecase.InventoryUseCase, productRepository domain.ProductRepository, txManager transactionManager) SkuService {
 	return &skuService{skuRepository, inventoryUseCase, productRepository, txManager}
 }
 
