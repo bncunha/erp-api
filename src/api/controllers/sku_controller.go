@@ -95,3 +95,35 @@ func (c *SkuController) Inactivate(context echo.Context) error {
 
 	return context.JSON(_http.StatusOK, nil)
 }
+
+func (c *SkuController) GetInventory(context echo.Context) error {
+	skuId := helper.ParseInt64(context.Param("id"))
+
+	items, err := c.skuService.GetInventory(context.Request().Context(), skuId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	viewModels := make([]viewmodel.SkuInventoryViewModel, 0, len(items))
+	for _, item := range items {
+		viewModels = append(viewModels, viewmodel.ToSkuInventoryViewModel(item))
+	}
+
+	return context.JSON(_http.StatusOK, viewModels)
+}
+
+func (c *SkuController) GetTransactions(context echo.Context) error {
+	skuId := helper.ParseInt64(context.Param("id"))
+
+	transactions, err := c.skuService.GetTransactions(context.Request().Context(), skuId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	viewModels := make([]viewmodel.SkuTransactionViewModel, 0, len(transactions))
+	for _, transaction := range transactions {
+		viewModels = append(viewModels, viewmodel.ToSkuTransactionViewModel(transaction))
+	}
+
+	return context.JSON(_http.StatusOK, viewModels)
+}

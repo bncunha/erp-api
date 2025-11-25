@@ -68,12 +68,13 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 	var skus []domain.Sku = make([]domain.Sku, 0)
 
 	query := `
-		SELECT s.id, s.code, s.color, s.size, s.cost, s.price, sum(inv_item.quantity)
-		FROM skus s
-		LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
-		WHERE s.product_id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL
-		GROUP BY s.id
-		ORDER BY id ASC`
+                SELECT s.id, s.code, s.color, s.size, s.cost, s.price, p.name, sum(inv_item.quantity)
+                FROM skus s
+                INNER JOIN products p ON p.id = s.product_id
+                LEFT JOIN inventory_items inv_item ON inv_item.sku_id = s.id
+                WHERE s.product_id = $1 AND s.tenant_id = $2 AND s.deleted_at IS NULL
+                GROUP BY s.id, p.name
+                ORDER BY s.id ASC`
 
 	rows, err := r.db.QueryContext(ctx, query, productId, tenantId)
 	if err != nil {
@@ -84,7 +85,7 @@ func (r *skuRepository) GetByProductId(ctx context.Context, productId int64) ([]
 	for rows.Next() {
 		var sku domain.Sku
 		var quantity sql.NullFloat64
-		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &quantity)
+		err = rows.Scan(&sku.Id, &sku.Code, &sku.Color, &sku.Size, &sku.Cost, &sku.Price, &sku.Product.Name, &quantity)
 		if err != nil {
 			return skus, err
 		}
