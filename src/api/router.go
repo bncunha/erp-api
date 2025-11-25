@@ -76,8 +76,8 @@ func (r *router) setupPrivateRoutes() {
 	skuGroup.PUT("/:id", r.controller.SkuController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	skuGroup.GET("/:id", r.controller.SkuController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	skuGroup.DELETE("/:id", r.controller.SkuController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
-	skuGroup.GET("/:id/inventory", r.controller.SkuController.GetInventory, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
-	skuGroup.GET("/:id/transactions", r.controller.SkuController.GetTransactions, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	skuGroup.GET("/:id/inventory", r.controller.SkuController.GetInventory, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	skuGroup.GET("/:id/transactions", r.controller.SkuController.GetTransactions, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 
 	categoryGroup := private.Group("/categories", middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	categoryGroup.POST("", r.controller.CategoryController.Create)
