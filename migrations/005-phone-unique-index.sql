@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX customers_unique_phone_per_tenant_idx ON public.customers (tenant_id, phone_number) WHERE deleted_at IS NULL;
