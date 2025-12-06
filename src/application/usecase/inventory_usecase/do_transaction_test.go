@@ -17,13 +17,13 @@ import (
 )
 
 type stubInventoryItemRepository struct {
-        createdItems          []domain.InventoryItem
-        returnedInventoryItem domain.InventoryItem
+	createdItems          []domain.InventoryItem
+	returnedInventoryItem domain.InventoryItem
 	createErr             error
 	getErr                error
 	updateErr             error
-        getManyErr            error
-        items                 map[int64][]domain.InventoryItem
+	getManyErr            error
+	items                 map[int64][]domain.InventoryItem
 }
 
 func (s *stubInventoryItemRepository) Create(ctx context.Context, tx *sql.Tx, inventoryItem domain.InventoryItem) (int64, error) {
@@ -71,16 +71,16 @@ func (s *stubInventoryItemRepository) GetAll(ctx context.Context) ([]output.GetI
 }
 
 func (s *stubInventoryItemRepository) GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (s *stubInventoryItemRepository) GetBySkuId(ctx context.Context, skuId int64) ([]domain.GetSkuInventoryOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 type stubInventoryTransactionRepository struct {
-        created []domain.InventoryTransaction
-        err     error
+	created []domain.InventoryTransaction
+	err     error
 }
 
 func (s *stubInventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction domain.InventoryTransaction) (int64, error) {
@@ -96,11 +96,11 @@ func (s *stubInventoryTransactionRepository) GetAll(ctx context.Context) ([]outp
 }
 
 func (s *stubInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (s *stubInventoryTransactionRepository) GetBySkuId(ctx context.Context, skuId int64) ([]output.GetInventoryTransactionsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func TestNewInventoryUseCase(t *testing.T) {
@@ -391,6 +391,10 @@ func (r *doTxInventoryRepository) Create(ctx context.Context, inventory domain.I
 	return 0, nil
 }
 
+func (r *doTxInventoryRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, inventory domain.Inventory) (int64, error) {
+	return r.Create(ctx, inventory)
+}
+
 func (r *doTxInventoryRepository) GetById(ctx context.Context, id int64) (domain.Inventory, error) {
 	if inv, ok := r.inventories[id]; ok {
 		return inv, nil
@@ -460,11 +464,11 @@ func (r *doTxInventoryItemRepository) GetAll(ctx context.Context) ([]output.GetI
 }
 
 func (r *doTxInventoryItemRepository) GetByInventoryId(ctx context.Context, id int64) ([]output.GetInventoryItemsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (r *doTxInventoryItemRepository) GetBySkuId(ctx context.Context, skuId int64) ([]domain.GetSkuInventoryOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 type doTxInventoryTransactionRepository struct {
@@ -477,11 +481,11 @@ func (r *doTxInventoryTransactionRepository) Create(ctx context.Context, tx *sql
 }
 
 func (r *doTxInventoryTransactionRepository) GetAll(ctx context.Context) ([]output.GetInventoryTransactionsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (r *doTxInventoryTransactionRepository) GetBySkuId(ctx context.Context, skuId int64) ([]output.GetInventoryTransactionsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (r *doTxInventoryTransactionRepository) GetByInventoryId(ctx context.Context, inventoryId int64) ([]output.GetInventoryTransactionsOutput, error) {

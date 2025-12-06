@@ -80,6 +80,9 @@ func (f *fakeUserRepository) GetByUsername(context.Context, string) (domain.User
 }
 
 func (f *fakeUserRepository) Create(context.Context, domain.User) (int64, error) { return 0, nil }
+func (f *fakeUserRepository) CreateWithTx(context.Context, *sql.Tx, domain.User) (int64, error) {
+	return 0, nil
+}
 
 func (f *fakeUserRepository) Update(context.Context, domain.User) error { return nil }
 
@@ -165,6 +168,10 @@ func (f *fakeInventoryRepository) Create(context.Context, domain.Inventory) (int
 	return 0, nil
 }
 
+func (f *fakeInventoryRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, inventory domain.Inventory) (int64, error) {
+	return f.Create(ctx, inventory)
+}
+
 func (f *fakeInventoryRepository) GetById(context.Context, int64) (domain.Inventory, error) {
 	return domain.Inventory{}, nil
 }
@@ -220,11 +227,11 @@ func (f *fakeInventoryItemRepository) GetAll(context.Context) ([]serviceOutput.G
 }
 
 func (f *fakeInventoryItemRepository) GetByInventoryId(context.Context, int64) ([]serviceOutput.GetInventoryItemsOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (f *fakeInventoryItemRepository) GetBySkuId(context.Context, int64) ([]domain.GetSkuInventoryOutput, error) {
-        return nil, nil
+	return nil, nil
 }
 
 type fakeSalesRepository struct {

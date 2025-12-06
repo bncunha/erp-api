@@ -59,3 +59,23 @@ func TestEmailUseCaseSendRecoverPassword(t *testing.T) {
 		t.Fatalf("expected recover link in body, got %s", port.body)
 	}
 }
+
+func TestEmailUseCaseSendWelcome(t *testing.T) {
+	cfg := &config.Config{FRONTEND_URL: "http://frontend"}
+	port := &stubEmailPort{}
+	usecase := NewEmailUseCase(cfg, port)
+
+	if err := usecase.SendWelcome(context.Background(), "user@test.com", "User Test"); err != nil {
+		t.Fatalf("unexpected error sending welcome: %v", err)
+	}
+
+	if port.subject != WelcomeSubject {
+		t.Fatalf("expected welcome subject, got %s", port.subject)
+	}
+	if !strings.Contains(port.body, "User Test") {
+		t.Fatalf("expected name in body, got %s", port.body)
+	}
+	if !strings.Contains(port.body, cfg.FRONTEND_URL) {
+		t.Fatalf("expected frontend url in body, got %s", port.body)
+	}
+}

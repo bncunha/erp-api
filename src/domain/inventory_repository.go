@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 )
 
@@ -28,6 +29,7 @@ type GetInventorySummaryByIdOutput struct {
 
 type InventoryRepository interface {
 	Create(ctx context.Context, inventory Inventory) (int64, error)
+	CreateWithTx(ctx context.Context, tx *sql.Tx, inventory Inventory) (int64, error)
 	GetById(ctx context.Context, id int64) (Inventory, error)
 	GetAll(ctx context.Context) ([]Inventory, error)
 	GetByUserId(ctx context.Context, userId int64) (Inventory, error)
