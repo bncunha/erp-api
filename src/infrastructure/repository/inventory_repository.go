@@ -26,6 +26,18 @@ func (r *inventoryRepository) Create(ctx context.Context, inventory domain.Inven
 	return insertedID, err
 }
 
+func (r *inventoryRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, inventory domain.Inventory) (int64, error) {
+	tenantId := inventory.TenantId
+	if tenantId == 0 {
+		tenantId = ctx.Value(constants.TENANT_KEY).(int64)
+	}
+
+	var insertedID int64
+	query := `INSERT INTO inventories (user_id, tenant_id, type) VALUES ($1, $2, $3) RETURNING id`
+	err := tx.QueryRowContext(ctx, query, inventory.User.Id, tenantId, inventory.Type).Scan(&insertedID)
+	return insertedID, err
+}
+
 func (r *inventoryRepository) GetById(ctx context.Context, id int64) (domain.Inventory, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventory domain.Inventory

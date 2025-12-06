@@ -11,6 +11,7 @@ import (
 type EmailUseCase interface {
 	SendInvite(ctx context.Context, user domain.User, code string, uuid string) error
 	SendRecoverPassword(ctx context.Context, user domain.User, code string, uuid string) error
+	SendWelcome(ctx context.Context, email string, name string) error
 }
 
 type emailUseCase struct {
