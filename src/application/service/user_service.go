@@ -108,7 +108,7 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 		Id:          userId,
 		Username:    request.Username,
 		Name:        request.Name,
-		PhoneNumber: request.PhoneNumber,
+		PhoneNumber: &request.PhoneNumber,
 		Role:        request.Role,
 		Email:       request.Email,
 	}
