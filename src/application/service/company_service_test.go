@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -135,11 +136,12 @@ func (s *stubWelcomeEmailUseCase) SendWelcome(ctx context.Context, email string,
 }
 
 func newFakeTransaction() (*sql.Tx, *fakeSQLTx) {
-	driverName := fmt.Sprintf("fakedriver-%d", time.Now().UnixNano())
-	sql.Register(driverName, &fakeDriver{tx: &fakeSQLTx{}})
+	driverName := fmt.Sprintf("fakedriver-%d", atomic.AddInt64(&fakeDriverCounter, 1))
+	fake := &fakeSQLTx{}
+	sql.Register(driverName, &fakeDriver{tx: fake})
 	db, _ := sql.Open(driverName, "")
 	tx, _ := db.Begin()
-	return tx, db.Driver().(*fakeDriver).tx
+	return tx, fake
 }
 
 func TestCompanyServiceCreateSuccess(t *testing.T) {
@@ -205,7 +207,7 @@ func TestCompanyServiceCreateDuplicate(t *testing.T) {
 		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
-	if err == nil || err.Error() != "Empresa já cadastrada" {
+	if err == nil || err.Error() != "Empresa j\u00e1 cadastrada" {
 		t.Fatalf("expected duplicate error, got %v", err)
 	}
 	if !fakeTx.rolledBack {
@@ -216,7 +218,7 @@ func TestCompanyServiceCreateDuplicate(t *testing.T) {
 func TestCompanyServiceCreateDuplicateCNPJ(t *testing.T) {
 	tx, fakeTx := newFakeTransaction()
 	service := NewCompanyService(
-		&stubCompanyRepository{err: &pq.Error{Detail: "Key (cnpj)=(04.252.011/0001-10) already exists.", Constraint: "companies_cnpj_unique"}},
+		&stubCompanyRepository{err: &pq.Error{Message: "duplicate key value violates unique constraint", Detail: "Key (cnpj)=(04.252.011/0001-10) already exists.", Constraint: "companies_cnpj_unique"}},
 		&stubAddressRepository{},
 		&stubCompanyInventoryRepository{},
 		&stubCompanyUserRepository{},
@@ -234,7 +236,7 @@ func TestCompanyServiceCreateDuplicateCNPJ(t *testing.T) {
 		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
-	if err == nil || err.Error() != "CNPJ já cadastrado" {
+	if err == nil || err.Error() != "CNPJ j\u00e1 cadastrado" {
 		t.Fatalf("expected CNPJ duplicate error, got %v", err)
 	}
 	if !fakeTx.rolledBack {
@@ -245,7 +247,7 @@ func TestCompanyServiceCreateDuplicateCNPJ(t *testing.T) {
 func TestCompanyServiceCreateDuplicateCPF(t *testing.T) {
 	tx, fakeTx := newFakeTransaction()
 	service := NewCompanyService(
-		&stubCompanyRepository{err: &pq.Error{Detail: "Key (cpf)=(39053344705) already exists.", Constraint: "companies_cpf_unique"}},
+		&stubCompanyRepository{err: &pq.Error{Message: "duplicate key value violates unique constraint", Detail: "Key (cpf)=(39053344705) already exists.", Constraint: "companies_cpf_unique"}},
 		&stubAddressRepository{},
 		&stubCompanyInventoryRepository{},
 		&stubCompanyUserRepository{},
@@ -263,7 +265,7 @@ func TestCompanyServiceCreateDuplicateCPF(t *testing.T) {
 		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
-	if err == nil || err.Error() != "CPF já cadastrado" {
+	if err == nil || err.Error() != "CPF j\u00e1 cadastrado" {
 		t.Fatalf("expected CPF duplicate error, got %v", err)
 	}
 	if !fakeTx.rolledBack {
