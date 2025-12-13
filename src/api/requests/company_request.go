@@ -26,11 +26,11 @@ type CreateCompanyAddress struct {
 }
 
 type CreateCompanyUserRequest struct {
-	Name        string `json:"name" validate:"required,max=100"`
-	Username    string `json:"username" validate:"required,max=30"`
-	PhoneNumber string `json:"phone_number" validate:"max=20"`
-	Email       string `json:"email" validate:"required,email,max=250"`
-	Password    string `json:"password" validate:"required,min=6"`
+	Name        string  `json:"name" validate:"required,max=100"`
+	Username    string  `json:"username" validate:"required,max=30"`
+	PhoneNumber *string `json:"phone_number" validate:"omitempty,max=20"`
+	Email       string  `json:"email" validate:"required,email,max=250"`
+	Password    string  `json:"password" validate:"required,min=6"`
 }
 
 func (r *CreateCompanyRequest) Validate() error {

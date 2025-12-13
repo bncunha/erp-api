@@ -6,11 +6,11 @@ import (
 )
 
 type CreateUserRequest struct {
-	Username    string `json:"username" validate:"required,max=30"`
-	Name        string `json:"name" validate:"required,max=100"`
-	PhoneNumber string `json:"phone_number" validate:"max=20"`
-	Role        string `json:"role" validate:"required,max=100"`
-	Email       string `json:"email" validate:"required,email,max=250"`
+	Username    string  `json:"username" validate:"required,max=30"`
+	Name        string  `json:"name" validate:"required,max=100"`
+	PhoneNumber *string `json:"phone_number" validate:"omitempty,max=20"`
+	Role        string  `json:"role" validate:"required,max=100"`
+	Email       string  `json:"email" validate:"required,email,max=250"`
 }
 
 func (r *CreateUserRequest) Validate() error {
@@ -22,11 +22,11 @@ func (r *CreateUserRequest) Validate() error {
 }
 
 type EditUserRequest struct {
-	Username    string `json:"username" validate:"required,max=30"`
-	Name        string `json:"name" validate:"required,max=100"`
-	PhoneNumber string `json:"phone_number" validate:"max=20"`
-	Role        string `json:"role" validate:"required,max=100"`
-	Email       string `json:"email" validate:"required,email,max=250"`
+	Username    string  `json:"username" validate:"required,max=30"`
+	Name        string  `json:"name" validate:"required,max=100"`
+	PhoneNumber *string `json:"phone_number" validate:"omitempty,max=20"`
+	Role        string  `json:"role" validate:"required,max=100"`
+	Email       string  `json:"email" validate:"required,email,max=250"`
 }
 
 func (r *EditUserRequest) Validate() error {

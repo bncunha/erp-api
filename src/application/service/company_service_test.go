@@ -135,6 +135,8 @@ func (s *stubWelcomeEmailUseCase) SendWelcome(ctx context.Context, email string,
 	return s.err
 }
 
+func strPtr(s string) *string { return &s }
+
 func newFakeTransaction() (*sql.Tx, *fakeSQLTx) {
 	driverName := fmt.Sprintf("fakedriver-%d", atomic.AddInt64(&fakeDriverCounter, 1))
 	fake := &fakeSQLTx{}
@@ -167,7 +169,7 @@ func TestCompanyServiceCreateSuccess(t *testing.T) {
 		User: request.CreateCompanyUserRequest{
 			Name:        "Admin",
 			Username:    "admin",
-			PhoneNumber: "123",
+			PhoneNumber: strPtr("123"),
 			Email:       "admin@test.com",
 			Password:    "secret123",
 		},

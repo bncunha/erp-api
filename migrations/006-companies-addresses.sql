@@ -21,4 +21,5 @@ CREATE TABLE addresses (
 
 CREATE UNIQUE INDEX addresses_tenant_id_unique ON addresses (tenant_id);
 
-CREATE UNIQUE INDEX users_phone_number_unique ON users (phone_number) WHERE (phone_number IS NOT NULL)
+CREATE UNIQUE INDEX users_phone_number_unique ON users (phone_number) WHERE (phone_number IS NOT NULL);
+ALTER TABLE users ALTER COLUMN phone_number DROP NOT NULL;
