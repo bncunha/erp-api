@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/constants"
@@ -9,6 +10,7 @@ import (
 	emailusecase "github.com/bncunha/erp-api/src/application/usecase/email_usecase"
 	"github.com/bncunha/erp-api/src/domain"
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
+	"github.com/lib/pq"
 )
 
 type CompanyService interface {
@@ -53,6 +55,19 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 	})
 	if err != nil {
 		if errors.IsDuplicated(err) {
+			if pqErr, ok := err.(*pq.Error); ok {
+				detail := strings.ToLower(pqErr.Detail)
+				constraint := strings.ToLower(pqErr.Constraint)
+				if strings.Contains(detail, "cnpj") || strings.Contains(constraint, "cnpj") {
+					return errors.New("CNPJ já cadastrado")
+				}
+				if strings.Contains(detail, "cpf") || strings.Contains(constraint, "cpf") {
+					return errors.New("CPF já cadastrado")
+				}
+				if strings.Contains(detail, "cellphone") || strings.Contains(constraint, "cellphone") {
+					return errors.New("Telefone já cadastrado na empresa")
+				}
+			}
 			return errors.New("Empresa já cadastrada")
 		}
 		return err
@@ -90,7 +105,7 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 	adminId, err := s.userRepository.CreateWithTx(ctxWithTenant, tx, adminUser)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.ParseDuplicatedMessage("Usuário", err)
+			return errors.ParseDuplicatedMessage("Usuǭrio", err)
 		}
 		return err
 	}
@@ -110,7 +125,7 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 	go func() {
 		welcomeErr := s.emailUsecase.SendWelcome(ctx, req.User.Email, req.User.Name)
 		if welcomeErr != nil {
-			logs.Logger.Errorf("Erro ao enviar email de boas vindas para o usuário %s: %v", req.User.Username, welcomeErr)
+			logs.Logger.Errorf("Erro ao enviar email de boas vindas para o usuǭrio %s: %v", req.User.Username, welcomeErr)
 		}
 	}()
 

@@ -5,6 +5,7 @@ ALTER TABLE companies ADD COLUMN legal_name VARCHAR(255);
 
 CREATE UNIQUE INDEX companies_cnpj_unique ON companies (cnpj) WHERE cnpj IS NOT NULL;
 CREATE UNIQUE INDEX companies_cpf_unique ON companies (cpf) WHERE cpf IS NOT NULL;
+CREATE UNIQUE INDEX companies_cellphone_unique ON companies (cellphone) WHERE cellphone IS NOT NULL;
 
 CREATE TABLE addresses (
   id BIGSERIAL PRIMARY KEY,

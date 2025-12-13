@@ -10,6 +10,7 @@ import (
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/lib/pq"
 )
 
 type stubCompanyRepository struct {
@@ -206,6 +207,64 @@ func TestCompanyServiceCreateDuplicate(t *testing.T) {
 
 	if err == nil || err.Error() != "Empresa já cadastrada" {
 		t.Fatalf("expected duplicate error, got %v", err)
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected transaction rollback")
+	}
+}
+
+func TestCompanyServiceCreateDuplicateCNPJ(t *testing.T) {
+	tx, fakeTx := newFakeTransaction()
+	service := NewCompanyService(
+		&stubCompanyRepository{err: &pq.Error{Detail: "Key (cnpj)=(04.252.011/0001-10) already exists.", Constraint: "companies_cnpj_unique"}},
+		&stubAddressRepository{},
+		&stubCompanyInventoryRepository{},
+		&stubCompanyUserRepository{},
+		&stubEncrypto{},
+		&stubWelcomeEmailUseCase{},
+		&stubCompanyTxManager{tx: tx},
+	)
+
+	err := service.Create(context.Background(), request.CreateCompanyRequest{
+		Name:      "Empresa",
+		LegalName: "Empresa Ltda",
+		Cnpj:      "04.252.011/0001-10",
+		Cellphone: "11999999999",
+		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+	})
+
+	if err == nil || err.Error() != "CNPJ já cadastrado" {
+		t.Fatalf("expected CNPJ duplicate error, got %v", err)
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected transaction rollback")
+	}
+}
+
+func TestCompanyServiceCreateDuplicateCPF(t *testing.T) {
+	tx, fakeTx := newFakeTransaction()
+	service := NewCompanyService(
+		&stubCompanyRepository{err: &pq.Error{Detail: "Key (cpf)=(39053344705) already exists.", Constraint: "companies_cpf_unique"}},
+		&stubAddressRepository{},
+		&stubCompanyInventoryRepository{},
+		&stubCompanyUserRepository{},
+		&stubEncrypto{},
+		&stubWelcomeEmailUseCase{},
+		&stubCompanyTxManager{tx: tx},
+	)
+
+	err := service.Create(context.Background(), request.CreateCompanyRequest{
+		Name:      "Empresa",
+		LegalName: "Empresa Ltda",
+		Cpf:       "39053344705",
+		Cellphone: "11999999999",
+		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+	})
+
+	if err == nil || err.Error() != "CPF já cadastrado" {
+		t.Fatalf("expected CPF duplicate error, got %v", err)
 	}
 	if !fakeTx.rolledBack {
 		t.Fatalf("expected transaction rollback")
