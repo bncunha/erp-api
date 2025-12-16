@@ -9,22 +9,24 @@ import (
 var ErrInventoryNotFound = errors.New("Inventário não encontrado")
 
 type GetInventorySummaryOutput struct {
-	InventoryId       int64
-	InventoryType     InventoryType
-	InventoryUserName *string
-	TotalSkus         int64
-	TotalQuantity     float64
-	ZeroQuantityItems int64
+        InventoryId       int64
+        InventoryType     InventoryType
+        InventoryUserName *string
+        TotalSkus         int64
+        TotalQuantity     float64
+        ZeroQuantityItems int64
+        StockValue        float64
 }
 
 type GetInventorySummaryByIdOutput struct {
 	InventoryId         int64
 	InventoryType       InventoryType
-	InventoryUserName   *string
-	TotalSkus           int64
-	TotalQuantity       float64
-	ZeroQuantityItems   int64
-	LastTransactionDays *int64
+        InventoryUserName   *string
+        TotalSkus           int64
+        TotalQuantity       float64
+        ZeroQuantityItems   int64
+        LastTransactionDays *int64
+        StockValue          float64
 }
 
 type InventoryRepository interface {

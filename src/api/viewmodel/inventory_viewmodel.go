@@ -148,12 +148,13 @@ func ToGetInventoriesViewModel(inventory domain.Inventory) GetInventoriesViewMod
 }
 
 type GetInventorySummaryViewModel struct {
-	InventoryId       int64   `json:"inventory_id"`
-	InventoryType     string  `json:"inventory_type"`
-	UserName          *string `json:"user_name"`
-	TotalSkus         int64   `json:"total_skus"`
-	TotalQuantity     float64 `json:"total_quantity"`
-	ZeroQuantityItems int64   `json:"zero_quantity_items"`
+        InventoryId       int64   `json:"inventory_id"`
+        InventoryType     string  `json:"inventory_type"`
+        UserName          *string `json:"user_name"`
+        TotalSkus         int64   `json:"total_skus"`
+        TotalQuantity     float64 `json:"total_quantity"`
+        ZeroQuantityItems int64   `json:"zero_quantity_items"`
+        StockValue        float64 `json:"stock_value"`
 }
 
 func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) GetInventorySummaryViewModel {
@@ -164,22 +165,24 @@ func ToGetInventorySummaryViewModel(summary output.GetInventorySummaryOutput) Ge
 
 	return GetInventorySummaryViewModel{
 		InventoryId:       summary.InventoryId,
-		InventoryType:     inventoryType,
-		UserName:          summary.InventoryUserName,
-		TotalSkus:         summary.TotalSkus,
-		TotalQuantity:     summary.TotalQuantity,
-		ZeroQuantityItems: summary.ZeroQuantityItems,
-	}
+                InventoryType:     inventoryType,
+                UserName:          summary.InventoryUserName,
+                TotalSkus:         summary.TotalSkus,
+                TotalQuantity:     summary.TotalQuantity,
+                ZeroQuantityItems: summary.ZeroQuantityItems,
+                StockValue:        summary.StockValue,
+        }
 }
 
 type GetInventorySummaryByIdViewModel struct {
 	InventoryId         int64   `json:"inventory_id"`
 	InventoryType       string  `json:"inventory_type"`
-	UserName            *string `json:"user_name"`
-	TotalSkus           int64   `json:"total_skus"`
-	TotalQuantity       float64 `json:"total_quantity"`
-	ZeroQuantityItems   int64   `json:"zero_quantity_items"`
-	LastTransactionDays *int64  `json:"last_transaction_days"`
+        UserName            *string `json:"user_name"`
+        TotalSkus           int64   `json:"total_skus"`
+        TotalQuantity       float64 `json:"total_quantity"`
+        ZeroQuantityItems   int64   `json:"zero_quantity_items"`
+        LastTransactionDays *int64  `json:"last_transaction_days"`
+        StockValue          float64 `json:"stock_value"`
 }
 
 func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOutput) GetInventorySummaryByIdViewModel {
@@ -192,9 +195,10 @@ func ToGetInventorySummaryByIdViewModel(summary output.GetInventorySummaryByIdOu
 		InventoryId:         summary.InventoryId,
 		InventoryType:       inventoryType,
 		UserName:            summary.InventoryUserName,
-		TotalSkus:           summary.TotalSkus,
-		TotalQuantity:       summary.TotalQuantity,
-		ZeroQuantityItems:   summary.ZeroQuantityItems,
-		LastTransactionDays: summary.LastTransactionDays,
-	}
+                TotalSkus:           summary.TotalSkus,
+                TotalQuantity:       summary.TotalQuantity,
+                ZeroQuantityItems:   summary.ZeroQuantityItems,
+                LastTransactionDays: summary.LastTransactionDays,
+                StockValue:          summary.StockValue,
+        }
 }
