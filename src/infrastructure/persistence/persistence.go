@@ -21,7 +21,7 @@ func NewPersistence(cfg *config.Config) *Persistence {
 
 func (p *Persistence) ConnectDb() (*sql.DB, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.cfg.DB_USER, p.cfg.DB_PASS, p.cfg.DB_HOST, p.cfg.DB_NAME)
-
+	logs.Logger.Infof("Conectando com o banco de dados: %s", connStr)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		logs.Logger.Errorf("Erro ao conectar:", err)
