@@ -2,32 +2,36 @@ package domain
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 )
 
 var ErrInventoryNotFound = errors.New("Inventário não encontrado")
 
 type GetInventorySummaryOutput struct {
-	InventoryId       int64
-	InventoryType     InventoryType
-	InventoryUserName *string
-	TotalSkus         int64
-	TotalQuantity     float64
-	ZeroQuantityItems int64
+        InventoryId       int64
+        InventoryType     InventoryType
+        InventoryUserName *string
+        TotalSkus         int64
+        TotalQuantity     float64
+        ZeroQuantityItems int64
+        StockValue        float64
 }
 
 type GetInventorySummaryByIdOutput struct {
 	InventoryId         int64
 	InventoryType       InventoryType
-	InventoryUserName   *string
-	TotalSkus           int64
-	TotalQuantity       float64
-	ZeroQuantityItems   int64
-	LastTransactionDays *int64
+        InventoryUserName   *string
+        TotalSkus           int64
+        TotalQuantity       float64
+        ZeroQuantityItems   int64
+        LastTransactionDays *int64
+        StockValue          float64
 }
 
 type InventoryRepository interface {
 	Create(ctx context.Context, inventory Inventory) (int64, error)
+	CreateWithTx(ctx context.Context, tx *sql.Tx, inventory Inventory) (int64, error)
 	GetById(ctx context.Context, id int64) (Inventory, error)
 	GetAll(ctx context.Context) ([]Inventory, error)
 	GetByUserId(ctx context.Context, userId int64) (Inventory, error)

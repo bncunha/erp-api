@@ -39,12 +39,32 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (do
 }
 
 func (r *userRepository) Create(ctx context.Context, user domain.User) (int64, error) {
+	return r.create(ctx, r.db, nil, user)
+}
+
+func (r *userRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, user domain.User) (int64, error) {
+	return r.create(ctx, nil, tx, user)
+}
+
+func (r *userRepository) create(ctx context.Context, db *sql.DB, tx *sql.Tx, user domain.User) (int64, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
-	query := `INSERT INTO users (username, name, phone_number, role, tenant_id, email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	query := `INSERT INTO users (username, name, phone_number, role, tenant_id, email, password) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')) RETURNING id`
 	var id int64
-	err := r.db.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Role, tenantId, user.Email).Scan(&id)
-	if err != nil {
-		return id, err
+	executor := any(db)
+	if tx != nil {
+		executor = tx
+	}
+
+	switch exec := executor.(type) {
+	case interface {
+		QueryRowContext(context.Context, string, ...any) *sql.Row
+	}:
+		err := exec.QueryRowContext(ctx, query, user.Username, user.Name, user.PhoneNumber, user.Role, tenantId, user.Email, user.Password).Scan(&id)
+		if err != nil {
+			return id, err
+		}
+	default:
+		return id, errors.New("executor not provided")
 	}
 	return id, nil
 }

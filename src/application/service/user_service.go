@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/constants"
@@ -44,7 +45,7 @@ func (s *userService) Create(ctx context.Context, request request.CreateUserRequ
 	user := domain.NewUser(domain.CreateUserParams{
 		Username:    request.Username,
 		Name:        request.Name,
-		PhoneNumber: request.PhoneNumber,
+		PhoneNumber: normalizePhone(request.PhoneNumber),
 		Role:        request.Role,
 		Email:       request.Email,
 	})
@@ -108,7 +109,7 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 		Id:          userId,
 		Username:    request.Username,
 		Name:        request.Name,
-		PhoneNumber: request.PhoneNumber,
+		PhoneNumber: normalizePhone(request.PhoneNumber),
 		Role:        request.Role,
 		Email:       request.Email,
 	}
@@ -140,6 +141,17 @@ func (s *userService) Update(ctx context.Context, request request.EditUserReques
 	}
 
 	return nil
+}
+
+func normalizePhone(phone *string) *string {
+	if phone == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*phone)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func (s *userService) GetById(ctx context.Context, userId int64) (domain.User, error) {

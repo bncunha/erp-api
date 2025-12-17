@@ -26,6 +26,18 @@ func (r *inventoryRepository) Create(ctx context.Context, inventory domain.Inven
 	return insertedID, err
 }
 
+func (r *inventoryRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, inventory domain.Inventory) (int64, error) {
+	tenantId := inventory.TenantId
+	if tenantId == 0 {
+		tenantId = ctx.Value(constants.TENANT_KEY).(int64)
+	}
+
+	var insertedID int64
+	query := `INSERT INTO inventories (user_id, tenant_id, type) VALUES ($1, $2, $3) RETURNING id`
+	err := tx.QueryRowContext(ctx, query, inventory.User.Id, tenantId, inventory.Type).Scan(&insertedID)
+	return insertedID, err
+}
+
 func (r *inventoryRepository) GetById(ctx context.Context, id int64) (domain.Inventory, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var inventory domain.Inventory
@@ -111,15 +123,17 @@ func (r *inventoryRepository) GetSummary(ctx context.Context) ([]domain.GetInven
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	summaries := make([]domain.GetInventorySummaryOutput, 0)
 
-	query := `SELECT i.id,
+       query := `SELECT i.id,
        i.type,
        u.name,
        COUNT(DISTINCT ii.sku_id) AS total_skus,
        COALESCE(SUM(ii.quantity), 0) AS total_quantity,
-       COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items
+       COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items,
+       COALESCE(SUM(ii.quantity * COALESCE(s.price, 0)), 0) AS stock_value
 FROM inventories i
 LEFT JOIN users u ON u.id = i.user_id
 LEFT JOIN inventory_items ii ON ii.inventory_id = i.id AND ii.deleted_at IS NULL AND ii.tenant_id = i.tenant_id
+LEFT JOIN skus s ON s.id = ii.sku_id AND s.tenant_id = i.tenant_id
 WHERE i.tenant_id = $1 AND i.deleted_at IS NULL
 GROUP BY i.id, i.type, u.name
 ORDER BY i.id ASC`
@@ -135,9 +149,9 @@ ORDER BY i.id ASC`
 		var inventoryType string
 		var userName sql.NullString
 
-		if err := rows.Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems); err != nil {
-			return summaries, err
-		}
+               if err := rows.Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems, &summary.StockValue); err != nil {
+                        return summaries, err
+                }
 
 		summary.InventoryType = domain.InventoryType(inventoryType)
 		if userName.Valid {
@@ -163,6 +177,7 @@ func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (dom
    COUNT(DISTINCT ii.sku_id) AS total_skus,
    COALESCE(SUM(ii.quantity), 0) AS total_quantity,
    COALESCE(SUM(CASE WHEN ii.quantity = 0 THEN 1 ELSE 0 END), 0) AS zero_quantity_items,
+   COALESCE(SUM(ii.quantity * COALESCE(s.price, 0)), 0) AS stock_value,
    (
            SELECT DATE_PART('day', NOW() - MAX(it.date))::bigint
            FROM inventory_transactions it
@@ -173,12 +188,13 @@ func (r *inventoryRepository) GetSummaryById(ctx context.Context, id int64) (dom
 FROM inventories i
 LEFT JOIN users u ON u.id = i.user_id
 LEFT JOIN inventory_items ii ON ii.inventory_id = i.id AND ii.deleted_at IS NULL AND ii.tenant_id = i.tenant_id
+LEFT JOIN skus s ON s.id = ii.sku_id AND s.tenant_id = i.tenant_id
 WHERE i.id = $1 AND i.tenant_id = $2 AND i.deleted_at IS NULL
 GROUP BY i.id, i.type, u.name`
 
 	var lastTransactionDays sql.NullInt64
 
-	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems, &lastTransactionDays)
+       err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&summary.InventoryId, &inventoryType, &userName, &summary.TotalSkus, &summary.TotalQuantity, &summary.ZeroQuantityItems, &summary.StockValue, &lastTransactionDays)
 	if err != nil {
 		if errors.IsNoRowsFinded(err) {
 			return summary, domain.ErrInventoryNotFound
