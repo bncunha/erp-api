@@ -6,6 +6,7 @@ import (
 	"github.com/bncunha/erp-api/src/api/http"
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/api/viewmodel"
+	"github.com/bncunha/erp-api/src/application/constants"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/domain"
@@ -80,7 +81,7 @@ func (c *UserController) GetAll(context echo.Context) error {
 }
 
 func (c *UserController) GetLegalTerms(context echo.Context) error {
-	userId := helper.ParseInt64(context.Param("id"))
+	userId := int64(context.Request().Context().Value(constants.USERID_KEY).(float64))
 
 	terms, err := c.userService.GetActiveLegalTerms(context.Request().Context(), userId)
 	if err != nil {

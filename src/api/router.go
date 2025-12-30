@@ -91,7 +91,7 @@ func (r *router) setupPrivateRoutes() {
 	userGroup.POST("", r.controller.UserController.Create)
 	userGroup.GET("", r.controller.UserController.GetAll)
 	userGroup.GET("/:id", r.controller.UserController.GetById)
-	userGroup.GET("/:id/legal-terms", r.controller.UserController.GetLegalTerms)
+	userGroup.GET("/legal-terms", r.controller.UserController.GetLegalTerms)
 	userGroup.PUT("/:id", r.controller.UserController.Edit)
 	userGroup.DELETE("/:id", r.controller.UserController.Inactivate)
 
