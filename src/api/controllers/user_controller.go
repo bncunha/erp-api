@@ -79,6 +79,22 @@ func (c *UserController) GetAll(context echo.Context) error {
 	return context.JSON(_http.StatusOK, userViewModels)
 }
 
+func (c *UserController) GetLegalTerms(context echo.Context) error {
+	userId := helper.ParseInt64(context.Param("id"))
+
+	terms, err := c.userService.GetActiveLegalTerms(context.Request().Context(), userId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	viewModels := make([]viewmodel.LegalTermViewModel, 0, len(terms))
+	for _, term := range terms {
+		viewModels = append(viewModels, viewmodel.ToLegalTermViewModel(term))
+	}
+
+	return context.JSON(_http.StatusOK, viewModels)
+}
+
 func (c *UserController) Inactivate(context echo.Context) error {
 	id := helper.ParseInt64(context.Param("id"))
 

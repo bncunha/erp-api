@@ -297,6 +297,22 @@ func TestUserServiceForgotPasswordSuccess(t *testing.T) {
 	}
 }
 
+type stubUserLegalDocumentRepository struct {
+	activeByUser []domain.LegalTermStatus
+	err          error
+}
+
+func (s *stubUserLegalDocumentRepository) GetLastActiveByType(ctx context.Context, docType domain.LegalDocumentType) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
+func (s *stubUserLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.activeByUser, nil
+}
+
 func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInventoryRepository) (*userService, *stubUserTokenService, *stubEmailUseCase, *stubUserTokenRepository) {
 	if userRepo == nil {
 		userRepo = &stubUserRepository{}
@@ -307,6 +323,7 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 	userTokenService := &stubUserTokenService{output: domain.UserToken{Code: "code", Uuid: "uuid"}}
 	emailUsecase := &stubEmailUseCase{}
 	userTokenRepository := &stubUserTokenRepository{}
+	legalDocumentRepo := &stubUserLegalDocumentRepository{}
 	service := &userService{
 		userRepository:      userRepo,
 		inventoryRepository: inventoryRepo,
@@ -314,6 +331,7 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 		userTokenService:    userTokenService,
 		emailUsecase:        emailUsecase,
 		userTokenRepository: userTokenRepository,
+		legalDocumentRepo:   legalDocumentRepo,
 	}
 	return service, userTokenService, emailUsecase, userTokenRepository
 }

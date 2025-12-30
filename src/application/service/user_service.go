@@ -18,6 +18,7 @@ type UserService interface {
 	Update(ctx context.Context, request request.EditUserRequest, userId int64) error
 	GetById(ctx context.Context, userId int64) (domain.User, error)
 	GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error)
+	GetActiveLegalTerms(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error)
 	Inactivate(ctx context.Context, id int64) error
 	ResetPassword(ctx context.Context, request request.ResetPasswordRequest) error
 	ForgotPassword(ctx context.Context, request request.ForgotPasswordRequest) error
@@ -30,10 +31,11 @@ type userService struct {
 	userTokenService    UserTokenService
 	emailUsecase        emailusecase.EmailUseCase
 	userTokenRepository domain.UserTokenRepository
+	legalDocumentRepo   domain.LegalDocumentRepository
 }
 
-func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto domain.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase, userTokenRepository domain.UserTokenRepository) UserService {
-	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase, userTokenRepository}
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto domain.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase, userTokenRepository domain.UserTokenRepository, legalDocumentRepo domain.LegalDocumentRepository) UserService {
+	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase, userTokenRepository, legalDocumentRepo}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -173,6 +175,13 @@ func (s *userService) GetAll(ctx context.Context, request request.GetAllUserRequ
 		return users, err
 	}
 	return users, nil
+}
+
+func (s *userService) GetActiveLegalTerms(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
+	if s.legalDocumentRepo == nil {
+		return nil, errors.New("legal document repository not configured")
+	}
+	return s.legalDocumentRepo.GetActiveByUser(ctx, userId)
 }
 
 func (s *userService) Inactivate(ctx context.Context, id int64) error {

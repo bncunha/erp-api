@@ -18,17 +18,19 @@ type CompanyService interface {
 }
 
 type companyService struct {
-	companyRepository domain.CompanyRepository
-	addressRepository domain.AddressRepository
-	inventoryRepo     domain.InventoryRepository
-	userRepository    domain.UserRepository
-	encrypto          domain.Encrypto
-	emailUsecase      emailusecase.EmailUseCase
-	txManager         transactionManager
+	companyRepository   domain.CompanyRepository
+	addressRepository   domain.AddressRepository
+	inventoryRepo       domain.InventoryRepository
+	userRepository      domain.UserRepository
+	encrypto            domain.Encrypto
+	emailUsecase        emailusecase.EmailUseCase
+	legalDocumentRepo   domain.LegalDocumentRepository
+	legalAcceptanceRepo domain.LegalAcceptanceRepository
+	txManager           transactionManager
 }
 
-func NewCompanyService(companyRepository domain.CompanyRepository, addressRepository domain.AddressRepository, inventoryRepo domain.InventoryRepository, userRepository domain.UserRepository, encrypto domain.Encrypto, emailUsecase emailusecase.EmailUseCase, txManager transactionManager) CompanyService {
-	return &companyService{companyRepository, addressRepository, inventoryRepo, userRepository, encrypto, emailUsecase, txManager}
+func NewCompanyService(companyRepository domain.CompanyRepository, addressRepository domain.AddressRepository, inventoryRepo domain.InventoryRepository, userRepository domain.UserRepository, encrypto domain.Encrypto, emailUsecase emailusecase.EmailUseCase, legalDocumentRepo domain.LegalDocumentRepository, legalAcceptanceRepo domain.LegalAcceptanceRepository, txManager transactionManager) CompanyService {
+	return &companyService{companyRepository, addressRepository, inventoryRepo, userRepository, encrypto, emailUsecase, legalDocumentRepo, legalAcceptanceRepo, txManager}
 }
 
 func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRequest) (err error) {
@@ -112,6 +114,36 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 
 	adminUser.Id = adminId
 	adminUser.TenantId = companyId
+
+	termsDoc, err := s.legalDocumentRepo.GetLastActiveByType(ctx, domain.LegalDocumentTypeTerms)
+	if err != nil {
+		return err
+	}
+
+	privacyDoc, err := s.legalDocumentRepo.GetLastActiveByType(ctx, domain.LegalDocumentTypePrivacy)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.legalAcceptanceRepo.CreateWithTx(ctxWithTenant, tx, domain.LegalAcceptance{
+		UserId:          adminId,
+		TenantId:        companyId,
+		LegalDocumentId: termsDoc.Id,
+		Accepted:        true,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.legalAcceptanceRepo.CreateWithTx(ctxWithTenant, tx, domain.LegalAcceptance{
+		UserId:          adminId,
+		TenantId:        companyId,
+		LegalDocumentId: privacyDoc.Id,
+		Accepted:        true,
+	})
+	if err != nil {
+		return err
+	}
 
 	_, err = s.inventoryRepo.CreateWithTx(ctxWithTenant, tx, domain.Inventory{TenantId: companyId, User: domain.User{Id: adminUser.Id}, Type: domain.InventoryTypePrimary})
 	if err != nil {
