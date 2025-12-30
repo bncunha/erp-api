@@ -211,6 +211,17 @@ func (s *userService) AcceptLegalTerms(ctx context.Context, userId int64, terms 
 		}
 	}()
 
+	tenantIdValue := ctx.Value(constants.TENANT_KEY)
+	var tenantId int64
+	switch value := tenantIdValue.(type) {
+	case int64:
+		tenantId = value
+	case float64:
+		tenantId = int64(value)
+	default:
+		return errors.New("tenant id invalido")
+	}
+
 	for _, term := range terms {
 		document, fetchErr := s.legalDocumentRepo.GetByTypeAndVersion(ctx, domain.LegalDocumentType(term.DocType), term.DocVersion)
 		if fetchErr != nil {
@@ -219,6 +230,7 @@ func (s *userService) AcceptLegalTerms(ctx context.Context, userId int64, terms 
 
 		_, err = s.legalAcceptanceRepo.CreateWithTx(ctx, tx, domain.LegalAcceptance{
 			UserId:          userId,
+			TenantId:        tenantId,
 			LegalDocumentId: document.Id,
 			Accepted:        true,
 		})

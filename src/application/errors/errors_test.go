@@ -2,6 +2,7 @@ package errors
 
 import (
 	stdErrors "errors"
+	"strings"
 	"testing"
 
 	"github.com/lib/pq"
@@ -57,5 +58,22 @@ func TestIs(t *testing.T) {
 	err := stdErrors.Join(target)
 	if !Is(err, target) {
 		t.Fatalf("expected Is to match target")
+	}
+}
+
+func TestParseDuplicatedMessage(t *testing.T) {
+	err := ParseDuplicatedMessage("Usuario", stdErrors.New("other"))
+	if !strings.Contains(err.Error(), "Usuario") || !strings.Contains(err.Error(), "cadastrado") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+
+	phoneErr := ParseDuplicatedMessage("Usuario", &pq.Error{Detail: "phone_number"})
+	if !strings.Contains(phoneErr.Error(), "telefone") {
+		t.Fatalf("expected telefone message, got %v", phoneErr)
+	}
+
+	emailErr := ParseDuplicatedMessage("Usuario", &pq.Error{Detail: "email"})
+	if !strings.Contains(emailErr.Error(), "email") {
+		t.Fatalf("expected email message, got %v", emailErr)
 	}
 }
