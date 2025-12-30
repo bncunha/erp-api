@@ -318,9 +318,9 @@ func (s *stubUserLegalDocumentRepository) GetActiveByUser(ctx context.Context, u
 	return s.activeByUser, nil
 }
 
-type stubLegalAcceptanceRepository struct{}
+type stubUserLegalAcceptanceRepository struct{}
 
-func (s *stubLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
+func (s *stubUserLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
 	return 1, nil
 }
 
@@ -344,7 +344,7 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 	emailUsecase := &stubEmailUseCase{}
 	userTokenRepository := &stubUserTokenRepository{}
 	legalDocumentRepo := &stubUserLegalDocumentRepository{}
-	legalAcceptanceRepo := &stubLegalAcceptanceRepository{}
+	legalAcceptanceRepo := &stubUserLegalAcceptanceRepository{}
 	service := &userService{
 		userRepository:      userRepo,
 		inventoryRepository: inventoryRepo,
