@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -306,11 +307,30 @@ func (s *stubUserLegalDocumentRepository) GetLastActiveByType(ctx context.Contex
 	return domain.LegalDocument{}, nil
 }
 
+func (s *stubUserLegalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
 func (s *stubUserLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
 	return s.activeByUser, nil
+}
+
+type stubLegalAcceptanceRepository struct{}
+
+func (s *stubLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
+	return 1, nil
+}
+
+type stubUserTxManager struct {
+	tx  *sql.Tx
+	err error
+}
+
+func (s *stubUserTxManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return s.tx, s.err
 }
 
 func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInventoryRepository) (*userService, *stubUserTokenService, *stubEmailUseCase, *stubUserTokenRepository) {
@@ -324,6 +344,7 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 	emailUsecase := &stubEmailUseCase{}
 	userTokenRepository := &stubUserTokenRepository{}
 	legalDocumentRepo := &stubUserLegalDocumentRepository{}
+	legalAcceptanceRepo := &stubLegalAcceptanceRepository{}
 	service := &userService{
 		userRepository:      userRepo,
 		inventoryRepository: inventoryRepo,
@@ -332,6 +353,8 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 		emailUsecase:        emailUsecase,
 		userTokenRepository: userTokenRepository,
 		legalDocumentRepo:   legalDocumentRepo,
+		legalAcceptanceRepo: legalAcceptanceRepo,
+		txManager:           &stubUserTxManager{},
 	}
 	return service, userTokenService, emailUsecase, userTokenRepository
 }

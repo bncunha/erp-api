@@ -96,6 +96,20 @@ func (c *UserController) GetLegalTerms(context echo.Context) error {
 	return context.JSON(_http.StatusOK, viewModels)
 }
 
+func (c *UserController) AcceptLegalTerms(context echo.Context) error {
+	var termsRequest []request.AcceptLegalTermRequest
+	if err := context.Bind(&termsRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	userId := int64(context.Request().Context().Value(constants.USERID_KEY).(float64))
+	if err := c.userService.AcceptLegalTerms(context.Request().Context(), userId, termsRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
+}
+
 func (c *UserController) Inactivate(context echo.Context) error {
 	id := helper.ParseInt64(context.Param("id"))
 

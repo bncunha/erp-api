@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/bncunha/erp-api/src/application/errors"
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -21,11 +22,13 @@ func (r *legalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx
 		return 0, errors.New("transaction not provided")
 	}
 
+	tenantId := ctx.Value(constants.TENANT_KEY)
+
 	query := `INSERT INTO legal_acceptances (user_id, tenant_id, legal_document_id, accepted)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id`
 	var id int64
-	err := tx.QueryRowContext(ctx, query, acceptance.UserId, acceptance.TenantId, acceptance.LegalDocumentId, acceptance.Accepted).Scan(&id)
+	err := tx.QueryRowContext(ctx, query, acceptance.UserId, tenantId, acceptance.LegalDocumentId, acceptance.Accepted).Scan(&id)
 	if err != nil {
 		return 0, err
 	}

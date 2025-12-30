@@ -19,6 +19,7 @@ type UserService interface {
 	GetById(ctx context.Context, userId int64) (domain.User, error)
 	GetAll(ctx context.Context, request request.GetAllUserRequest) ([]domain.User, error)
 	GetActiveLegalTerms(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error)
+	AcceptLegalTerms(ctx context.Context, userId int64, terms []request.AcceptLegalTermRequest) error
 	Inactivate(ctx context.Context, id int64) error
 	ResetPassword(ctx context.Context, request request.ResetPasswordRequest) error
 	ForgotPassword(ctx context.Context, request request.ForgotPasswordRequest) error
@@ -32,10 +33,12 @@ type userService struct {
 	emailUsecase        emailusecase.EmailUseCase
 	userTokenRepository domain.UserTokenRepository
 	legalDocumentRepo   domain.LegalDocumentRepository
+	legalAcceptanceRepo domain.LegalAcceptanceRepository
+	txManager           transactionManager
 }
 
-func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto domain.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase, userTokenRepository domain.UserTokenRepository, legalDocumentRepo domain.LegalDocumentRepository) UserService {
-	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase, userTokenRepository, legalDocumentRepo}
+func NewUserService(userRepository domain.UserRepository, inventoryRepository domain.InventoryRepository, encrypto domain.Encrypto, userTokenService UserTokenService, emailUsecase emailusecase.EmailUseCase, userTokenRepository domain.UserTokenRepository, legalDocumentRepo domain.LegalDocumentRepository, legalAcceptanceRepo domain.LegalAcceptanceRepository, txManager transactionManager) UserService {
+	return &userService{userRepository, inventoryRepository, encrypto, userTokenService, emailUsecase, userTokenRepository, legalDocumentRepo, legalAcceptanceRepo, txManager}
 }
 
 func (s *userService) Create(ctx context.Context, request request.CreateUserRequest) error {
@@ -182,6 +185,56 @@ func (s *userService) GetActiveLegalTerms(ctx context.Context, userId int64) ([]
 		return nil, errors.New("legal document repository not configured")
 	}
 	return s.legalDocumentRepo.GetActiveByUser(ctx, userId)
+}
+
+func (s *userService) AcceptLegalTerms(ctx context.Context, userId int64, terms []request.AcceptLegalTermRequest) (err error) {
+	if len(terms) == 0 {
+		return errors.New("Envie ao menos um termo.")
+	}
+	if s.legalDocumentRepo == nil || s.legalAcceptanceRepo == nil || s.txManager == nil {
+		return errors.New("legal acceptance not configured")
+	}
+
+	for i := range terms {
+		if err = terms[i].Validate(); err != nil {
+			return err
+		}
+	}
+
+	tx, err := s.txManager.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil && tx != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, term := range terms {
+		document, fetchErr := s.legalDocumentRepo.GetByTypeAndVersion(ctx, domain.LegalDocumentType(term.DocType), term.DocVersion)
+		if fetchErr != nil {
+			return fetchErr
+		}
+
+		_, err = s.legalAcceptanceRepo.CreateWithTx(ctx, tx, domain.LegalAcceptance{
+			UserId:          userId,
+			LegalDocumentId: document.Id,
+			Accepted:        true,
+		})
+		if err != nil {
+			if errors.IsDuplicated(err) {
+				return errors.New("Termo já aceito.")
+			}
+			return err
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *userService) Inactivate(ctx context.Context, id int64) error {

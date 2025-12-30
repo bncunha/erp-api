@@ -150,6 +150,10 @@ func (s *stubLegalDocumentRepository) GetLastActiveByType(ctx context.Context, d
 	return domain.LegalDocument{}, fmt.Errorf("document not found")
 }
 
+func (s *stubLegalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
 func (s *stubLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
 	return nil, nil
 }

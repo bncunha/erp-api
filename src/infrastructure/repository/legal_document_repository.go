@@ -43,6 +43,31 @@ func (r *legalDocumentRepository) GetLastActiveByType(ctx context.Context, docTy
 	return document, nil
 }
 
+func (r *legalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	var document domain.LegalDocument
+	query := `SELECT id, doc_type, doc_version, published_at, content_sha256, is_active
+		FROM legal_documents
+		WHERE doc_type = $1 AND doc_version = $2
+		LIMIT 1`
+
+	err := r.db.QueryRowContext(ctx, query, docType, version).Scan(
+		&document.Id,
+		&document.DocType,
+		&document.DocVersion,
+		&document.PublishedAt,
+		&document.ContentSha256,
+		&document.IsActive,
+	)
+	if err != nil {
+		if errors.IsNoRowsFinded(err) {
+			return document, errors.New("Documento legal nao encontrado")
+		}
+		return document, err
+	}
+
+	return document, nil
+}
+
 func (r *legalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	terms := make([]domain.LegalTermStatus, 0)
