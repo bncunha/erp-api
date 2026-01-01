@@ -107,7 +107,7 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 	adminId, err := s.userRepository.CreateWithTx(ctxWithTenant, tx, adminUser)
 	if err != nil {
 		if errors.IsDuplicated(err) {
-			return errors.ParseDuplicatedMessage("Usuǭrio", err)
+			return errors.ParseDuplicatedMessage("Usuário", err)
 		}
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *companyService) Create(ctx context.Context, req request.CreateCompanyRe
 	go func() {
 		welcomeErr := s.emailUsecase.SendWelcome(ctx, req.User.Email, req.User.Name)
 		if welcomeErr != nil {
-			logs.Logger.Errorf("Erro ao enviar email de boas vindas para o usuǭrio %s: %v", req.User.Username, welcomeErr)
+			logs.Logger.Errorf("Erro ao enviar email de boas vindas para o usuário %s: %v", req.User.Username, welcomeErr)
 		}
 	}()
 
