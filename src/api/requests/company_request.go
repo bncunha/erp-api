@@ -12,9 +12,9 @@ type CreateCompanyRequest struct {
 	Cnpj            string                   `json:"cnpj" validate:"omitempty,max=20"`
 	Cpf             string                   `json:"cpf" validate:"omitempty,max=14"`
 	Cellphone       string                   `json:"cellphone" validate:"required,max=20"`
-	AcceptedTerms   bool                     `json:"accepted_terms" validate:"required"`
+	AcceptedTerms   bool                     `json:"accepted_terms"`
 	AcceptedPrivacy bool                     `json:"accepted_privacy"`
-	Address         CreateCompanyAddress     `json:"address"`
+	Address         CreateCompanyAddress     `json:"address" validate:"required"`
 	User            CreateCompanyUserRequest `json:"user" validate:"required"`
 }
 
