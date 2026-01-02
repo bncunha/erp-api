@@ -6,6 +6,7 @@ import (
 	"github.com/bncunha/erp-api/src/api/http"
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/api/viewmodel"
+	"github.com/bncunha/erp-api/src/application/constants"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service"
 	"github.com/bncunha/erp-api/src/domain"
@@ -77,6 +78,36 @@ func (c *UserController) GetAll(context echo.Context) error {
 	}
 
 	return context.JSON(_http.StatusOK, userViewModels)
+}
+
+func (c *UserController) GetLegalTerms(context echo.Context) error {
+	userId := int64(context.Request().Context().Value(constants.USERID_KEY).(float64))
+
+	terms, err := c.userService.GetActiveLegalTerms(context.Request().Context(), userId)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	viewModels := make([]viewmodel.LegalTermViewModel, 0, len(terms))
+	for _, term := range terms {
+		viewModels = append(viewModels, viewmodel.ToLegalTermViewModel(term))
+	}
+
+	return context.JSON(_http.StatusOK, viewModels)
+}
+
+func (c *UserController) AcceptLegalTerms(context echo.Context) error {
+	var termsRequest []request.AcceptLegalTermRequest
+	if err := context.Bind(&termsRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	userId := int64(context.Request().Context().Value(constants.USERID_KEY).(float64))
+	if err := c.userService.AcceptLegalTerms(context.Request().Context(), userId, termsRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusOK, nil)
 }
 
 func (c *UserController) Inactivate(context echo.Context) error {

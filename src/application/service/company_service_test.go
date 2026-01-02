@@ -135,6 +135,42 @@ func (s *stubWelcomeEmailUseCase) SendWelcome(ctx context.Context, email string,
 	return s.err
 }
 
+type stubLegalDocumentRepository struct {
+	lastByType map[domain.LegalDocumentType]domain.LegalDocument
+	err        error
+}
+
+func (s *stubLegalDocumentRepository) GetLastActiveByType(ctx context.Context, docType domain.LegalDocumentType) (domain.LegalDocument, error) {
+	if s.err != nil {
+		return domain.LegalDocument{}, s.err
+	}
+	if doc, ok := s.lastByType[docType]; ok {
+		return doc, nil
+	}
+	return domain.LegalDocument{}, fmt.Errorf("document not found")
+}
+
+func (s *stubLegalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
+func (s *stubLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
+	return nil, nil
+}
+
+type stubLegalAcceptanceRepository struct {
+	created []domain.LegalAcceptance
+	err     error
+}
+
+func (s *stubLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	s.created = append(s.created, acceptance)
+	return int64(len(s.created)), nil
+}
+
 func strPtr(s string) *string { return &s }
 
 func newFakeTransaction() (*sql.Tx, *fakeSQLTx) {
@@ -151,13 +187,22 @@ func TestCompanyServiceCreateSuccess(t *testing.T) {
 	userRepo := &stubCompanyUserRepository{}
 	inventoryRepo := &stubCompanyInventoryRepository{}
 	emailUsecase := &stubWelcomeEmailUseCase{}
-	service := NewCompanyService(&stubCompanyRepository{id: 5}, &stubAddressRepository{}, inventoryRepo, userRepo, &stubEncrypto{}, emailUsecase, &stubCompanyTxManager{tx: tx})
+	legalDocRepo := &stubLegalDocumentRepository{
+		lastByType: map[domain.LegalDocumentType]domain.LegalDocument{
+			domain.LegalDocumentTypeTerms:   {Id: 1, DocType: domain.LegalDocumentTypeTerms, DocVersion: "v1"},
+			domain.LegalDocumentTypePrivacy: {Id: 2, DocType: domain.LegalDocumentTypePrivacy, DocVersion: "v1"},
+		},
+	}
+	legalAcceptanceRepo := &stubLegalAcceptanceRepository{}
+	service := NewCompanyService(&stubCompanyRepository{id: 5}, &stubAddressRepository{}, inventoryRepo, userRepo, &stubEncrypto{}, emailUsecase, legalDocRepo, legalAcceptanceRepo, &stubCompanyTxManager{tx: tx})
 
 	err := service.Create(context.Background(), request.CreateCompanyRequest{
-		Name:      "Empresa",
-		LegalName: "Empresa Ltda",
-		Cpf:       "390.533.447-05",
-		Cellphone: "11999999999",
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "390.533.447-05",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
 		Address: request.CreateCompanyAddress{
 			Street:       "Rua A",
 			Neighborhood: "Centro",
@@ -191,6 +236,9 @@ func TestCompanyServiceCreateSuccess(t *testing.T) {
 	if inventoryRepo.input.User.Id != userRepo.id || inventoryRepo.input.Type != domain.InventoryTypePrimary {
 		t.Fatalf("expected primary inventory to be created for user %d", userRepo.id)
 	}
+	if len(legalAcceptanceRepo.created) != 2 {
+		t.Fatalf("expected legal acceptances to be created")
+	}
 	if emailUsecase.toEmail != "admin@test.com" || emailUsecase.toName != "Admin" {
 		t.Fatalf("expected welcome email to be triggered")
 	}
@@ -198,15 +246,17 @@ func TestCompanyServiceCreateSuccess(t *testing.T) {
 
 func TestCompanyServiceCreateDuplicate(t *testing.T) {
 	tx, fakeTx := newFakeTransaction()
-	service := NewCompanyService(&stubCompanyRepository{err: fmt.Errorf("duplicate key value violates unique constraint")}, &stubAddressRepository{}, &stubCompanyInventoryRepository{}, &stubCompanyUserRepository{}, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, &stubCompanyTxManager{tx: tx})
+	service := NewCompanyService(&stubCompanyRepository{err: fmt.Errorf("duplicate key value violates unique constraint")}, &stubAddressRepository{}, &stubCompanyInventoryRepository{}, &stubCompanyUserRepository{}, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, &stubLegalDocumentRepository{}, &stubLegalAcceptanceRepository{}, &stubCompanyTxManager{tx: tx})
 
 	err := service.Create(context.Background(), request.CreateCompanyRequest{
-		Name:      "Empresa",
-		LegalName: "Empresa Ltda",
-		Cnpj:      "04.252.011/0001-10",
-		Cellphone: "11999999999",
-		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
-		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cnpj:            "04.252.011/0001-10",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address:         request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:            request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
 	if err == nil || err.Error() != "Empresa j\u00e1 cadastrada" {
@@ -226,16 +276,20 @@ func TestCompanyServiceCreateDuplicateCNPJ(t *testing.T) {
 		&stubCompanyUserRepository{},
 		&stubEncrypto{},
 		&stubWelcomeEmailUseCase{},
+		&stubLegalDocumentRepository{},
+		&stubLegalAcceptanceRepository{},
 		&stubCompanyTxManager{tx: tx},
 	)
 
 	err := service.Create(context.Background(), request.CreateCompanyRequest{
-		Name:      "Empresa",
-		LegalName: "Empresa Ltda",
-		Cnpj:      "04.252.011/0001-10",
-		Cellphone: "11999999999",
-		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
-		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cnpj:            "04.252.011/0001-10",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address:         request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:            request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
 	if err == nil || err.Error() != "CNPJ j\u00e1 cadastrado" {
@@ -255,16 +309,20 @@ func TestCompanyServiceCreateDuplicateCPF(t *testing.T) {
 		&stubCompanyUserRepository{},
 		&stubEncrypto{},
 		&stubWelcomeEmailUseCase{},
+		&stubLegalDocumentRepository{},
+		&stubLegalAcceptanceRepository{},
 		&stubCompanyTxManager{tx: tx},
 	)
 
 	err := service.Create(context.Background(), request.CreateCompanyRequest{
-		Name:      "Empresa",
-		LegalName: "Empresa Ltda",
-		Cpf:       "39053344705",
-		Cellphone: "11999999999",
-		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
-		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "39053344705",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address:         request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:            request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
 	if err == nil || err.Error() != "CPF j\u00e1 cadastrado" {
@@ -278,15 +336,17 @@ func TestCompanyServiceCreateDuplicateCPF(t *testing.T) {
 func TestCompanyServiceCreateUserError(t *testing.T) {
 	tx, fakeTx := newFakeTransaction()
 	userRepo := &stubCompanyUserRepository{err: fmt.Errorf("user error")}
-	service := NewCompanyService(&stubCompanyRepository{id: 2}, &stubAddressRepository{}, &stubCompanyInventoryRepository{}, userRepo, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, &stubCompanyTxManager{tx: tx})
+	service := NewCompanyService(&stubCompanyRepository{id: 2}, &stubAddressRepository{}, &stubCompanyInventoryRepository{}, userRepo, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, &stubLegalDocumentRepository{}, &stubLegalAcceptanceRepository{}, &stubCompanyTxManager{tx: tx})
 
 	err := service.Create(context.Background(), request.CreateCompanyRequest{
-		Name:      "Empresa",
-		LegalName: "Empresa Ltda",
-		Cpf:       "39053344705",
-		Cellphone: "11999999999",
-		Address:   request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
-		User:      request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "39053344705",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address:         request.CreateCompanyAddress{Street: "Rua", Neighborhood: "Centro", Number: "1", City: "Cidade", UF: "SP", Cep: "00000000"},
+		User:            request.CreateCompanyUserRequest{Name: "Admin", Username: "admin", Email: "admin@test.com", Password: "secret123"},
 	})
 
 	if err == nil || err.Error() != "user error" {

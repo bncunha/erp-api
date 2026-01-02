@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -297,6 +299,177 @@ func TestUserServiceForgotPasswordSuccess(t *testing.T) {
 	}
 }
 
+func TestUserServiceAcceptLegalTermsSuccess(t *testing.T) {
+	tx, fakeTx, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	docRepo := &stubAcceptLegalDocumentRepository{
+		documents: map[string]domain.LegalDocument{
+			"TERMS:v1":   {Id: 1, DocType: domain.LegalDocumentTypeTerms, DocVersion: "v1"},
+			"PRIVACY:v2": {Id: 2, DocType: domain.LegalDocumentTypePrivacy, DocVersion: "v2"},
+		},
+	}
+	acceptanceRepo := &stubAcceptLegalAcceptanceRepository{}
+	service := &userService{
+		legalDocumentRepo:   docRepo,
+		legalAcceptanceRepo: acceptanceRepo,
+		txManager:           &stubTxManager{tx: tx},
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(10))
+	err := service.AcceptLegalTerms(ctx, 99, []request.AcceptLegalTermRequest{
+		{DocType: "TERMS", DocVersion: "v1", Accepted: true},
+		{DocType: "PRIVACY", DocVersion: "v2", Accepted: true},
+	})
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if len(acceptanceRepo.created) != 2 {
+		t.Fatalf("expected 2 acceptances, got %d", len(acceptanceRepo.created))
+	}
+	if !fakeTx.committed || fakeTx.rolledBack {
+		t.Fatalf("transaction not committed correctly: %+v", fakeTx)
+	}
+}
+
+func TestUserServiceAcceptLegalTermsValidationError(t *testing.T) {
+	service := &userService{
+		legalDocumentRepo:   &stubAcceptLegalDocumentRepository{},
+		legalAcceptanceRepo: &stubAcceptLegalAcceptanceRepository{},
+		txManager:           &stubTxManager{tx: &sql.Tx{}},
+	}
+
+	err := service.AcceptLegalTerms(context.Background(), 1, nil)
+	if err == nil || err.Error() != "Envie ao menos um termo." {
+		t.Fatalf("expected empty terms error, got %v", err)
+	}
+
+	err = service.AcceptLegalTerms(context.Background(), 1, []request.AcceptLegalTermRequest{
+		{DocType: "TERMS", DocVersion: "v1", Accepted: false},
+	})
+	if err == nil || !strings.Contains(err.Error(), "Accepted") {
+		t.Fatalf("expected accept validation error, got %v", err)
+	}
+}
+
+func TestUserServiceAcceptLegalTermsDuplicate(t *testing.T) {
+	tx, _, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	docRepo := &stubAcceptLegalDocumentRepository{
+		documents: map[string]domain.LegalDocument{
+			"TERMS:v1": {Id: 1, DocType: domain.LegalDocumentTypeTerms, DocVersion: "v1"},
+		},
+	}
+	acceptanceRepo := &stubAcceptLegalAcceptanceRepository{
+		err: errors.New("duplicate key value violates unique constraint"),
+	}
+	service := &userService{
+		legalDocumentRepo:   docRepo,
+		legalAcceptanceRepo: acceptanceRepo,
+		txManager:           &stubTxManager{tx: tx},
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(10))
+	err := service.AcceptLegalTerms(ctx, 1, []request.AcceptLegalTermRequest{
+		{DocType: "TERMS", DocVersion: "v1", Accepted: true},
+	})
+	if err == nil || !strings.Contains(err.Error(), "Termo") {
+		t.Fatalf("expected duplicate error, got %v", err)
+	}
+}
+
+func TestUserServiceAcceptLegalTermsInvalidTenant(t *testing.T) {
+	tx, _, cleanup := newTestSQLTx()
+	defer cleanup()
+
+	service := &userService{
+		legalDocumentRepo:   &stubAcceptLegalDocumentRepository{},
+		legalAcceptanceRepo: &stubAcceptLegalAcceptanceRepository{},
+		txManager:           &stubTxManager{tx: tx},
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, "invalid")
+	err := service.AcceptLegalTerms(ctx, 1, []request.AcceptLegalTermRequest{
+		{DocType: "TERMS", DocVersion: "v1", Accepted: true},
+	})
+	if err == nil || err.Error() != "tenant id invalido" {
+		t.Fatalf("expected tenant error, got %v", err)
+	}
+}
+
+type stubUserLegalDocumentRepository struct {
+	activeByUser []domain.LegalTermStatus
+	err          error
+}
+
+func (s *stubUserLegalDocumentRepository) GetLastActiveByType(ctx context.Context, docType domain.LegalDocumentType) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
+func (s *stubUserLegalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
+func (s *stubUserLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.activeByUser, nil
+}
+
+type stubUserLegalAcceptanceRepository struct{}
+
+func (s *stubUserLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
+	return 1, nil
+}
+
+type stubUserTxManager struct {
+	tx  *sql.Tx
+	err error
+}
+
+func (s *stubUserTxManager) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return s.tx, s.err
+}
+
+type stubAcceptLegalDocumentRepository struct {
+	documents map[string]domain.LegalDocument
+	err       error
+}
+
+func (s *stubAcceptLegalDocumentRepository) GetLastActiveByType(ctx context.Context, docType domain.LegalDocumentType) (domain.LegalDocument, error) {
+	return domain.LegalDocument{}, nil
+}
+
+func (s *stubAcceptLegalDocumentRepository) GetByTypeAndVersion(ctx context.Context, docType domain.LegalDocumentType, version string) (domain.LegalDocument, error) {
+	if s.err != nil {
+		return domain.LegalDocument{}, s.err
+	}
+	key := string(docType) + ":" + version
+	if doc, ok := s.documents[key]; ok {
+		return doc, nil
+	}
+	return domain.LegalDocument{}, errors.New("document not found")
+}
+
+func (s *stubAcceptLegalDocumentRepository) GetActiveByUser(ctx context.Context, userId int64) ([]domain.LegalTermStatus, error) {
+	return nil, nil
+}
+
+type stubAcceptLegalAcceptanceRepository struct {
+	err     error
+	created []domain.LegalAcceptance
+}
+
+func (s *stubAcceptLegalAcceptanceRepository) CreateWithTx(ctx context.Context, tx *sql.Tx, acceptance domain.LegalAcceptance) (int64, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	s.created = append(s.created, acceptance)
+	return int64(len(s.created)), nil
+}
+
 func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInventoryRepository) (*userService, *stubUserTokenService, *stubEmailUseCase, *stubUserTokenRepository) {
 	if userRepo == nil {
 		userRepo = &stubUserRepository{}
@@ -307,6 +480,8 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 	userTokenService := &stubUserTokenService{output: domain.UserToken{Code: "code", Uuid: "uuid"}}
 	emailUsecase := &stubEmailUseCase{}
 	userTokenRepository := &stubUserTokenRepository{}
+	legalDocumentRepo := &stubUserLegalDocumentRepository{}
+	legalAcceptanceRepo := &stubUserLegalAcceptanceRepository{}
 	service := &userService{
 		userRepository:      userRepo,
 		inventoryRepository: inventoryRepo,
@@ -314,6 +489,9 @@ func newUserServiceTest(userRepo *stubUserRepository, inventoryRepo *stubInvento
 		userTokenService:    userTokenService,
 		emailUsecase:        emailUsecase,
 		userTokenRepository: userTokenRepository,
+		legalDocumentRepo:   legalDocumentRepo,
+		legalAcceptanceRepo: legalAcceptanceRepo,
+		txManager:           &stubUserTxManager{},
 	}
 	return service, userTokenService, emailUsecase, userTokenRepository
 }

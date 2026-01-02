@@ -7,13 +7,15 @@ import (
 )
 
 type CreateCompanyRequest struct {
-	Name      string                   `json:"name" validate:"required,max=255"`
-	LegalName string                   `json:"legal_name" validate:"required,max=255"`
-	Cnpj      string                   `json:"cnpj" validate:"omitempty,max=20"`
-	Cpf       string                   `json:"cpf" validate:"omitempty,max=14"`
-	Cellphone string                   `json:"cellphone" validate:"required,max=20"`
-	Address   CreateCompanyAddress     `json:"address" validate:"required"`
-	User      CreateCompanyUserRequest `json:"user" validate:"required"`
+	Name            string                   `json:"name" validate:"required,max=255"`
+	LegalName       string                   `json:"legal_name" validate:"required,max=255"`
+	Cnpj            string                   `json:"cnpj" validate:"omitempty,max=20"`
+	Cpf             string                   `json:"cpf" validate:"omitempty,max=14"`
+	Cellphone       string                   `json:"cellphone" validate:"required,max=20"`
+	AcceptedTerms   bool                     `json:"accepted_terms"`
+	AcceptedPrivacy bool                     `json:"accepted_privacy"`
+	Address         CreateCompanyAddress     `json:"address" validate:"required"`
+	User            CreateCompanyUserRequest `json:"user" validate:"required"`
 }
 
 type CreateCompanyAddress struct {
@@ -56,6 +58,10 @@ func (r *CreateCompanyRequest) Validate() error {
 			return errors.New("CPF inválido")
 		}
 		r.Cpf = helper.SanitizeDocument(r.Cpf)
+	}
+
+	if !r.AcceptedTerms || !r.AcceptedPrivacy {
+		return errors.New("Os termos e a politica de privacidade são obrigatórios.")
 	}
 
 	return nil
