@@ -118,7 +118,7 @@ func (r *router) setupPrivateRoutes() {
 	customerGroup.PUT("/:id", r.controller.CustomerController.Edit, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	customerGroup.DELETE("/:id", r.controller.CustomerController.Inactivate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 
-	dashboardGroup := private.Group("/api/dashboard")
+	dashboardGroup := private.Group("/dashboard")
 	dashboardGroup.GET("/widgets", r.controller.DashboardController.GetWidgets)
 	dashboardGroup.POST("/widgets/data", r.controller.DashboardController.GetWidgetData)
 }
