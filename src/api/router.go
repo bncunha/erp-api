@@ -34,7 +34,7 @@ func (r *router) SetupCors(env string) {
 		}))
 	} else {
 		r.echo.Use(_middleware.CORSWithConfig(_middleware.CORSConfig{
-			AllowOrigins: []string{"https://erp-front-production.onrender.com", "https://trinus.app"},
+			AllowOrigins: []string{"https://erp-front-production.onrender.com", "https://trinus.app", "https://erp.trinus.app"},
 			AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
 		}))
 	}
