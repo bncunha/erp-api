@@ -158,6 +158,47 @@ func TestUserServiceGetAllError(t *testing.T) {
 	}
 }
 
+func TestUserServiceGetActiveLegalTermsSuccess(t *testing.T) {
+	legalRepo := &stubUserLegalDocumentRepository{
+		activeByUser: []domain.LegalTermStatus{
+			{DocType: domain.LegalDocumentTypeTerms, DocVersion: "v1", Accepted: true},
+		},
+	}
+	service := &userService{legalDocumentRepo: legalRepo}
+
+	terms, err := service.GetActiveLegalTerms(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(terms) != 1 || terms[0].DocVersion != "v1" {
+		t.Fatalf("unexpected legal terms: %+v", terms)
+	}
+}
+
+func TestUserServiceGetActiveLegalTermsNotConfigured(t *testing.T) {
+	service := &userService{}
+	if _, err := service.GetActiveLegalTerms(context.Background(), 5); err == nil {
+		t.Fatalf("expected not configured error")
+	}
+}
+
+func TestNormalizePhone(t *testing.T) {
+	if normalizePhone(nil) != nil {
+		t.Fatalf("expected nil phone to stay nil")
+	}
+
+	empty := "   "
+	if normalizePhone(&empty) != nil {
+		t.Fatalf("expected empty phone to return nil")
+	}
+
+	value := "  11999998888 "
+	normalized := normalizePhone(&value)
+	if normalized == nil || *normalized != "11999998888" {
+		t.Fatalf("unexpected normalized phone: %v", normalized)
+	}
+}
+
 func TestUserServiceInactivate(t *testing.T) {
 	userRepo := &stubUserRepository{}
 	service, _, _, _ := newUserServiceTest(userRepo, &stubInventoryRepository{})

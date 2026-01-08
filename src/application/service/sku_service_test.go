@@ -7,6 +7,7 @@ import (
 
 	request "github.com/bncunha/erp-api/src/api/requests"
 	"github.com/bncunha/erp-api/src/application/constants"
+	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
 )
 
@@ -295,5 +296,51 @@ func TestSkuServiceCreateRollsBackOnInventoryError(t *testing.T) {
 	}
 	if fakeTx.committed {
 		t.Fatalf("did not expect commit on failure")
+	}
+}
+
+func TestSkuServiceGetInventory(t *testing.T) {
+	skuRepo := &stubSkuRepository{getById: domain.Sku{Id: 3}}
+	itemRepo := &stubInventoryItemRepository{getBySku: []output.GetSkuInventoryOutput{{InventoryId: 3}}}
+	service := &skuService{skuRepository: skuRepo, inventoryItemRepository: itemRepo}
+
+	items, err := service.GetInventory(context.Background(), 3)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 || items[0].InventoryId != 3 {
+		t.Fatalf("expected inventory items")
+	}
+}
+
+func TestSkuServiceGetInventorySkuNotFound(t *testing.T) {
+	skuRepo := &stubSkuRepository{getByIdErr: errors.New("not found")}
+	service := &skuService{skuRepository: skuRepo, inventoryItemRepository: &stubInventoryItemRepository{}}
+
+	if _, err := service.GetInventory(context.Background(), 3); err == nil {
+		t.Fatalf("expected sku lookup error")
+	}
+}
+
+func TestSkuServiceGetTransactions(t *testing.T) {
+	skuRepo := &stubSkuRepository{getById: domain.Sku{Id: 5}}
+	trxRepo := &stubInventoryTransactionRepository{getBySkuId: []output.GetInventoryTransactionsOutput{{Id: 7}}}
+	service := &skuService{skuRepository: skuRepo, inventoryTransactionRepository: trxRepo}
+
+	items, err := service.GetTransactions(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 1 || items[0].Id != 7 {
+		t.Fatalf("expected transaction items")
+	}
+}
+
+func TestSkuServiceGetTransactionsSkuNotFound(t *testing.T) {
+	skuRepo := &stubSkuRepository{getByIdErr: errors.New("not found")}
+	service := &skuService{skuRepository: skuRepo, inventoryTransactionRepository: &stubInventoryTransactionRepository{}}
+
+	if _, err := service.GetTransactions(context.Background(), 5); err == nil {
+		t.Fatalf("expected sku lookup error")
 	}
 }

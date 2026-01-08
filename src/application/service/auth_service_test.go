@@ -60,3 +60,18 @@ func TestAuthServiceLoginTokenGenerationError(t *testing.T) {
 		t.Fatalf("expected token generation error")
 	}
 }
+
+func TestAuthServiceLoginBcryptPassword(t *testing.T) {
+	userRepo := &stubUserRepository{
+		getByUsername: domain.User{Username: "user", Password: "$2a$1234567890123456789012", Name: "User", TenantId: 1},
+	}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{compareResp: true}}
+
+	output, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if output.Token == "" {
+		t.Fatalf("expected token to be generated")
+	}
+}

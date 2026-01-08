@@ -136,6 +136,11 @@ func ctxWithRole(role domain.Role) context.Context {
 	return context.WithValue(context.Background(), constants.ROLE_KEY, string(role))
 }
 
+func ctxWithRoleAndUser(role domain.Role, userId int64) context.Context {
+	ctx := ctxWithRole(role)
+	return context.WithValue(ctx, constants.USERID_KEY, float64(userId))
+}
+
 func TestDashboardServiceListWidgetsByRole(t *testing.T) {
 	service := newDashboardService(&stubDashboardRepository{}, &stubUserRepository{})
 
@@ -293,7 +298,7 @@ func TestDashboardServiceGetWidgetDataMeusProdutosMaisVendidos(t *testing.T) {
 	}
 	service := newDashboardService(repo, &stubUserRepository{})
 
-	resp, err := service.GetWidgetData(ctxWithRole(domain.UserRoleReseller), newDashboardRequest(domain.DashboardWidgetMeusProdutosMaisVendidos))
+	resp, err := service.GetWidgetData(ctxWithRoleAndUser(domain.UserRoleReseller, 7), newDashboardRequest(domain.DashboardWidgetMeusProdutosMaisVendidos))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -314,7 +319,7 @@ func TestDashboardServiceGetWidgetDataMinhasVendasNoTempo(t *testing.T) {
 	}
 	service := newDashboardService(repo, &stubUserRepository{})
 
-	resp, err := service.GetWidgetData(ctxWithRole(domain.UserRoleReseller), newDashboardRequest(domain.DashboardWidgetMinhasVendasNoTempo))
+	resp, err := service.GetWidgetData(ctxWithRoleAndUser(domain.UserRoleReseller, 7), newDashboardRequest(domain.DashboardWidgetMinhasVendasNoTempo))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -387,5 +392,110 @@ func TestDashboardServiceAdminResellerValidation(t *testing.T) {
 	}
 	if !errors.Is(err, ErrDashboardResellerNotFound) {
 		t.Fatalf("expected ErrDashboardResellerNotFound")
+	}
+}
+
+func TestDashboardServiceParsePeriodInvalid(t *testing.T) {
+	service := newDashboardService(&stubDashboardRepository{}, &stubUserRepository{})
+
+	if _, err := service.(*dashboardService).parsePeriod(request.DashboardWidgetPeriodRequest{From: "invalid", To: "2026-01-01"}); err == nil {
+		t.Fatalf("expected invalid period error")
+	}
+}
+
+func TestDashboardServiceResolveResellerFilterAdminValid(t *testing.T) {
+	userRepo := &stubUserRepository{
+		getByIdResponses: map[int64]domain.User{12: {Id: 12, Role: string(domain.UserRoleReseller)}},
+	}
+	service := newDashboardService(&stubDashboardRepository{}, userRepo)
+	resellerId := int64(12)
+
+	id, err := service.(*dashboardService).resolveResellerFilter(ctxWithRole(domain.UserRoleAdmin), string(domain.UserRoleAdmin), &request.DashboardWidgetFiltersRequest{ResellerId: &resellerId})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if id == nil || *id != 12 {
+		t.Fatalf("expected reseller id 12")
+	}
+}
+
+func TestDashboardServiceResolveResellerFilterResellerMissingUser(t *testing.T) {
+	service := newDashboardService(&stubDashboardRepository{}, &stubUserRepository{})
+
+	_, err := service.(*dashboardService).resolveResellerFilter(ctxWithRole(domain.UserRoleReseller), string(domain.UserRoleReseller), nil)
+	if err == nil {
+		t.Fatalf("expected permission error")
+	}
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied")
+	}
+}
+
+func TestDashboardServiceHandleMinhasVendas(t *testing.T) {
+	repo := &stubDashboardRepository{
+		salesCountResponses: []int64{12, 6},
+	}
+	service := newDashboardService(repo, &stubUserRepository{}).(*dashboardService)
+	period, _ := service.parsePeriod(request.DashboardWidgetPeriodRequest{From: "2026-01-01", To: "2026-01-31"})
+	resellerId := int64(3)
+
+	resp, err := service.handleMinhasVendas(context.Background(), widgetInput{Period: period, ResellerId: &resellerId})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, ok := resp.Data.(output.DashboardCardData)
+	if !ok {
+		t.Fatalf("expected card data")
+	}
+	if data.Value != 12 || data.PreviousValue != 6 || data.DeltaPercent != 100 {
+		t.Fatalf("unexpected card data: %+v", data)
+	}
+}
+
+func TestDashboardServiceHandleMinhasVendasNoTempo(t *testing.T) {
+	repo := &stubDashboardRepository{
+		salesCountByDay: []domain.DashboardTimeSeriesItem{
+			{Date: time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC), Value: 2},
+			{Date: time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC), Value: 4},
+		},
+	}
+	service := newDashboardService(repo, &stubUserRepository{}).(*dashboardService)
+	period, _ := service.parsePeriod(request.DashboardWidgetPeriodRequest{From: "2026-01-01", To: "2026-01-31"})
+	resellerId := int64(3)
+
+	resp, err := service.handleMinhasVendasNoTempo(context.Background(), widgetInput{Period: period, ResellerId: &resellerId})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, ok := resp.Data.(output.DashboardLineBarData)
+	if !ok {
+		t.Fatalf("expected line data")
+	}
+	if len(data.Labels) != 2 || data.Series[0].Values[1] != 4 {
+		t.Fatalf("unexpected line data: %+v", data)
+	}
+}
+
+func TestDashboardServiceHandleMeusProdutosMaisVendidos(t *testing.T) {
+	repo := &stubDashboardRepository{
+		topProducts: []domain.DashboardProductSalesItem{
+			{ProductName: "Camisa", Quantity: 7},
+			{ProductName: "Calca", Quantity: 2},
+		},
+	}
+	service := newDashboardService(repo, &stubUserRepository{}).(*dashboardService)
+	period, _ := service.parsePeriod(request.DashboardWidgetPeriodRequest{From: "2026-01-01", To: "2026-01-31"})
+	resellerId := int64(3)
+
+	resp, err := service.handleMeusProdutosMaisVendidos(context.Background(), widgetInput{Period: period, ResellerId: &resellerId})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, ok := resp.Data.(output.DashboardLineBarData)
+	if !ok {
+		t.Fatalf("expected bar data")
+	}
+	if len(data.Labels) != 2 || data.Series[0].Values[0] != 7 {
+		t.Fatalf("unexpected bar data: %+v", data)
 	}
 }
