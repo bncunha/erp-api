@@ -414,7 +414,7 @@ func (s *dashboardService) handleEstoqueBaixo(ctx context.Context, input widgetI
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetEstoqueBaixo,
 		Type: domain.DashboardWidgetTypeTable,
-		Meta: s.buildMeta("Estoque baixo", input.Period, "", true),
+		Meta: s.buildMeta("Estoque baixo", input.Period, "", false),
 		Data: data,
 	}, nil
 }
