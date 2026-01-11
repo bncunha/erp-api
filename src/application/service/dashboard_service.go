@@ -133,7 +133,7 @@ func (s *dashboardService) widgetDefinitions() []widgetDefinition {
 		{
 			Enum:        domain.DashboardWidgetFaturamento,
 			Type:        domain.DashboardWidgetTypeCard,
-			Order:       1,
+			Order:       3,
 			Title:       "Faturamento",
 			Description: "Total vendido no período",
 			Roles:       []domain.Role{domain.UserRoleAdmin},
@@ -151,7 +151,7 @@ func (s *dashboardService) widgetDefinitions() []widgetDefinition {
 		{
 			Enum:        domain.DashboardWidgetProdutosEmEstoque,
 			Type:        domain.DashboardWidgetTypeCard,
-			Order:       3,
+			Order:       1,
 			Title:       "Produtos em estoque",
 			Description: "Quantidade total em estoque",
 			Roles:       []domain.Role{domain.UserRoleAdmin},
@@ -169,7 +169,7 @@ func (s *dashboardService) widgetDefinitions() []widgetDefinition {
 		{
 			Enum:        domain.DashboardWidgetFaturamentoNoTempo,
 			Type:        domain.DashboardWidgetTypeLine,
-			Order:       5,
+			Order:       3,
 			Title:       "Faturamento no tempo",
 			Description: "Evolução diária do faturamento",
 			Roles:       []domain.Role{domain.UserRoleAdmin},
@@ -381,7 +381,7 @@ func (s *dashboardService) handleProdutosEmEstoque(ctx context.Context, input wi
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetProdutosEmEstoque,
 		Type: domain.DashboardWidgetTypeCard,
-		Meta: s.buildMeta("Produtos em estoque", input.Period, ""),
+		Meta: s.buildMeta("Produtos em estoque", input.Period, "", false),
 		Data: data,
 	}, nil
 }
@@ -414,7 +414,7 @@ func (s *dashboardService) handleEstoqueBaixo(ctx context.Context, input widgetI
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetEstoqueBaixo,
 		Type: domain.DashboardWidgetTypeTable,
-		Meta: s.buildMeta("Estoque baixo", input.Period, ""),
+		Meta: s.buildMeta("Estoque baixo", input.Period, "", true),
 		Data: data,
 	}, nil
 }
@@ -447,7 +447,7 @@ func (s *dashboardService) handleFaturamentoNoTempo(ctx context.Context, input w
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetFaturamentoNoTempo,
 		Type: domain.DashboardWidgetTypeLine,
-		Meta: s.buildMeta("Faturamento no tempo", input.Period, "BRL"),
+		Meta: s.buildMeta("Faturamento no tempo", input.Period, "BRL", true),
 		Data: data,
 	}, nil
 }
@@ -480,7 +480,7 @@ func (s *dashboardService) handleMinhasVendasNoTempo(ctx context.Context, input 
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetMinhasVendasNoTempo,
 		Type: domain.DashboardWidgetTypeLine,
-		Meta: s.buildMeta("Minhas vendas no tempo", input.Period, ""),
+		Meta: s.buildMeta("Minhas vendas no tempo", input.Period, "", true),
 		Data: data,
 	}, nil
 }
@@ -513,7 +513,7 @@ func (s *dashboardService) handleVendasPorRevendedor(ctx context.Context, input 
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetVendasPorRevendedor,
 		Type: domain.DashboardWidgetTypeBar,
-		Meta: s.buildMeta("Vendas por revendedor", input.Period, "BRL"),
+		Meta: s.buildMeta("Vendas por revendedor", input.Period, "BRL", true),
 		Data: data,
 	}, nil
 }
@@ -546,7 +546,7 @@ func (s *dashboardService) handleMeusProdutosMaisVendidos(ctx context.Context, i
 	return output.DashboardWidgetDataOutput{
 		Enum: domain.DashboardWidgetMeusProdutosMaisVendidos,
 		Type: domain.DashboardWidgetTypeBar,
-		Meta: s.buildMeta("Meus produtos mais vendidos", input.Period, ""),
+		Meta: s.buildMeta("Meus produtos mais vendidos", input.Period, "", true),
 		Data: data,
 	}, nil
 }
@@ -580,9 +580,10 @@ func (s *dashboardService) previousPeriod(period widgetPeriod) (time.Time, time.
 	return prevFrom, prevTo
 }
 
-func (s *dashboardService) buildMeta(title string, period widgetPeriod, currency string) output.DashboardWidgetMeta {
+func (s *dashboardService) buildMeta(title string, period widgetPeriod, currency string, showPeriod bool) output.DashboardWidgetMeta {
 	return output.DashboardWidgetMeta{
-		Title: title,
+		Title:      title,
+		ShowPeriod: showPeriod,
 		Period: output.DashboardWidgetPeriod{
 			From: period.FromLabel,
 			To:   period.ToLabel,
@@ -607,7 +608,7 @@ func (s *dashboardService) buildCardResponse(enum domain.DashboardWidgetEnum, wi
 	return output.DashboardWidgetDataOutput{
 		Enum: enum,
 		Type: widgetType,
-		Meta: s.buildMeta(title, period, unit),
+		Meta: s.buildMeta(title, period, unit, true),
 		Data: data,
 	}
 }

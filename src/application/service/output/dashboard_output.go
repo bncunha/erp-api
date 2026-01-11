@@ -23,9 +23,10 @@ type DashboardWidgetPeriod struct {
 }
 
 type DashboardWidgetMeta struct {
-	Title    string                `json:"title"`
-	Period   DashboardWidgetPeriod `json:"period"`
-	Currency string                `json:"currency,omitempty"`
+	Title      string                `json:"title"`
+	Period     DashboardWidgetPeriod `json:"period"`
+	ShowPeriod bool                  `json:"show_period"`
+	Currency   string                `json:"currency,omitempty"`
 }
 
 type DashboardWidgetDataOutput struct {
