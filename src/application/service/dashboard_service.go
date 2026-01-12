@@ -169,7 +169,7 @@ func (s *dashboardService) widgetDefinitions() []widgetDefinition {
 		{
 			Enum:        domain.DashboardWidgetFaturamentoNoTempo,
 			Type:        domain.DashboardWidgetTypeLine,
-			Order:       3,
+			Order:       5,
 			Title:       "Faturamento no tempo",
 			Description: "Evolução diária do faturamento",
 			Roles:       []domain.Role{domain.UserRoleAdmin},
@@ -305,7 +305,7 @@ func (s *dashboardService) handleFaturamento(ctx context.Context, input widgetIn
 		return output.DashboardWidgetDataOutput{}, err
 	}
 
-	return s.buildCardResponse(domain.DashboardWidgetFaturamento, domain.DashboardWidgetTypeCard, "Faturamento do mês", input.Period, current, previous, "BRL"), nil
+	return s.buildCardResponse(domain.DashboardWidgetFaturamento, domain.DashboardWidgetTypeCard, "Faturamento", input.Period, current, previous, "BRL"), nil
 }
 
 func (s *dashboardService) handleMeuFaturamento(ctx context.Context, input widgetInput) (output.DashboardWidgetDataOutput, error) {
@@ -388,8 +388,8 @@ func (s *dashboardService) handleProdutosEmEstoque(ctx context.Context, input wi
 
 func (s *dashboardService) handleEstoqueBaixo(ctx context.Context, input widgetInput) (output.DashboardWidgetDataOutput, error) {
 	items, err := s.dashboardRepository.GetLowStockProducts(ctx, domain.DashboardStockQueryInput{
-		ResellerId: input.ResellerId,
-		Threshold:  defaultLowStockThreshold,
+		// ResellerId: input.ResellerId,
+		Threshold: defaultLowStockThreshold,
 	})
 	if err != nil {
 		return output.DashboardWidgetDataOutput{}, err
