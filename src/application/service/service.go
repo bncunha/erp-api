@@ -17,6 +17,7 @@ type ApplicationService struct {
 	CustomerService  CustomerService
 	CompanyService   CompanyService
 	UserTokenService UserTokenService
+	DashboardService DashboardService
 	repositories     *repository.Repository
 	useCases         *usecase.ApplicationUseCase
 	ports            *ports.Ports
@@ -44,4 +45,5 @@ func (s *ApplicationService) SetupServices() {
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
 	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
 	s.CompanyService = NewCompanyService(s.repositories.CompanyRepository, s.repositories.AddressRepository, s.repositories.InventoryRepository, s.repositories.UserRepository, s.ports.Encrypto, s.useCases.EmailUseCase, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
+	s.DashboardService = NewDashboardService(s.repositories.DashboardRepository, s.repositories.UserRepository)
 }

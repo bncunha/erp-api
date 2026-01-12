@@ -23,6 +23,7 @@ type Repository struct {
 	AddressRepository              domain.AddressRepository
 	LegalDocumentRepository        domain.LegalDocumentRepository
 	LegalAcceptanceRepository      domain.LegalAcceptanceRepository
+	DashboardRepository            domain.DashboardRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -44,6 +45,7 @@ func (r *Repository) SetupRepositories() {
 	r.AddressRepository = NewAddressRepository(r.db)
 	r.LegalDocumentRepository = NewLegalDocumentRepository(r.db)
 	r.LegalAcceptanceRepository = NewLegalAcceptanceRepository(r.db)
+	r.DashboardRepository = NewDashboardRepository(r.db)
 }
 
 func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {
