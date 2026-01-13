@@ -185,6 +185,15 @@ func (s *dashboardService) widgetDefinitions() []widgetDefinition {
 			Handler:     s.handleVendasPorRevendedor,
 		},
 		{
+			Enum:        domain.DashboardWidgetProdutosMaisVendidos,
+			Type:        domain.DashboardWidgetTypeBar,
+			Order:       7,
+			Title:       "Produtos mais vendidos",
+			Description: "Top produtos por quantidade vendida no período",
+			Roles:       []domain.Role{domain.UserRoleAdmin},
+			Handler:     s.handleProdutosMaisVendidos,
+		},
+		{
 			Enum:        domain.DashboardWidgetMeuFaturamento,
 			Type:        domain.DashboardWidgetTypeCard,
 			Order:       1,
@@ -547,6 +556,39 @@ func (s *dashboardService) handleMeusProdutosMaisVendidos(ctx context.Context, i
 		Enum: domain.DashboardWidgetMeusProdutosMaisVendidos,
 		Type: domain.DashboardWidgetTypeBar,
 		Meta: s.buildMeta("Meus produtos mais vendidos", input.Period, "", true),
+		Data: data,
+	}, nil
+}
+
+func (s *dashboardService) handleProdutosMaisVendidos(ctx context.Context, input widgetInput) (output.DashboardWidgetDataOutput, error) {
+	items, err := s.dashboardRepository.GetTopProductsByReseller(ctx, domain.DashboardQueryInput{
+		From:       input.Period.From,
+		To:         input.Period.To,
+		ResellerId: input.ResellerId,
+		ProductId:  input.ProductId,
+	}, maxTopProducts)
+	if err != nil {
+		return output.DashboardWidgetDataOutput{}, err
+	}
+
+	labels := make([]string, 0, len(items))
+	values := make([]float64, 0, len(items))
+	for _, item := range items {
+		labels = append(labels, item.ProductName)
+		values = append(values, item.Quantity)
+	}
+
+	data := output.DashboardLineBarData{
+		Labels: labels,
+		Series: []output.DashboardSeries{
+			{Name: "Quantidade", Values: values},
+		},
+	}
+
+	return output.DashboardWidgetDataOutput{
+		Enum: domain.DashboardWidgetProdutosMaisVendidos,
+		Type: domain.DashboardWidgetTypeBar,
+		Meta: s.buildMeta("Produtos mais vendidos", input.Period, "", true),
 		Data: data,
 	}, nil
 }

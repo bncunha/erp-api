@@ -148,8 +148,8 @@ func TestDashboardServiceListWidgetsByRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(adminItems) != 6 {
-		t.Fatalf("expected 6 admin widgets, got %d", len(adminItems))
+	if len(adminItems) != 7 {
+		t.Fatalf("expected 7 admin widgets, got %d", len(adminItems))
 	}
 
 	resellerItems, err := service.ListWidgets(ctxWithRole(domain.UserRoleReseller))
@@ -287,6 +287,28 @@ func TestDashboardServiceGetWidgetDataVendasPorRevendedor(t *testing.T) {
 	}
 	if len(data.Labels) != 2 || data.Series[0].Values[0] != 100 {
 		t.Fatalf("unexpected bar data: %+v", data)
+	}
+}
+
+func TestDashboardServiceGetWidgetDataProdutosMaisVendidos(t *testing.T) {
+	repo := &stubDashboardRepository{
+		topProducts: []domain.DashboardProductSalesItem{
+			{ProductName: "Camisa", Quantity: 5},
+			{ProductName: "Calca", Quantity: 2},
+		},
+	}
+	service := newDashboardService(repo, &stubUserRepository{})
+
+	resp, err := service.GetWidgetData(ctxWithRole(domain.UserRoleAdmin), newDashboardRequest(domain.DashboardWidgetProdutosMaisVendidos))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, ok := resp.Data.(output.DashboardLineBarData)
+	if !ok {
+		t.Fatalf("expected bar data")
+	}
+	if len(data.Labels) != 2 || data.Series[0].Values[0] != 5 || repo.topProductsLimit != 10 {
+		t.Fatalf("unexpected bar data or limit: %+v", data)
 	}
 }
 

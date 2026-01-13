@@ -9,6 +9,7 @@ const (
 	DashboardWidgetEstoqueBaixo             DashboardWidgetEnum = "ESTOQUE_BAIXO"
 	DashboardWidgetFaturamentoNoTempo       DashboardWidgetEnum = "FATURAMENTO_NO_TEMPO"
 	DashboardWidgetVendasPorRevendedor      DashboardWidgetEnum = "VENDAS_POR_REVENDEDOR"
+	DashboardWidgetProdutosMaisVendidos     DashboardWidgetEnum = "PRODUTOS_MAIS_VENDIDOS"
 	DashboardWidgetMeuFaturamento           DashboardWidgetEnum = "MEU_FATURAMENTO"
 	DashboardWidgetMinhasVendas             DashboardWidgetEnum = "MINHAS_VENDAS"
 	DashboardWidgetMinhasVendasNoTempo      DashboardWidgetEnum = "MINHAS_VENDAS_NO_TEMPO"
