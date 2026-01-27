@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	request "github.com/bncunha/erp-api/src/api/requests"
+	"github.com/bncunha/erp-api/src/application/constants"
 	helper "github.com/bncunha/erp-api/src/application/helpers"
 	"github.com/bncunha/erp-api/src/application/service/output"
 	"github.com/bncunha/erp-api/src/domain"
@@ -19,14 +20,16 @@ type AuthService interface {
 type authService struct {
 	userRepository domain.UserRepository
 	encrypt        domain.Encrypto
-	generateToken  func(username string, tenantID int64, role string, userID int64) (string, error)
+	generateToken  func(username string, tenantID int64, role string, userID int64, billing helper.BillingClaims) (string, error)
+	billingService BillingService
 }
 
-func NewAuthService(userRepository domain.UserRepository, encrypt domain.Encrypto) AuthService {
+func NewAuthService(userRepository domain.UserRepository, encrypt domain.Encrypto, billingService BillingService) AuthService {
 	return &authService{
 		userRepository: userRepository,
-		generateToken:  helper.GenerateJWT,
+		generateToken:  helper.GenerateJWTWithBilling,
 		encrypt:        encrypt,
+		billingService: billingService,
 	}
 }
 
@@ -63,10 +66,22 @@ func (s *authService) Login(ctx context.Context, input request.LoginRequest) (ou
 
 	tokenFn := s.generateToken
 	if tokenFn == nil {
-		tokenFn = helper.GenerateJWT
+		tokenFn = helper.GenerateJWTWithBilling
 	}
 
-	token, err := tokenFn(user.Username, user.TenantId, user.Role, user.Id)
+	if s.billingService == nil {
+		return out, errors.New("billing service not configured")
+	}
+
+	ctxWithTenant := context.WithValue(ctx, constants.TENANT_KEY, user.TenantId)
+	status, err := s.billingService.GetStatus(ctxWithTenant)
+	if err != nil {
+		return out, err
+	}
+
+	token, err := tokenFn(user.Username, user.TenantId, user.Role, user.Id, helper.BillingClaims{
+		CanWrite: status.CanWrite,
+	})
 	if err != nil {
 		return out, err
 	}

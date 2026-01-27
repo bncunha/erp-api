@@ -18,6 +18,7 @@ type ApplicationService struct {
 	CompanyService   CompanyService
 	UserTokenService UserTokenService
 	DashboardService DashboardService
+	BillingService   BillingService
 	repositories     *repository.Repository
 	useCases         *usecase.ApplicationUseCase
 	ports            *ports.Ports
@@ -39,7 +40,8 @@ func (s *ApplicationService) SetupServices() {
 		s.repositories,
 	)
 	s.CategoryService = NewCategoryService(s.repositories.CategoryRepository)
-	s.AuthService = NewAuthService(s.repositories.UserRepository, s.ports.Encrypto)
+	s.BillingService = NewBillingService(s.repositories.PlanRepository, s.repositories.SubscriptionRepository, s.repositories.BillingPaymentRepository, s.repositories)
+	s.AuthService = NewAuthService(s.repositories.UserRepository, s.ports.Encrypto, s.BillingService)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository, s.ports.Encrypto, s.UserTokenService, s.useCases.EmailUseCase, s.repositories.UserTokenRepository, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)

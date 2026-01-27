@@ -62,6 +62,7 @@ func (r *router) setupPrivateRoutes() {
 	private := r.echo.Group("")
 
 	private.Use(middleware.AuthMiddleware)
+	private.Use(middleware.BillingWriteGuard())
 
 	productGroup := private.Group("/products")
 	productGroup.POST("", r.controller.ProductController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
@@ -121,6 +122,11 @@ func (r *router) setupPrivateRoutes() {
 	dashboardGroup := private.Group("/dashboard")
 	dashboardGroup.GET("/widgets", r.controller.DashboardController.GetWidgets)
 	dashboardGroup.POST("/widgets/data", r.controller.DashboardController.GetWidgetData)
+
+	billingGroup := private.Group("/billing")
+	billingGroup.GET("", r.controller.BillingController.Summary, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	billingGroup.GET("/status", r.controller.BillingController.Status)
+	billingGroup.GET("/payments", r.controller.BillingController.Payments, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 }
 
 func (r *router) Start() {
