@@ -5,10 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bncunha/erp-api/src/api/responses"
+	response "github.com/bncunha/erp-api/src/api/responses"
 	"github.com/bncunha/erp-api/src/application/constants"
 	"github.com/labstack/echo/v4"
 )
+
+var ENABLE_ROUTES = []string{"/billing", "/dashboard"}
 
 func BillingWriteGuard() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -19,8 +21,10 @@ func BillingWriteGuard() echo.MiddlewareFunc {
 			}
 
 			path := ctx.Request().URL.Path
-			if strings.HasPrefix(path, "/billing") {
-				return next(ctx)
+			for _, route := range ENABLE_ROUTES {
+				if strings.HasPrefix(path, route) {
+					return next(ctx)
+				}
 			}
 
 			canWriteValue := ctx.Request().Context().Value(constants.BILLING_CAN_WRITE_KEY)
