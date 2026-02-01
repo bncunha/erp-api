@@ -24,6 +24,32 @@ func TestGetRole(t *testing.T) {
 	}
 }
 
+func TestGetTenantId(t *testing.T) {
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(42))
+	tenantID, err := GetTenantId(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tenantID != 42 {
+		t.Fatalf("expected tenant id 42, got %d", tenantID)
+	}
+
+	ctx = context.WithValue(context.Background(), constants.TENANT_KEY, float64(55))
+	tenantID, err = GetTenantId(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tenantID != 55 {
+		t.Fatalf("expected tenant id 55, got %d", tenantID)
+	}
+
+	ctx = context.WithValue(context.Background(), constants.TENANT_KEY, "invalid")
+	_, err = GetTenantId(ctx)
+	if err == nil {
+		t.Fatalf("expected error for invalid tenant id")
+	}
+}
+
 func TestParseFloat(t *testing.T) {
 	value, err := ParseFloat("12.50")
 	if err != nil {

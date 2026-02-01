@@ -79,6 +79,72 @@ func TestAuthServiceLoginBcryptPassword(t *testing.T) {
 	}
 }
 
+func TestAuthServiceLoginBcryptPasswordMismatch(t *testing.T) {
+	userRepo := &stubUserRepository{
+		getByUsername: domain.User{Username: "user", Password: "$2a$1234567890123456789012", Name: "User", TenantId: 1},
+	}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{compareResp: false}, billingService: stubBillingService{}}
+
+	_, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err == nil || err.Error() != "senha incorreta" {
+		t.Fatalf("expected invalid password error")
+	}
+}
+
+func TestAuthServiceLoginPasswordUpgradeEncryptError(t *testing.T) {
+	userRepo := &stubUserRepository{
+		getByUsername: domain.User{Username: "user", Password: "password", Name: "User", TenantId: 1},
+	}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{encryptErr: errors.New("encrypt fail")}, billingService: stubBillingService{}}
+
+	output, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if output.Token == "" {
+		t.Fatalf("expected token to be generated")
+	}
+	if userRepo.updatePasswordReq.user.Username != "user" {
+		t.Fatalf("expected update password to be called")
+	}
+}
+
+func TestAuthServiceLoginPasswordUpgradeUpdatePasswordError(t *testing.T) {
+	userRepo := &stubUserRepository{
+		getByUsername:    domain.User{Username: "user", Password: "password", Name: "User", TenantId: 1},
+		updatePasswordErr: errors.New("update fail"),
+	}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}, billingService: stubBillingService{}}
+
+	output, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if output.Token == "" {
+		t.Fatalf("expected token to be generated")
+	}
+}
+
+func TestAuthServiceLoginMissingBillingService(t *testing.T) {
+	userRepo := &stubUserRepository{getByUsername: domain.User{Username: "user", Password: "password", Name: "User", TenantId: 1}}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}}
+
+	_, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err == nil || err.Error() != "billing service not configured" {
+		t.Fatalf("expected billing service not configured error")
+	}
+}
+
+func TestAuthServiceLoginBillingStatusError(t *testing.T) {
+	userRepo := &stubUserRepository{getByUsername: domain.User{Username: "user", Password: "password", Name: "User", TenantId: 1}}
+	service := &authService{userRepository: userRepo, encrypt: &stubEncrypto{}, billingService: stubBillingServiceErr{err: errors.New("billing fail")}}
+
+	_, err := service.Login(context.Background(), request.LoginRequest{Username: "user", Password: "password"})
+	if err == nil || err.Error() != "billing fail" {
+		t.Fatalf("expected billing error")
+	}
+}
+
 type stubBillingService struct{}
 
 func (stubBillingService) GetStatus(ctx context.Context) (output.BillingStatusOutput, error) {
@@ -91,4 +157,20 @@ func (stubBillingService) GetSummary(ctx context.Context) (output.BillingSummary
 
 func (stubBillingService) GetPayments(ctx context.Context) ([]output.BillingPaymentOutput, error) {
 	return nil, nil
+}
+
+type stubBillingServiceErr struct {
+	err error
+}
+
+func (s stubBillingServiceErr) GetStatus(ctx context.Context) (output.BillingStatusOutput, error) {
+	return output.BillingStatusOutput{}, s.err
+}
+
+func (s stubBillingServiceErr) GetSummary(ctx context.Context) (output.BillingSummaryOutput, error) {
+	return output.BillingSummaryOutput{}, s.err
+}
+
+func (s stubBillingServiceErr) GetPayments(ctx context.Context) ([]output.BillingPaymentOutput, error) {
+	return nil, s.err
 }

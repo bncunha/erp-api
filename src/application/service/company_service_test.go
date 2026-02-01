@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -241,6 +242,160 @@ func TestCompanyServiceCreateSuccess(t *testing.T) {
 	}
 	if emailUsecase.toEmail != "admin@test.com" || emailUsecase.toName != "Admin" {
 		t.Fatalf("expected welcome email to be triggered")
+	}
+}
+
+func TestCompanyServiceCreateValidationError(t *testing.T) {
+	service := NewCompanyService(nil, nil, nil, nil, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, nil, nil, &stubCompanyTxManager{})
+	if err := service.Create(context.Background(), request.CreateCompanyRequest{}); err == nil {
+		t.Fatalf("expected validation error")
+	}
+}
+
+func TestCompanyServiceCreateBeginTxError(t *testing.T) {
+	service := NewCompanyService(nil, nil, nil, nil, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, nil, nil, &stubCompanyTxManager{err: errors.New("tx fail")})
+	req := request.CreateCompanyRequest{
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "390.533.447-05",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address: request.CreateCompanyAddress{
+			Street:       "Rua A",
+			Neighborhood: "Centro",
+			Number:       "123",
+			City:         "Cidade",
+			UF:           "SP",
+			Cep:          "00000000",
+		},
+		User: request.CreateCompanyUserRequest{
+			Name:     "Admin",
+			Username: "admin",
+			Email:    "admin@test.com",
+			Password: "secret123",
+		},
+	}
+
+	if err := service.Create(context.Background(), req); err == nil || err.Error() != "tx fail" {
+		t.Fatalf("expected tx error, got %v", err)
+	}
+}
+
+func TestCompanyServiceCreateAddressError(t *testing.T) {
+	tx, fakeTx := newFakeTransaction()
+	service := NewCompanyService(&stubCompanyRepository{id: 5}, &stubAddressRepository{err: errors.New("address fail")}, nil, nil, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, nil, nil, &stubCompanyTxManager{tx: tx})
+	req := request.CreateCompanyRequest{
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "390.533.447-05",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address: request.CreateCompanyAddress{
+			Street:       "Rua A",
+			Neighborhood: "Centro",
+			Number:       "123",
+			City:         "Cidade",
+			UF:           "SP",
+			Cep:          "00000000",
+		},
+		User: request.CreateCompanyUserRequest{
+			Name:     "Admin",
+			Username: "admin",
+			Email:    "admin@test.com",
+			Password: "secret123",
+		},
+	}
+
+	err := service.Create(context.Background(), req)
+	if err == nil || err.Error() != "address fail" {
+		t.Fatalf("expected address error, got %v", err)
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected rollback on address error")
+	}
+}
+
+func TestCompanyServiceCreateLegalDocumentError(t *testing.T) {
+	tx, fakeTx := newFakeTransaction()
+	userRepo := &stubCompanyUserRepository{}
+	inventoryRepo := &stubCompanyInventoryRepository{}
+	legalDocRepo := &stubLegalDocumentRepository{err: errors.New("doc fail")}
+	service := NewCompanyService(&stubCompanyRepository{id: 5}, &stubAddressRepository{}, inventoryRepo, userRepo, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, legalDocRepo, &stubLegalAcceptanceRepository{}, &stubCompanyTxManager{tx: tx})
+
+	req := request.CreateCompanyRequest{
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "390.533.447-05",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address: request.CreateCompanyAddress{
+			Street:       "Rua A",
+			Neighborhood: "Centro",
+			Number:       "123",
+			City:         "Cidade",
+			UF:           "SP",
+			Cep:          "00000000",
+		},
+		User: request.CreateCompanyUserRequest{
+			Name:     "Admin",
+			Username: "admin",
+			Email:    "admin@test.com",
+			Password: "secret123",
+		},
+	}
+
+	err := service.Create(context.Background(), req)
+	if err == nil || err.Error() != "doc fail" {
+		t.Fatalf("expected legal document error, got %v", err)
+	}
+	if !fakeTx.rolledBack {
+		t.Fatalf("expected rollback on legal doc error")
+	}
+}
+
+func TestCompanyServiceCreateCommitError(t *testing.T) {
+	tx, fakeTx := newFakeTransaction()
+	fakeTx.commitErr = errors.New("commit fail")
+	userRepo := &stubCompanyUserRepository{}
+	inventoryRepo := &stubCompanyInventoryRepository{}
+	legalDocRepo := &stubLegalDocumentRepository{
+		lastByType: map[domain.LegalDocumentType]domain.LegalDocument{
+			domain.LegalDocumentTypeTerms:   {Id: 1, DocType: domain.LegalDocumentTypeTerms, DocVersion: "v1"},
+			domain.LegalDocumentTypePrivacy: {Id: 2, DocType: domain.LegalDocumentTypePrivacy, DocVersion: "v1"},
+		},
+	}
+	legalAcceptanceRepo := &stubLegalAcceptanceRepository{}
+	service := NewCompanyService(&stubCompanyRepository{id: 5}, &stubAddressRepository{}, inventoryRepo, userRepo, &stubEncrypto{}, &stubWelcomeEmailUseCase{}, legalDocRepo, legalAcceptanceRepo, &stubCompanyTxManager{tx: tx})
+
+	req := request.CreateCompanyRequest{
+		Name:            "Empresa",
+		LegalName:       "Empresa Ltda",
+		Cpf:             "390.533.447-05",
+		Cellphone:       "11999999999",
+		AcceptedTerms:   true,
+		AcceptedPrivacy: true,
+		Address: request.CreateCompanyAddress{
+			Street:       "Rua A",
+			Neighborhood: "Centro",
+			Number:       "123",
+			City:         "Cidade",
+			UF:           "SP",
+			Cep:          "00000000",
+		},
+		User: request.CreateCompanyUserRequest{
+			Name:     "Admin",
+			Username: "admin",
+			Email:    "admin@test.com",
+			Password: "secret123",
+		},
+	}
+
+	err := service.Create(context.Background(), req)
+	if err == nil || err.Error() != "commit fail" {
+		t.Fatalf("expected commit error, got %v", err)
 	}
 }
 

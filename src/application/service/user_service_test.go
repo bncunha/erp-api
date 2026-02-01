@@ -292,6 +292,77 @@ func TestUserServiceResetPasswordInvalidToken(t *testing.T) {
 		t.Fatalf("expected invalid token error, got %v", err)
 	}
 }
+func TestUserServiceResetPasswordTokenLookupError(t *testing.T) {
+	service, _, _, tokenRepo := newUserServiceTest(&stubUserRepository{}, &stubInventoryRepository{})
+	tokenRepo.lastActiveErr = errors.New("lookup fail")
+
+	err := service.ResetPassword(context.Background(), request.ResetPasswordRequest{Code: "reset", Uuid: "uuid", Password: "newpass123"})
+	if err == nil || err.Error() != "Código expirado ou inválido! Solicite um novo código para o administrador." {
+		t.Fatalf("expected expired code error, got %v", err)
+	}
+}
+
+func TestUserServiceResetPasswordCompareError(t *testing.T) {
+	service, _, _, tokenRepo := newUserServiceTest(&stubUserRepository{}, &stubInventoryRepository{})
+	tokenRepo.lastActive = domain.UserToken{
+		User:      domain.User{Id: 10},
+		CodeHash:  "encrypted:reset",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	service.encrypto = &stubEncrypto{compareErr: errors.New("compare fail")}
+
+	err := service.ResetPassword(context.Background(), request.ResetPasswordRequest{Code: "reset", Uuid: "uuid", Password: "newpass123"})
+	if err == nil || err.Error() != "Código expirado ou inválido! Solicite um novo código para o administrador." {
+		t.Fatalf("expected expired code error, got %v", err)
+	}
+}
+
+func TestUserServiceResetPasswordEncryptError(t *testing.T) {
+	userRepo := &stubUserRepository{}
+	service, _, _, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.lastActive = domain.UserToken{
+		User:      domain.User{Id: 10},
+		CodeHash:  "encrypted:reset",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	service.encrypto = &stubEncrypto{encryptErr: errors.New("encrypt fail")}
+
+	err := service.ResetPassword(context.Background(), request.ResetPasswordRequest{Code: "reset", Uuid: "uuid", Password: "newpass123"})
+	if err == nil || err.Error() != "encrypt fail" {
+		t.Fatalf("expected encrypt error, got %v", err)
+	}
+}
+
+func TestUserServiceResetPasswordUpdatePasswordError(t *testing.T) {
+	userRepo := &stubUserRepository{updatePasswordErr: errors.New("update fail")}
+	service, _, _, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.lastActive = domain.UserToken{
+		User:      domain.User{Id: 10},
+		CodeHash:  "encrypted:reset",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	err := service.ResetPassword(context.Background(), request.ResetPasswordRequest{Code: "reset", Uuid: "uuid", Password: "newpass123"})
+	if err == nil || err.Error() != "update fail" {
+		t.Fatalf("expected update error, got %v", err)
+	}
+}
+
+func TestUserServiceResetPasswordSetUsedError(t *testing.T) {
+	userRepo := &stubUserRepository{}
+	service, _, _, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.lastActive = domain.UserToken{
+		User:      domain.User{Id: 10},
+		CodeHash:  "encrypted:reset",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	tokenRepo.setUsedErr = errors.New("set used fail")
+
+	err := service.ResetPassword(context.Background(), request.ResetPasswordRequest{Code: "reset", Uuid: "uuid", Password: "newpass123"})
+	if err == nil || err.Error() != "set used fail" {
+		t.Fatalf("expected set used error, got %v", err)
+	}
+}
 
 func TestUserServiceForgotPasswordValidationError(t *testing.T) {
 	service, _, _, _ := newUserServiceTest(&stubUserRepository{}, &stubInventoryRepository{})
@@ -308,6 +379,34 @@ func TestUserServiceForgotPasswordLookupError(t *testing.T) {
 	}
 	if tokenRepo.createInput.User.Id != 0 || emailUsecase.recoverCalls != 0 {
 		t.Fatalf("expected no token creation or email send")
+	}
+}
+func TestUserServiceForgotPasswordTokenCreateError(t *testing.T) {
+	user := domain.User{Id: 5, Email: "user@test.com", Name: "User"}
+	userRepo := &stubUserRepository{getByEmail: user}
+	service, _, emailUsecase, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.createErr = errors.New("create fail")
+
+	if err := service.ForgotPassword(context.Background(), request.ForgotPasswordRequest{Email: user.Email}); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if tokenRepo.createInput.User.Id != 0 || emailUsecase.recoverCalls != 0 {
+		t.Fatalf("expected no token creation or email send")
+	}
+}
+
+func TestUserServiceForgotPasswordGetTokenError(t *testing.T) {
+	user := domain.User{Id: 5, Email: "user@test.com", Name: "User"}
+	userRepo := &stubUserRepository{getByEmail: user}
+	service, _, emailUsecase, tokenRepo := newUserServiceTest(userRepo, &stubInventoryRepository{})
+	tokenRepo.createID = 1
+	tokenRepo.getByIdErr = errors.New("get token fail")
+
+	if err := service.ForgotPassword(context.Background(), request.ForgotPasswordRequest{Email: user.Email}); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if emailUsecase.recoverCalls != 0 {
+		t.Fatalf("expected no recover email on token error")
 	}
 }
 
