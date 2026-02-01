@@ -18,7 +18,18 @@ func ToBillingStatusViewModel(status output.BillingStatusOutput) BillingStatusVi
 		PlanName:         status.PlanName,
 		CurrentPeriodEnd: status.CurrentPeriodEnd,
 		CanWrite:         status.CanWrite,
-		Reason:           status.Reason,
+		Reason:           parseReason(status.Reason),
+	}
+}
+
+func parseReason(reason string) string {
+	switch reason {
+	case "BillingReasonTrialExpired":
+		return "Período de teste expirado"
+	case "BillingReasonPaymentOverdue":
+		return "Problema com o pagamento, contate o suporte"
+	default:
+		return ""
 	}
 }
 

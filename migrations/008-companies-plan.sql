@@ -65,6 +65,4 @@ CREATE INDEX idx_payment_events_processed ON payment_events(processed_at);
 INSERT INTO plans (name, price, status)
 VALUES
   ('TRIAL', 0.00, 'ACTIVE'),
-  ('BASIC', 99.90, 'ACTIVE'),
-  ('PREMIUM', 199.90, 'ACTIVE')
-ON CONFLICT (name) DO NOTHING;
+  ('PREMIUM', 79.90, 'ACTIVE');
