@@ -1,6 +1,3 @@
-ALTER TABLE IF EXISTS payments RENAME TO sales_payments;
-ALTER TABLE IF EXISTS payment_dates RENAME TO sales_payment_dates;
-
 CREATE TABLE plans (
   id BIGSERIAL PRIMARY KEY,
   name VARCHAR(30) UNIQUE NOT NULL,          -- TRIAL, BASIC, PREMIUM
