@@ -238,7 +238,10 @@ SELECT
       AND si.tenant_id = s.tenant_id
   ) AS total_items,
   CASE
-    WHEN COUNT(pd.id) > 0 AND COUNT(pd.id) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID')
+    WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0
+      THEN 'CANCEL'
+    WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
+      AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID')
       THEN 'PAID'
     WHEN COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
       THEN 'DELAYED'
@@ -259,12 +262,19 @@ GROUP BY s.id, s.date, c.name, u.name, sv.id
 HAVING
   $6::text IS NULL
   OR (
-      ($6 = 'PAID' AND COUNT(pd.id) > 0 AND COUNT(pd.id) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID'))
+      ($6 = 'CANCEL' AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0)
+      OR ($6 = 'PAID'
+        AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
+        AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID')
+      )
       OR ($6 = 'DELAYED' AND COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE))
-      OR ($6 = 'PENDING' AND NOT (
-        (COUNT(pd.id) > 0 AND COUNT(pd.id) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID'))
-        OR COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
-      ))
+      OR ($6 = 'PENDING'
+        AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
+        AND NOT (
+          (COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID'))
+          OR COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
+        )
+      )
   )
 ORDER BY s.date DESC, s.id DESC`
 	valueArgs := []interface{}{tenantId, pq.Array(input.UserId), pq.Array(input.CustomerId), input.InitialDate, input.FinalDate, input.PaymentStatus}
@@ -299,7 +309,9 @@ func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (domain.Get
 		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
 		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
 		CASE
-			WHEN COUNT(pd.id) > 0 AND COUNT(pd.id) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID') THEN 'PAID'
+			WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0 THEN 'CANCEL'
+			WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
+			  AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID') THEN 'PAID'
 			WHEN COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE) THEN 'DELAYED'
 			ELSE 'PENDING'
 		END AS payment_status
