@@ -344,12 +344,11 @@ func TestSalesReturnValidate(t *testing.T) {
 		t.Fatalf("expected valid return, got %v", err)
 	}
 
-	longReason := strings.Repeat("a", 2001)
-	invalidReason := NewSalesReturn("Cliente", longReason, []SalesReturnItem{
+	invalidReason := NewSalesReturn("Cliente", "   ", []SalesReturnItem{
 		{Sku: Sku{Id: 1, Product: Product{Name: "Produto"}}, Quantity: 1},
 	})
-	if err := invalidReason.Validate(saleItems); err != ErrReturnReasonLengthInvalid {
-		t.Fatalf("expected reason length error, got %v", err)
+	if err := invalidReason.Validate(saleItems); err != ErrReturnReasonRequired {
+		t.Fatalf("expected reason required error, got %v", err)
 	}
 
 	duplicated := NewSalesReturn("Cliente", "ok", []SalesReturnItem{
