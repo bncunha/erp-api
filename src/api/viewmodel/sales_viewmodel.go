@@ -94,6 +94,7 @@ type SalePaymentsItemViewModel struct {
 }
 
 type SaleItemsViewModel struct {
+	SkuId       int64   `json:"sku_id"`
 	Code        string  `json:"code"`
 	Description string  `json:"description"`
 	Quantity    float64 `json:"quantity"`
@@ -170,6 +171,7 @@ func toSaleItemsViewModel(itemsOutput []output.GetItemsOutput) []SaleItemsViewMo
 	itemsViewModel := make([]SaleItemsViewModel, len(itemsOutput))
 	for i, item := range itemsOutput {
 		itemsViewModel[i] = SaleItemsViewModel{
+			SkuId:       item.Sku.Id,
 			Code:        item.Sku.Code,
 			Description: item.Sku.GetName(),
 			Quantity:    item.Quantity,
