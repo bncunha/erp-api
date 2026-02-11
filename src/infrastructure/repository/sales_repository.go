@@ -364,7 +364,7 @@ func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (domain.Get
 	LEFT JOIN payment_dates pd ON pd.payment_id = p.id AND pd.tenant_id = s.tenant_id
 	WHERE s.id = $1
 	  AND s.tenant_id = $2
-	GROUP BY s.id, s.code, s.date, u.name, c.name`
+	GROUP BY s.id, s.code, s.date, u.name, c.name, sv.id`
 	err := r.db.QueryRowContext(ctx, query, id, tenantId).Scan(&output.Id, &output.Code, &output.Date, &output.SellerName, &output.CustomerName, &output.TotalValue, &output.ReceivedValue, &output.FutureRevenue, &output.PaymentStatus)
 	if err != nil {
 		return output, err
