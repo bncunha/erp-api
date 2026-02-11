@@ -229,7 +229,7 @@ SELECT
   c.name AS customer,
   u.name AS seller,
   COALESCE(SUM(pd.installment_value), 0) AS total_value,
-  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
+  COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PAID','REVERSAL')), 0) AS received_value,
   COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
   (
     SELECT COALESCE(SUM(si.quantity), 0)
@@ -341,7 +341,7 @@ func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (domain.Get
 		u.name AS seller_name,
 		c.name AS customer_name,
 		COALESCE(SUM(pd.installment_value), 0) AS total_value,
-		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
+		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PAID','REVERSAL')), 0) AS received_value,
 		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
 		CASE
 			WHEN (
