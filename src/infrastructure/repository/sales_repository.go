@@ -41,6 +41,10 @@ func (r *salesRepository) CreateSaleVersion(ctx context.Context, tx *sql.Tx, sal
 }
 
 func (r *salesRepository) CreateManySaleItem(ctx context.Context, tx *sql.Tx, sale domain.Sales, saleItems []domain.SalesItem) ([]int64, error) {
+	if len(saleItems) == 0 {
+		return []int64{}, nil
+	}
+
 	tenantId := ctx.Value(constants.TENANT_KEY)
 	var ids []int64
 

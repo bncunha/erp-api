@@ -76,8 +76,10 @@ func (s *salesUseCase) DoReturn(ctx context.Context, input DoReturnInput) (err e
 		SalesVersionId: nextSaleVersionId,
 		Items:          newSaleItems,
 	}
-	if _, err = s.saleRepository.CreateManySaleItem(ctx, tx, saleToCreate, newSaleItems); err != nil {
-		return err
+	if len(newSaleItems) > 0 {
+		if _, err = s.saleRepository.CreateManySaleItem(ctx, tx, saleToCreate, newSaleItems); err != nil {
+			return err
+		}
 	}
 
 	oldPayments, err := s.saleRepository.GetPaymentsBySaleVersionId(ctx, sale.SalesVersionId)
@@ -225,7 +227,7 @@ func (s *salesUseCase) recalculatePayments(old []domain.GetSalesPaymentOutput, n
 		diff := round2(paidTotal - newTotal)
 		payment := ensurePayment(domain.PaymentTypeReturn)
 		now := time.Now()
-		d := domain.NewSalesPaymentDates(now, &now, 1, -diff, domain.PaymentStatusPaid)
+		d := domain.NewSalesPaymentDates(now, &now, 1, -diff, domain.PaymentStatusReversal)
 		d.PaymentType = domain.PaymentTypeReturn
 		payment.Dates = append(payment.Dates, d)
 		paymentsMap[domain.PaymentTypeReturn] = payment

@@ -44,10 +44,11 @@ const (
 )
 
 const (
-	PaymentStatusPaid    PaymentStatus = "PAID"
-	PaymentStatusCancel  PaymentStatus = "CANCEL"
-	PaymentStatusPending PaymentStatus = "PENDING"
-	PaymentStatusDelayed PaymentStatus = "DELAYED"
+	PaymentStatusPaid     PaymentStatus = "PAID"
+	PaymentStatusCancel   PaymentStatus = "CANCEL"
+	PaymentStatusPending  PaymentStatus = "PENDING"
+	PaymentStatusDelayed  PaymentStatus = "DELAYED"
+	PaymentStatusReversal PaymentStatus = "REVERSAL"
 )
 
 type Sales struct {
