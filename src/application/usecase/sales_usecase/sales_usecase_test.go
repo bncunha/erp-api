@@ -243,6 +243,14 @@ type fakeSalesRepository struct {
 	createItemsErr   error
 	createPaymentErr error
 	createDatesErr   error
+	saleByIdForUpdate domain.SaleWithVersionOutput
+	saleByIdForUpdateErr error
+	itemsByVersion []serviceOutput.GetItemsOutput
+	itemsByVersionErr error
+	paymentsByVersion []serviceOutput.GetSalesPaymentOutput
+	paymentsByVersionErr error
+	updateLastVersion int
+	returnCreated bool
 }
 
 func (f *fakeSalesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale domain.Sales) (int64, error) {
@@ -251,6 +259,10 @@ func (f *fakeSalesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale d
 	}
 	f.sale = sale
 	return 101, nil
+}
+
+func (f *fakeSalesRepository) CreateSaleVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int, date time.Time) (int64, error) {
+	return 1001, nil
 }
 
 func (f *fakeSalesRepository) CreateManySaleItem(ctx context.Context, tx *sql.Tx, sale domain.Sales, items []domain.SalesItem) ([]int64, error) {
@@ -278,6 +290,32 @@ func (f *fakeSalesRepository) CreateManyPaymentDates(ctx context.Context, tx *sq
 	return []int64{1}, nil
 }
 
+func (f *fakeSalesRepository) CreateSalesReturn(ctx context.Context, tx *sql.Tx, saleId int64, fromSalesVersionId int64, toSalesVersionId int64, salesReturn domain.SalesReturn, createdByUserId int64) (int64, error) {
+	f.returnCreated = true
+	return 1, nil
+}
+
+func (f *fakeSalesRepository) CreateSalesReturnItems(ctx context.Context, tx *sql.Tx, salesReturnId int64, items []domain.SalesReturnItem) ([]int64, error) {
+	return []int64{1}, nil
+}
+
+func (f *fakeSalesRepository) UpdateSaleLastVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int) error {
+	f.updateLastVersion = version
+	return nil
+}
+
+func (f *fakeSalesRepository) CancelPaymentDatesBySaleVersionId(ctx context.Context, tx *sql.Tx, saleVersionId int64) error {
+	return nil
+}
+
+func (f *fakeSalesRepository) GetSaleByIdForUpdate(ctx context.Context, tx *sql.Tx, id int64) (domain.SaleWithVersionOutput, error) {
+	return f.saleByIdForUpdate, f.saleByIdForUpdateErr
+}
+
+func (f *fakeSalesRepository) GetSaleVersionIdBySaleIdAndVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int) (int64, error) {
+	return 1, nil
+}
+
 func (f *fakeSalesRepository) GetSales(context.Context, serviceInput.GetSalesInput) ([]serviceOutput.GetSalesItemOutput, error) {
 	return nil, nil
 }
@@ -290,7 +328,19 @@ func (f *fakeSalesRepository) GetPaymentsBySaleId(context.Context, int64) ([]ser
 	return nil, nil
 }
 
+func (f *fakeSalesRepository) GetPaymentsBySaleVersionId(context.Context, int64) ([]serviceOutput.GetSalesPaymentOutput, error) {
+	return f.paymentsByVersion, f.paymentsByVersionErr
+}
+
 func (f *fakeSalesRepository) GetItemsBySaleId(context.Context, int64) ([]serviceOutput.GetItemsOutput, error) {
+	return nil, nil
+}
+
+func (f *fakeSalesRepository) GetItemsBySaleVersionId(context.Context, int64) ([]serviceOutput.GetItemsOutput, error) {
+	return f.itemsByVersion, f.itemsByVersionErr
+}
+
+func (f *fakeSalesRepository) GetReturnsBySaleId(context.Context, int64) ([]serviceOutput.GetSalesReturnOutput, error) {
 	return nil, nil
 }
 
@@ -654,5 +704,69 @@ func TestSalesUseCaseDetachIds(t *testing.T) {
 	ids := useCase.detachIds([]DoSaleItemsInput{{SkuId: 1}, {SkuId: 2}})
 	if len(ids) != 2 || ids[0] != 1 || ids[1] != 2 {
 		t.Fatalf("unexpected ids: %v", ids)
+	}
+}
+
+func TestSalesUseCaseDoReturnSuccess(t *testing.T) {
+	env := newSaleTestEnv(t)
+	env.salesRepo.saleByIdForUpdate = domain.SaleWithVersionOutput{
+		Id:             101,
+		LastVersion:    1,
+		SalesVersionId: 1001,
+	}
+	env.salesRepo.itemsByVersion = []serviceOutput.GetItemsOutput{
+		{Sku: domain.Sku{Id: 3, Price: 10, Product: domain.Product{Name: "Prod"}}, Quantity: 2, UnitPrice: 10},
+	}
+	env.salesRepo.paymentsByVersion = []serviceOutput.GetSalesPaymentOutput{
+		{PaymentType: domain.PaymentTypeCash, InstallmentNumber: 1, InstallmentValue: 20, DueDate: time.Now(), PaymentStatus: domain.PaymentStatusPaid},
+	}
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{
+		SaleId:                 101,
+		UserId:                 1,
+		InventoryDestinationId: 4,
+		ReturnerName:           "Cliente",
+		Reason:                 "Defeito",
+		Items: []DoReturnItemInput{
+			{SkuId: 3, Quantity: 1},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !env.salesRepo.returnCreated {
+		t.Fatalf("expected sales return to be created")
+	}
+	if env.salesRepo.updateLastVersion != 2 {
+		t.Fatalf("expected last version to be updated to 2, got %d", env.salesRepo.updateLastVersion)
+	}
+	if env.inventoryUseCase.received.Type != domain.InventoryTransactionTypeIn {
+		t.Fatalf("expected inventory IN transaction")
+	}
+}
+
+func TestSalesUseCaseDoReturnValidationError(t *testing.T) {
+	env := newSaleTestEnv(t)
+	env.salesRepo.saleByIdForUpdate = domain.SaleWithVersionOutput{
+		Id:             101,
+		LastVersion:    1,
+		SalesVersionId: 1001,
+	}
+	env.salesRepo.itemsByVersion = []serviceOutput.GetItemsOutput{
+		{Sku: domain.Sku{Id: 3, Price: 10, Product: domain.Product{Name: "Prod"}}, Quantity: 1, UnitPrice: 10},
+	}
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{
+		SaleId:                 101,
+		UserId:                 1,
+		InventoryDestinationId: 4,
+		ReturnerName:           "Cliente",
+		Reason:                 "Defeito",
+		Items: []DoReturnItemInput{
+			{SkuId: 3, Quantity: 2},
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected validation error")
 	}
 }

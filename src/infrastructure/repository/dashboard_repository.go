@@ -22,8 +22,9 @@ func (r *dashboardRepository) GetRevenue(ctx context.Context, input domain.Dashb
 
 	query := `
 	SELECT COALESCE(SUM(si.quantity * si.unit_price), 0)
-	FROM sales_items si
-	JOIN sales s ON s.id = si.sales_id AND s.tenant_id = si.tenant_id
+	FROM sales s
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = si.tenant_id
 	WHERE si.tenant_id = $1
 	  AND ($2::bigint IS NULL OR s.user_id = $2)
@@ -42,7 +43,8 @@ func (r *dashboardRepository) GetSalesCount(ctx context.Context, input domain.Da
 	query := `
 	SELECT COALESCE(COUNT(DISTINCT s.id), 0)
 	FROM sales s
-	JOIN sales_items si ON si.sales_id = s.id AND si.tenant_id = s.tenant_id
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = s.tenant_id
 	WHERE s.tenant_id = $1
 	  AND ($2::bigint IS NULL OR s.user_id = $2)
@@ -61,7 +63,8 @@ func (r *dashboardRepository) GetRevenueByDay(ctx context.Context, input domain.
 	query := `
 	SELECT date_trunc('day', s.date) AS day, COALESCE(SUM(si.quantity * si.unit_price), 0)
 	FROM sales s
-	JOIN sales_items si ON si.sales_id = s.id AND si.tenant_id = s.tenant_id
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = s.tenant_id
 	WHERE s.tenant_id = $1
 	  AND ($2::bigint IS NULL OR s.user_id = $2)
@@ -95,7 +98,8 @@ func (r *dashboardRepository) GetSalesCountByDay(ctx context.Context, input doma
 	query := `
 	SELECT date_trunc('day', s.date) AS day, COALESCE(COUNT(DISTINCT s.id), 0)
 	FROM sales s
-	JOIN sales_items si ON si.sales_id = s.id AND si.tenant_id = s.tenant_id
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = s.tenant_id
 	WHERE s.tenant_id = $1
 	  AND ($2::bigint IS NULL OR s.user_id = $2)
@@ -179,7 +183,8 @@ func (r *dashboardRepository) GetRevenueByReseller(ctx context.Context, input do
 	SELECT s.user_id, u.name, COALESCE(SUM(si.quantity * si.unit_price), 0) AS revenue
 	FROM sales s
 	JOIN users u ON u.id = s.user_id AND u.tenant_id = s.tenant_id
-	JOIN sales_items si ON si.sales_id = s.id AND si.tenant_id = s.tenant_id
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = s.tenant_id
 	WHERE s.tenant_id = $1
 	  AND ($2::bigint IS NULL OR s.user_id = $2)
@@ -213,7 +218,8 @@ func (r *dashboardRepository) GetTopProductsByReseller(ctx context.Context, inpu
 	query := `
 	SELECT p.id, p.name, COALESCE(SUM(si.quantity), 0) AS qty
 	FROM sales s
-	JOIN sales_items si ON si.sales_id = s.id AND si.tenant_id = s.tenant_id
+	JOIN sales_versions sv ON sv.sales_id = s.id AND sv.version = s.last_version AND sv.tenant_id = s.tenant_id
+	JOIN sales_items si ON si.sales_version_id = sv.id AND si.tenant_id = s.tenant_id
 	JOIN skus sk ON sk.id = si.sku_id AND sk.tenant_id = s.tenant_id
 	JOIN products p ON p.id = sk.product_id AND p.tenant_id = s.tenant_id
 	WHERE s.tenant_id = $1

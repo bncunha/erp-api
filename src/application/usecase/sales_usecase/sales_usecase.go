@@ -10,6 +10,7 @@ import (
 
 type SalesUseCase interface {
 	DoSale(ctx context.Context, input DoSaleInput) error
+	DoReturn(ctx context.Context, input DoReturnInput) error
 }
 
 type salesUseCase struct {

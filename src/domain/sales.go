@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/bncunha/erp-api/src/infrastructure/ksuid"
@@ -25,6 +26,12 @@ var (
 	ErrSkusDuplicated              = errors.New("SKUs duplicados encontrados")
 	ErrPaymentTypesDuplicated      = errors.New("Tipos de pagamento duplicados encontrados. Remova os tipos de pagamento duplicados")
 	ErrPaymentDatesDuplicated      = errors.New("As datas de pagamento devem ser diferentes")
+	ErrReturnReasonRequired        = errors.New("Motivo da devolução é obrigatório")
+	ErrReturnReasonLengthInvalid   = errors.New("Motivo da devolução deve ter no máximo 2000 caracteres")
+	ErrReturnItemsRequired         = errors.New("É necessário informar ao menos um item para devolução")
+	ErrReturnItemsDuplicated       = errors.New("Há itens duplicados na devolução")
+	ErrReturnItemQuantityInvalid   = errors.New("Quantidade de devolução inválida")
+	ErrReturnItemNotFound          = errors.New("Item de devolução não encontrado na venda")
 )
 
 const (
@@ -33,6 +40,7 @@ const (
 	PaymentTypeDebitCard   PaymentType = "DEBIT_CARD"
 	PaymentTypePix         PaymentType = "PIX"
 	PaymentTypeCreditStore PaymentType = "CREDIT_STORE"
+	PaymentTypeReturn      PaymentType = "PAYMENT_RETURN"
 )
 
 const (
@@ -43,19 +51,23 @@ const (
 )
 
 type Sales struct {
-	Id       int64
-	Code     string
-	Date     time.Time
-	User     User
-	Customer Customer
-	Items    []SalesItem
-	Payments []SalesPayment
+	Id             int64
+	Code           string
+	Date           time.Time
+	Version        int
+	SalesVersionId int64
+	User           User
+	Customer       Customer
+	Items          []SalesItem
+	Payments       []SalesPayment
+	Returns        []SalesReturn
 }
 
 func NewSales(date time.Time, user User, customer Customer, items []SalesItem, payments []SalesPayment) Sales {
 	return Sales{
 		Code:     "V-" + ksuid.New().String(),
 		Date:     date,
+		Version:  1,
 		User:     user,
 		Customer: customer,
 		Items:    items,
@@ -122,6 +134,63 @@ func (s *Sales) isPaymentTypesDuplicated() bool {
 		paymentTypes[payment.PaymentType] = true
 	}
 	return false
+}
+
+type SalesReturn struct {
+	Id         int64
+	ReturnDate time.Time
+	Returner   string
+	Reason     string
+	Items      []SalesReturnItem
+}
+
+type SalesReturnItem struct {
+	Sku       Sku
+	Quantity  float64
+	UnitPrice float64
+}
+
+func NewSalesReturn(returner string, reason string, items []SalesReturnItem) SalesReturn {
+	return SalesReturn{
+		ReturnDate: time.Now(),
+		Returner:   strings.TrimSpace(returner),
+		Reason:     strings.TrimSpace(reason),
+		Items:      items,
+	}
+}
+
+func (r *SalesReturn) Validate(saleItems []SalesItem) error {
+	if strings.TrimSpace(r.Reason) == "" {
+		return ErrReturnReasonRequired
+	}
+	if len(r.Items) == 0 {
+		return ErrReturnItemsRequired
+	}
+
+	saleItemsBySku := make(map[int64]SalesItem)
+	for _, item := range saleItems {
+		saleItemsBySku[item.Sku.Id] = item
+	}
+
+	seen := make(map[int64]bool)
+	for _, item := range r.Items {
+		if item.Quantity <= 0 {
+			return errors.New(ErrReturnItemQuantityInvalid.Error() + fmt.Sprintf(": (%d)", item.Sku.Id))
+		}
+		if seen[item.Sku.Id] {
+			return errors.New(ErrReturnItemsDuplicated.Error() + fmt.Sprintf(": (%d)", item.Sku.Id))
+		}
+		seen[item.Sku.Id] = true
+
+		saleItem, ok := saleItemsBySku[item.Sku.Id]
+		if !ok {
+			return errors.New(ErrReturnItemNotFound.Error() + fmt.Sprintf(": (%d)", item.Sku.Id))
+		}
+		if item.Quantity > saleItem.Quantity {
+			return errors.New(ErrReturnItemQuantityInvalid.Error() + fmt.Sprintf(": (%d) %s", item.Sku.Id, saleItem.Sku.GetName()))
+		}
+	}
+	return nil
 }
 
 type SalesItem struct {

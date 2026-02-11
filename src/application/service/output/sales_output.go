@@ -66,3 +66,4 @@ type GetSalesPaymentGroupOutput struct {
 }
 
 type GetItemsOutput = domain.GetItemsOutput
+type GetSalesReturnOutput = domain.GetSalesReturnOutput

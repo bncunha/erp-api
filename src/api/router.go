@@ -108,6 +108,7 @@ func (r *router) setupPrivateRoutes() {
 
 	salesGroup := private.Group("/sales")
 	salesGroup.POST("", r.controller.SalesController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
+	salesGroup.POST("/:id/returns", r.controller.SalesController.CreateReturn, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.GET("", r.controller.SalesController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.GET("/:id", r.controller.SalesController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))

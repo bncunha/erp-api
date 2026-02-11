@@ -679,11 +679,17 @@ func (s *stubInventoryUseCase) DoTransaction(ctx context.Context, tx *sql.Tx, in
 
 type stubSalesUseCase struct {
 	receivedInput sales_usecase.DoSaleInput
+	receivedReturnInput sales_usecase.DoReturnInput
 	err           error
 }
 
 func (s *stubSalesUseCase) DoSale(ctx context.Context, input sales_usecase.DoSaleInput) error {
 	s.receivedInput = input
+	return s.err
+}
+
+func (s *stubSalesUseCase) DoReturn(ctx context.Context, input sales_usecase.DoReturnInput) error {
+	s.receivedReturnInput = input
 	return s.err
 }
 
@@ -697,6 +703,8 @@ type stubSalesRepository struct {
 	paymentsErr                   error
 	itemsOutput                   []output.GetItemsOutput
 	itemsErr                      error
+	returnsOutput                 []output.GetSalesReturnOutput
+	returnsErr                    error
 	getSaleByIdCalled             bool
 	getPaymentsCalled             bool
 	getItemsCalled                bool
@@ -718,6 +726,10 @@ func (s *stubSalesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale d
 	return 0, nil
 }
 
+func (s *stubSalesRepository) CreateSaleVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int, date time.Time) (int64, error) {
+	return 1, nil
+}
+
 func (s *stubSalesRepository) CreateManySaleItem(ctx context.Context, tx *sql.Tx, sale domain.Sales, saleItems []domain.SalesItem) ([]int64, error) {
 	return nil, nil
 }
@@ -728,6 +740,30 @@ func (s *stubSalesRepository) CreatePayment(ctx context.Context, tx *sql.Tx, sal
 
 func (s *stubSalesRepository) CreateManyPaymentDates(ctx context.Context, tx *sql.Tx, payment domain.SalesPayment, paymentDates []domain.SalesPaymentDates) ([]int64, error) {
 	return nil, nil
+}
+
+func (s *stubSalesRepository) CreateSalesReturn(ctx context.Context, tx *sql.Tx, saleId int64, fromSalesVersionId int64, toSalesVersionId int64, salesReturn domain.SalesReturn, createdByUserId int64) (int64, error) {
+	return 1, nil
+}
+
+func (s *stubSalesRepository) CreateSalesReturnItems(ctx context.Context, tx *sql.Tx, salesReturnId int64, items []domain.SalesReturnItem) ([]int64, error) {
+	return []int64{1}, nil
+}
+
+func (s *stubSalesRepository) UpdateSaleLastVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int) error {
+	return nil
+}
+
+func (s *stubSalesRepository) CancelPaymentDatesBySaleVersionId(ctx context.Context, tx *sql.Tx, saleVersionId int64) error {
+	return nil
+}
+
+func (s *stubSalesRepository) GetSaleByIdForUpdate(ctx context.Context, tx *sql.Tx, id int64) (domain.SaleWithVersionOutput, error) {
+	return domain.SaleWithVersionOutput{}, nil
+}
+
+func (s *stubSalesRepository) GetSaleVersionIdBySaleIdAndVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int) (int64, error) {
+	return 1, nil
 }
 
 func (s *stubSalesRepository) GetSales(ctx context.Context, input input.GetSalesInput) ([]output.GetSalesItemOutput, error) {
@@ -748,6 +784,18 @@ func (s *stubSalesRepository) GetPaymentsBySaleId(ctx context.Context, id int64)
 func (s *stubSalesRepository) GetItemsBySaleId(ctx context.Context, id int64) ([]output.GetItemsOutput, error) {
 	s.getItemsCalled = true
 	return s.itemsOutput, s.itemsErr
+}
+
+func (s *stubSalesRepository) GetPaymentsBySaleVersionId(ctx context.Context, saleVersionId int64) ([]output.GetSalesPaymentOutput, error) {
+	return s.paymentsOutput, s.paymentsErr
+}
+
+func (s *stubSalesRepository) GetItemsBySaleVersionId(ctx context.Context, saleVersionId int64) ([]output.GetItemsOutput, error) {
+	return s.itemsOutput, s.itemsErr
+}
+
+func (s *stubSalesRepository) GetReturnsBySaleId(ctx context.Context, id int64) ([]output.GetSalesReturnOutput, error) {
+	return s.returnsOutput, s.returnsErr
 }
 
 func (s *stubSalesRepository) ChangePaymentStatus(ctx context.Context, id int64, status domain.PaymentStatus) (int64, error) {

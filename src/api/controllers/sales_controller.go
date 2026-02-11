@@ -81,12 +81,12 @@ func (c *SalesController) GetAll(context echo.Context) error {
 func (c *SalesController) GetById(context echo.Context) error {
 	id := helper.ParseInt64(context.Param("id"))
 
-	saleOutput, paymentGroupOutput, itemsOutput, err := c.salesService.GetById(context.Request().Context(), id)
+	saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err := c.salesService.GetById(context.Request().Context(), id)
 	if err != nil {
 		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
 	}
 
-	return context.JSON(_http.StatusOK, viewmodel.ToSaleByIdViewModel(saleOutput, paymentGroupOutput, itemsOutput))
+	return context.JSON(_http.StatusOK, viewmodel.ToSaleByIdViewModel(saleOutput, paymentGroupOutput, itemsOutput, returnsOutput))
 }
 
 func (c *SalesController) ChangePaymentStatus(context echo.Context) error {
@@ -103,4 +103,19 @@ func (c *SalesController) ChangePaymentStatus(context echo.Context) error {
 	}
 
 	return context.JSON(_http.StatusOK, nil)
+}
+
+func (c *SalesController) CreateReturn(context echo.Context) error {
+	id := helper.ParseInt64(context.Param("id"))
+	var salesReturnRequest request.CreateSalesReturnRequest
+	if err := context.Bind(&salesReturnRequest); err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	err := c.salesService.CreateReturn(context.Request().Context(), id, salesReturnRequest)
+	if err != nil {
+		return context.JSON(_http.StatusBadRequest, http.HandleError(err))
+	}
+
+	return context.JSON(_http.StatusCreated, nil)
 }

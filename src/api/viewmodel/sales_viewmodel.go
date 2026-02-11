@@ -75,6 +75,7 @@ type SaleByIdViewModel struct {
 	PaymentStatus domain.PaymentStatus    `json:"payment_status"`
 	Payments      []SalePaymentsViewModel `json:"payments"`
 	Items         []SaleItemsViewModel    `json:"items"`
+	Returns       []SaleReturnViewModel   `json:"returns"`
 }
 
 type SalePaymentsViewModel struct {
@@ -100,7 +101,23 @@ type SaleItemsViewModel struct {
 	TotalValue  float64 `json:"total_value"`
 }
 
-func ToSaleByIdViewModel(sale output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput) SaleByIdViewModel {
+type SaleReturnViewModel struct {
+	Id         int64                    `json:"id"`
+	ReturnDate string                   `json:"return_date"`
+	Returner   string                   `json:"returner"`
+	Reason     string                   `json:"reason"`
+	Items      []SaleReturnItemViewModel `json:"items"`
+}
+
+type SaleReturnItemViewModel struct {
+	Code        string  `json:"code"`
+	Description string  `json:"description"`
+	Quantity    float64 `json:"quantity"`
+	UnitPrice   float64 `json:"unit_price"`
+	TotalValue  float64 `json:"total_value"`
+}
+
+func ToSaleByIdViewModel(sale output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, returnsOutput []output.GetSalesReturnOutput) SaleByIdViewModel {
 	return SaleByIdViewModel{
 		Id:            sale.Id,
 		Code:          sale.Code,
@@ -113,6 +130,7 @@ func ToSaleByIdViewModel(sale output.GetSaleByIdOutput, paymentGroupOutput []out
 		PaymentStatus: sale.PaymentStatus,
 		Payments:      toSalePaymentsViewModel(paymentGroupOutput),
 		Items:         toSaleItemsViewModel(itemsOutput),
+		Returns:       toSalesReturnsViewModel(returnsOutput),
 	}
 }
 
@@ -160,4 +178,28 @@ func toSaleItemsViewModel(itemsOutput []output.GetItemsOutput) []SaleItemsViewMo
 		}
 	}
 	return itemsViewModel
+}
+
+func toSalesReturnsViewModel(returnsOutput []output.GetSalesReturnOutput) []SaleReturnViewModel {
+	viewModels := make([]SaleReturnViewModel, len(returnsOutput))
+	for i, salesReturn := range returnsOutput {
+		items := make([]SaleReturnItemViewModel, len(salesReturn.Items))
+		for j, item := range salesReturn.Items {
+			items[j] = SaleReturnItemViewModel{
+				Code:        item.Sku.Code,
+				Description: item.Sku.GetName(),
+				Quantity:    item.Quantity,
+				UnitPrice:   item.UnitPrice,
+				TotalValue:  item.Quantity * item.UnitPrice,
+			}
+		}
+		viewModels[i] = SaleReturnViewModel{
+			Id:         salesReturn.Id,
+			ReturnDate: salesReturn.ReturnDate.Format(time.RFC3339),
+			Returner:   salesReturn.Returner,
+			Reason:     salesReturn.Reason,
+			Items:      items,
+		}
+	}
+	return viewModels
 }

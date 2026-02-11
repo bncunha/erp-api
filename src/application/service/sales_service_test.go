@@ -15,7 +15,7 @@ import (
 func TestSalesServiceCreateSales(t *testing.T) {
 	useCase := &stubSalesUseCase{}
 	repo := &stubSalesRepository{}
-	service := NewSalesService(useCase, repo)
+	service := NewSalesService(useCase, repo, &stubInventoryRepository{})
 
 	ctx := context.WithValue(context.Background(), constants.USERID_KEY, float64(42))
 	firstInstallment := time.Now().AddDate(0, 0, 10)
@@ -70,7 +70,7 @@ func TestSalesServiceCreateSales(t *testing.T) {
 }
 
 func TestSalesServiceCreateSalesValidationError(t *testing.T) {
-	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{})
+	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{}, &stubInventoryRepository{})
 
 	err := service.CreateSales(context.Background(), request.CreateSaleRequest{})
 	if err == nil {
@@ -82,7 +82,7 @@ func TestSalesServiceGetSales(t *testing.T) {
 	repo := &stubSalesRepository{
 		getSalesOutput: []output.GetSalesItemOutput{{Id: 1}},
 	}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleAdmin))
 	req := request.ListSalesRequest{UserId: []int64{7}}
@@ -100,7 +100,7 @@ func TestSalesServiceGetSales(t *testing.T) {
 }
 
 func TestSalesServiceGetSalesPermissionDenied(t *testing.T) {
-	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{})
+	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{}, &stubInventoryRepository{})
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, "")
 
 	_, err := service.GetSales(ctx, request.ListSalesRequest{})
@@ -115,9 +115,9 @@ func TestSalesServiceGetById(t *testing.T) {
 		paymentsOutput: []output.GetSalesPaymentOutput{{PaymentType: domain.PaymentTypeCash}, {PaymentType: domain.PaymentTypeCash}},
 		itemsOutput:    []output.GetItemsOutput{{Sku: domain.Sku{Id: 3}}},
 	}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 
-	sale, payments, items, err := service.GetById(context.Background(), 2)
+	sale, payments, items, returnsOutput, err := service.GetById(context.Background(), 2)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -130,6 +130,9 @@ func TestSalesServiceGetById(t *testing.T) {
 	if len(items) != 1 || items[0].Sku.Id != 3 {
 		t.Fatalf("unexpected items output: %+v", items)
 	}
+	if len(returnsOutput) != 0 {
+		t.Fatalf("expected no returns, got %+v", returnsOutput)
+	}
 }
 
 func TestSalesServiceChangePaymentStatus(t *testing.T) {
@@ -137,7 +140,7 @@ func TestSalesServiceChangePaymentStatus(t *testing.T) {
 	repo := &stubSalesRepository{
 		paymentDateBySaleAndPaymentId: domain.SalesPaymentDates{Id: 5},
 	}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 
 	req := request.ChangePaymentStatusRequest{
 		Status: string(domain.PaymentStatusPaid),
@@ -157,7 +160,7 @@ func TestSalesServiceChangePaymentStatus(t *testing.T) {
 }
 
 func TestSalesServiceChangePaymentStatusValidationError(t *testing.T) {
-	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{})
+	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{}, &stubInventoryRepository{})
 
 	err := service.ChangePaymentStatus(context.Background(), 1, 2, request.ChangePaymentStatusRequest{})
 	if err == nil {
@@ -197,7 +200,7 @@ func TestSalesServiceGetSalesNonAdminUsesContextUser(t *testing.T) {
 	repo := &stubSalesRepository{
 		getSalesOutput: []output.GetSalesItemOutput{},
 	}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 
 	ctx := context.WithValue(context.Background(), constants.ROLE_KEY, string(domain.UserRoleReseller))
 	ctx = context.WithValue(ctx, constants.USERID_KEY, float64(55))
@@ -214,7 +217,7 @@ func TestSalesServiceChangePaymentStatusUsesNilDateWhenNotPaid(t *testing.T) {
 	repo := &stubSalesRepository{
 		paymentDateBySaleAndPaymentId: domain.SalesPaymentDates{},
 	}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 
 	req := request.ChangePaymentStatusRequest{
 		Status: string(domain.PaymentStatusPending),
@@ -230,7 +233,7 @@ func TestSalesServiceChangePaymentStatusUsesNilDateWhenNotPaid(t *testing.T) {
 
 func TestSalesServiceCreateSalesUsesDefaultDueDate(t *testing.T) {
 	useCase := &stubSalesUseCase{}
-	service := NewSalesService(useCase, &stubSalesRepository{})
+	service := NewSalesService(useCase, &stubSalesRepository{}, &stubInventoryRepository{})
 
 	ctx := context.WithValue(context.Background(), constants.USERID_KEY, float64(9))
 	req := request.CreateSaleRequest{
@@ -260,7 +263,7 @@ func TestSalesServiceCreateSalesUsesDefaultDueDate(t *testing.T) {
 func TestSalesServiceCreateSalesUseCaseError(t *testing.T) {
 	expected := errors.New("boom")
 	useCase := &stubSalesUseCase{err: expected}
-	service := NewSalesService(useCase, &stubSalesRepository{})
+	service := NewSalesService(useCase, &stubSalesRepository{}, &stubInventoryRepository{})
 
 	ctx := context.WithValue(context.Background(), constants.USERID_KEY, float64(1))
 	installments := 1
@@ -282,8 +285,8 @@ func TestSalesServiceCreateSalesUseCaseError(t *testing.T) {
 
 func TestSalesServiceGetByIdErrors(t *testing.T) {
 	repo := &stubSalesRepository{saleByIdErr: errors.New("fail")}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
-	if _, _, _, err := service.GetById(context.Background(), 1); err == nil {
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
+	if _, _, _, _, err := service.GetById(context.Background(), 1); err == nil {
 		t.Fatalf("expected error")
 	}
 	if !repo.getSaleByIdCalled {
@@ -294,8 +297,8 @@ func TestSalesServiceGetByIdErrors(t *testing.T) {
 	}
 
 	repo = &stubSalesRepository{saleByIdOutput: output.GetSaleByIdOutput{Id: 1}, paymentsErr: errors.New("payments")}
-	service = NewSalesService(&stubSalesUseCase{}, repo)
-	if _, _, _, err := service.GetById(context.Background(), 1); err == nil {
+	service = NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
+	if _, _, _, _, err := service.GetById(context.Background(), 1); err == nil {
 		t.Fatalf("expected payments error")
 	}
 	if !repo.getPaymentsCalled || repo.getItemsCalled {
@@ -307,8 +310,8 @@ func TestSalesServiceGetByIdErrors(t *testing.T) {
 		paymentsOutput: []output.GetSalesPaymentOutput{},
 		itemsErr:       errors.New("items"),
 	}
-	service = NewSalesService(&stubSalesUseCase{}, repo)
-	if _, _, _, err := service.GetById(context.Background(), 1); err == nil {
+	service = NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
+	if _, _, _, _, err := service.GetById(context.Background(), 1); err == nil {
 		t.Fatalf("expected items error")
 	}
 	if !repo.getItemsCalled {
@@ -318,7 +321,7 @@ func TestSalesServiceGetByIdErrors(t *testing.T) {
 
 func TestSalesServiceChangePaymentStatusErrors(t *testing.T) {
 	repo := &stubSalesRepository{paymentDateErr: errors.New("dates")}
-	service := NewSalesService(&stubSalesUseCase{}, repo)
+	service := NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 	req := request.ChangePaymentStatusRequest{Status: string(domain.PaymentStatusPending)}
 	if err := service.ChangePaymentStatus(context.Background(), 1, 2, req); err == nil {
 		t.Fatalf("expected error from payment date lookup")
@@ -328,8 +331,52 @@ func TestSalesServiceChangePaymentStatusErrors(t *testing.T) {
 	}
 
 	repo = &stubSalesRepository{paymentDateBySaleAndPaymentId: domain.SalesPaymentDates{}, changePaymentStatusErr: errors.New("status")}
-	service = NewSalesService(&stubSalesUseCase{}, repo)
+	service = NewSalesService(&stubSalesUseCase{}, repo, &stubInventoryRepository{})
 	if err := service.ChangePaymentStatus(context.Background(), 1, 2, req); err == nil {
 		t.Fatalf("expected status change error")
+	}
+}
+
+func TestSalesServiceCreateReturnResellerUsesOwnInventory(t *testing.T) {
+	useCase := &stubSalesUseCase{}
+	inventoryRepo := &stubInventoryRepository{
+		getByUser: domain.Inventory{Id: 77},
+	}
+	service := NewSalesService(useCase, &stubSalesRepository{}, inventoryRepo)
+
+	ctx := context.WithValue(context.Background(), constants.USERID_KEY, float64(42))
+	ctx = context.WithValue(ctx, constants.ROLE_KEY, string(domain.UserRoleReseller))
+
+	req := request.CreateSalesReturnRequest{
+		ReturnerName: "Cliente",
+		Reason:       "Defeito",
+		Items: []request.CreateSalesReturnItemRequest{
+			{SkuId: 1, Quantity: 1},
+		},
+	}
+
+	if err := service.CreateReturn(ctx, 10, req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if useCase.receivedReturnInput.InventoryDestinationId != 77 {
+		t.Fatalf("expected destination inventory from reseller, got %d", useCase.receivedReturnInput.InventoryDestinationId)
+	}
+}
+
+func TestSalesServiceCreateReturnAdminRequiresInventory(t *testing.T) {
+	service := NewSalesService(&stubSalesUseCase{}, &stubSalesRepository{}, &stubInventoryRepository{})
+	ctx := context.WithValue(context.Background(), constants.USERID_KEY, float64(1))
+	ctx = context.WithValue(ctx, constants.ROLE_KEY, string(domain.UserRoleAdmin))
+
+	req := request.CreateSalesReturnRequest{
+		ReturnerName: "Cliente",
+		Reason:       "Troca",
+		Items: []request.CreateSalesReturnItemRequest{
+			{SkuId: 1, Quantity: 1},
+		},
+	}
+
+	if err := service.CreateReturn(ctx, 1, req); err == nil {
+		t.Fatalf("expected admin inventory validation error")
 	}
 }

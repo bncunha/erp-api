@@ -23,6 +23,7 @@ func (r *inventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx,
 	var nullableInventoryInId *int64
 	var nullableInventoryOutId *int64
 	var nullableSaleId *int64
+	var nullableSaleVersionId *int64
 
 	if transaction.InventoryIn.Id != 0 {
 		nullableInventoryInId = &transaction.InventoryIn.Id
@@ -35,9 +36,12 @@ func (r *inventoryTransactionRepository) Create(ctx context.Context, tx *sql.Tx,
 	if transaction.Sale.Id != 0 {
 		nullableSaleId = &transaction.Sale.Id
 	}
+	if transaction.Sale.SalesVersionId != 0 {
+		nullableSaleVersionId = &transaction.Sale.SalesVersionId
+	}
 
-	query := `INSERT INTO inventory_transactions (quantity, type, date, inventory_out_id, inventory_in_id, inventory_item_id, tenant_id, justification, sales_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
-	err := tx.QueryRowContext(ctx, query, transaction.Quantity, transaction.Type, transaction.Date, nullableInventoryOutId, nullableInventoryInId, transaction.InventoryItem.Id, tenantId, transaction.Justification, nullableSaleId).Scan(&insertedID)
+	query := `INSERT INTO inventory_transactions (quantity, type, date, inventory_out_id, inventory_in_id, inventory_item_id, tenant_id, justification, sales_id, sales_version_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	err := tx.QueryRowContext(ctx, query, transaction.Quantity, transaction.Type, transaction.Date, nullableInventoryOutId, nullableInventoryInId, transaction.InventoryItem.Id, tenantId, transaction.Justification, nullableSaleId, nullableSaleVersionId).Scan(&insertedID)
 	return insertedID, err
 }
 

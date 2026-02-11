@@ -44,7 +44,7 @@ func (s *ApplicationService) SetupServices() {
 	s.AuthService = NewAuthService(s.repositories.UserRepository, s.ports.Encrypto, s.BillingService)
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository, s.ports.Encrypto, s.UserTokenService, s.useCases.EmailUseCase, s.repositories.UserTokenRepository, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
-	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository)
+	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository, s.repositories.InventoryRepository)
 	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
 	s.CompanyService = NewCompanyService(s.repositories.CompanyRepository, s.repositories.AddressRepository, s.repositories.InventoryRepository, s.repositories.UserRepository, s.ports.Encrypto, s.useCases.EmailUseCase, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
 	s.DashboardService = NewDashboardService(s.repositories.DashboardRepository, s.repositories.UserRepository)

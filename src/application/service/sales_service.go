@@ -20,20 +20,23 @@ var (
 
 type SalesService interface {
 	CreateSales(ctx context.Context, request request.CreateSaleRequest) error
+	CreateReturn(ctx context.Context, saleId int64, request request.CreateSalesReturnRequest) error
 	GetSales(ctx context.Context, request request.ListSalesRequest) (output output.GetSalesOutput, err error)
-	GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, err error)
+	GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, returnsOutput []output.GetSalesReturnOutput, err error)
 	ChangePaymentStatus(ctx context.Context, id int64, paymentId int64, request request.ChangePaymentStatusRequest) error
 }
 
 type salesService struct {
-	salesUsecase    sales_usecase.SalesUseCase
-	salesRepository domain.SalesRepository
+	salesUsecase        sales_usecase.SalesUseCase
+	salesRepository     domain.SalesRepository
+	inventoryRepository domain.InventoryRepository
 }
 
-func NewSalesService(salesUsecase sales_usecase.SalesUseCase, salesRepository domain.SalesRepository) SalesService {
+func NewSalesService(salesUsecase sales_usecase.SalesUseCase, salesRepository domain.SalesRepository, inventoryRepository domain.InventoryRepository) SalesService {
 	return &salesService{
-		salesUsecase,
-		salesRepository,
+		salesUsecase:        salesUsecase,
+		salesRepository:     salesRepository,
+		inventoryRepository: inventoryRepository,
 	}
 }
 
@@ -140,24 +143,67 @@ func (s *salesService) GetSales(ctx context.Context, request request.ListSalesRe
 	return output, nil
 }
 
-func (s *salesService) GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, err error) {
+func (s *salesService) GetById(ctx context.Context, id int64) (saleOutput output.GetSaleByIdOutput, paymentGroupOutput []output.GetSalesPaymentGroupOutput, itemsOutput []output.GetItemsOutput, returnsOutput []output.GetSalesReturnOutput, err error) {
 	saleOutput, err = s.salesRepository.GetSaleById(ctx, id)
 	if err != nil {
-		return saleOutput, paymentGroupOutput, itemsOutput, err
+		return saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err
 	}
 
 	paymentOutput, err := s.salesRepository.GetPaymentsBySaleId(ctx, id)
 	if err != nil {
-		return saleOutput, paymentGroupOutput, itemsOutput, err
+		return saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err
 	}
 	paymentGroupOutput = s.groupPaymentsByPaymentType(paymentOutput)
 
 	itemsOutput, err = s.salesRepository.GetItemsBySaleId(ctx, id)
 	if err != nil {
-		return saleOutput, paymentGroupOutput, itemsOutput, err
+		return saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err
 	}
 
-	return saleOutput, paymentGroupOutput, itemsOutput, err
+	returnsOutput, err = s.salesRepository.GetReturnsBySaleId(ctx, id)
+	if err != nil {
+		return saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err
+	}
+
+	return saleOutput, paymentGroupOutput, itemsOutput, returnsOutput, err
+}
+
+func (s *salesService) CreateReturn(ctx context.Context, saleId int64, request request.CreateSalesReturnRequest) error {
+	if err := request.Validate(); err != nil {
+		return err
+	}
+
+	userID := int64(ctx.Value(constants.USERID_KEY).(float64))
+	role := ctx.Value(constants.ROLE_KEY).(string)
+
+	inventoryDestinationID := request.InventoryDestinationId
+	if role == string(domain.UserRoleReseller) {
+		userInventory, err := s.inventoryRepository.GetByUserId(ctx, userID)
+		if err != nil {
+			return err
+		}
+		inventoryDestinationID = userInventory.Id
+	}
+	if role == string(domain.UserRoleAdmin) && inventoryDestinationID == 0 {
+		return errors.New("Estoque de destino é obrigatório para Administradores.")
+	}
+
+	items := make([]sales_usecase.DoReturnItemInput, 0, len(request.Items))
+	for _, item := range request.Items {
+		items = append(items, sales_usecase.DoReturnItemInput{
+			SkuId:    item.SkuId,
+			Quantity: item.Quantity,
+		})
+	}
+
+	return s.salesUsecase.DoReturn(ctx, sales_usecase.DoReturnInput{
+		SaleId:                 saleId,
+		UserId:                 userID,
+		InventoryDestinationId: inventoryDestinationID,
+		ReturnerName:           request.ReturnerName,
+		Reason:                 request.Reason,
+		Items:                  items,
+	})
 }
 
 func (s *salesService) groupPaymentsByPaymentType(payments []output.GetSalesPaymentOutput) []output.GetSalesPaymentGroupOutput {

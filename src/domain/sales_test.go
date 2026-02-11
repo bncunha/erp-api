@@ -331,3 +331,39 @@ func TestInventoryHelpers(t *testing.T) {
 		t.Fatalf("unexpected inventory item: %+v", item)
 	}
 }
+
+func TestSalesReturnValidate(t *testing.T) {
+	saleItems := []SalesItem{
+		{Sku: Sku{Id: 1, Product: Product{Name: "Produto"}}, Quantity: 3},
+	}
+
+	valid := NewSalesReturn("Cliente", "Motivo", []SalesReturnItem{
+		{Sku: Sku{Id: 1, Product: Product{Name: "Produto"}}, Quantity: 1},
+	})
+	if err := valid.Validate(saleItems); err != nil {
+		t.Fatalf("expected valid return, got %v", err)
+	}
+
+	longReason := strings.Repeat("a", 2001)
+	invalidReason := NewSalesReturn("Cliente", longReason, []SalesReturnItem{
+		{Sku: Sku{Id: 1, Product: Product{Name: "Produto"}}, Quantity: 1},
+	})
+	if err := invalidReason.Validate(saleItems); err != ErrReturnReasonLengthInvalid {
+		t.Fatalf("expected reason length error, got %v", err)
+	}
+
+	duplicated := NewSalesReturn("Cliente", "ok", []SalesReturnItem{
+		{Sku: Sku{Id: 1}, Quantity: 1},
+		{Sku: Sku{Id: 1}, Quantity: 1},
+	})
+	if err := duplicated.Validate(saleItems); err == nil {
+		t.Fatalf("expected duplicated sku error")
+	}
+
+	notFound := NewSalesReturn("Cliente", "ok", []SalesReturnItem{
+		{Sku: Sku{Id: 2}, Quantity: 1},
+	})
+	if err := notFound.Validate(saleItems); err == nil {
+		t.Fatalf("expected not found item error")
+	}
+}

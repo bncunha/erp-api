@@ -33,3 +33,17 @@ type DoSalePaymentDatesInput struct {
 	Status            domain.PaymentStatus
 	DateInformed      bool
 }
+
+type DoReturnInput struct {
+	SaleId                int64
+	UserId                int64
+	InventoryDestinationId int64
+	ReturnerName          string
+	Reason                string
+	Items                 []DoReturnItemInput
+}
+
+type DoReturnItemInput struct {
+	SkuId    int64
+	Quantity float64
+}

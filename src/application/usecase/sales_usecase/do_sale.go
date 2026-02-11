@@ -88,6 +88,10 @@ func (s *salesUseCase) DoSale(ctx context.Context, input DoSaleInput) error {
 	if err != nil {
 		return err
 	}
+	sale.SalesVersionId, err = s.saleRepository.CreateSaleVersion(ctx, tx, sale.Id, 1, sale.Date)
+	if err != nil {
+		return err
+	}
 
 	_, err = s.saleRepository.CreateManySaleItem(ctx, tx, sale, sale.Items)
 	if err != nil {

@@ -56,7 +56,7 @@ func (i *CreateSaleRequestItems) Validate() error {
 }
 
 type CreateSaleRequestPayments struct {
-	PaymentType          domain.PaymentType `json:"payment_type" validate:"required,oneof=CASH CREDIT_CARD DEBIT_CARD PIX CREDIT_STORE"`
+	PaymentType          domain.PaymentType `json:"payment_type" validate:"required,oneof=CASH CREDIT_CARD DEBIT_CARD PIX CREDIT_STORE PAYMENT_RETURN"`
 	Value                float64            `json:"value" validate:"required,gt=0"`
 	InstallmentsQuantity *int               `json:"installments_quantity" validate:"omitempty,gt=0"`
 	FirstInstallmentDate *time.Time         `json:"first_installment_date"`
@@ -72,6 +72,30 @@ func (p *CreateSaleRequestPayments) Validate() error {
 	}
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+type CreateSalesReturnRequest struct {
+	ReturnerName         string                           `json:"returner_name" validate:"required,max=255"`
+	Reason               string                           `json:"reason" validate:"required,max=2000"`
+	InventoryDestinationId int64                          `json:"inventory_destination_id"`
+	Items                []CreateSalesReturnItemRequest   `json:"items" validate:"required,gt=0"`
+}
+
+type CreateSalesReturnItemRequest struct {
+	SkuId    int64   `json:"sku_id" validate:"required"`
+	Quantity float64 `json:"quantity" validate:"required,gt=0"`
+}
+
+func (r *CreateSalesReturnRequest) Validate() error {
+	if err := validator.Validate(r); err != nil {
+		return err
+	}
+	for _, item := range r.Items {
+		if err := validator.Validate(item); err != nil {
+			return err
+		}
 	}
 	return nil
 }

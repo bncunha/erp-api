@@ -52,6 +52,7 @@ type InventoryTransaction struct {
 	InventoryOut  Inventory
 	InventoryItem InventoryItem
 	Sale          Sales
+	SalesVersionId int64
 	TenantId      int64
 	Justification string
 }
