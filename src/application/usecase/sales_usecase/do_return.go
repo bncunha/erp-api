@@ -167,10 +167,10 @@ func (s *salesUseCase) recalculatePayments(old []domain.GetSalesPaymentOutput, n
 
 	paidTotal := 0.0
 	pending := make([]domain.GetSalesPaymentOutput, 0)
-	paid := make([]domain.GetSalesPaymentOutput, 0)
+	settled := make([]domain.GetSalesPaymentOutput, 0)
 	for _, date := range old {
-		if date.PaymentStatus == domain.PaymentStatusPaid {
-			paid = append(paid, date)
+		if date.PaymentStatus == domain.PaymentStatusPaid || date.PaymentStatus == domain.PaymentStatusReversal {
+			settled = append(settled, date)
 			paidTotal += date.InstallmentValue
 			continue
 		}
@@ -190,11 +190,10 @@ func (s *salesUseCase) recalculatePayments(old []domain.GetSalesPaymentOutput, n
 		return &p
 	}
 
-	for _, p := range paid {
+	for _, p := range settled {
 		payment := ensurePayment(p.PaymentType)
-		status := domain.PaymentStatusPaid
 		dueDate := p.DueDate
-		d := domain.NewSalesPaymentDates(dueDate, p.PaidDate, int(p.InstallmentNumber), p.InstallmentValue, status)
+		d := domain.NewSalesPaymentDates(dueDate, p.PaidDate, int(p.InstallmentNumber), p.InstallmentValue, p.PaymentStatus)
 		d.PaymentType = p.PaymentType
 		payment.Dates = append(payment.Dates, d)
 		paymentsMap[p.PaymentType] = payment

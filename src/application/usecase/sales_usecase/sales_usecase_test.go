@@ -1031,3 +1031,50 @@ func TestSalesUseCaseRecalculatePaymentsDistributesPendingAmounts(t *testing.T) 
 		t.Fatalf("unexpected split across pending dates: %+v", payments[0].Dates)
 	}
 }
+
+func TestSalesUseCaseRecalculatePaymentsKeepsPreviousReversalsSeparated(t *testing.T) {
+	uc := &salesUseCase{}
+	now := time.Now()
+	old := []domain.GetSalesPaymentOutput{
+		{
+			PaymentType:       domain.PaymentTypeCash,
+			InstallmentNumber: 1,
+			InstallmentValue:  100,
+			DueDate:           now,
+			PaidDate:          &now,
+			PaymentStatus:     domain.PaymentStatusPaid,
+		},
+		{
+			PaymentType:       domain.PaymentTypeReturn,
+			InstallmentNumber: 1,
+			InstallmentValue:  -20,
+			DueDate:           now,
+			PaidDate:          &now,
+			PaymentStatus:     domain.PaymentStatusReversal,
+		},
+	}
+	newItems := []domain.SalesItem{
+		{Sku: domain.Sku{Price: 60}, Quantity: 1},
+	}
+
+	payments := uc.recalculatePayments(old, newItems)
+	var returnPayment *domain.SalesPayment
+	for i := range payments {
+		if payments[i].PaymentType == domain.PaymentTypeReturn {
+			returnPayment = &payments[i]
+			break
+		}
+	}
+	if returnPayment == nil {
+		t.Fatalf("expected return payment to exist")
+	}
+	if len(returnPayment.Dates) != 2 {
+		t.Fatalf("expected two reversal dates, got %+v", returnPayment.Dates)
+	}
+	if returnPayment.Dates[0].InstallmentValue != -20 || returnPayment.Dates[1].InstallmentValue != -20 {
+		t.Fatalf("expected separated reversals of -20 each, got %+v", returnPayment.Dates)
+	}
+	if returnPayment.Dates[0].Status != domain.PaymentStatusReversal || returnPayment.Dates[1].Status != domain.PaymentStatusReversal {
+		t.Fatalf("expected reversal status for both entries, got %+v", returnPayment.Dates)
+	}
+}
