@@ -238,6 +238,13 @@ SELECT
       AND si.tenant_id = s.tenant_id
   ) AS total_items,
   CASE
+    WHEN (
+      SELECT COALESCE(SUM(si.quantity), 0)
+      FROM sales_items si
+      WHERE si.sales_version_id = sv.id
+        AND si.tenant_id = s.tenant_id
+    ) = 0
+      THEN 'CANCEL'
     WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0
       THEN 'CANCEL'
     WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
@@ -262,13 +269,41 @@ GROUP BY s.id, s.date, c.name, u.name, sv.id
 HAVING
   $6::text IS NULL
   OR (
-      ($6 = 'CANCEL' AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0)
+      ($6 = 'CANCEL' AND (
+        (
+          SELECT COALESCE(SUM(si.quantity), 0)
+          FROM sales_items si
+          WHERE si.sales_version_id = sv.id
+            AND si.tenant_id = s.tenant_id
+        ) = 0
+        OR COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0
+      ))
       OR ($6 = 'PAID'
+        AND (
+          SELECT COALESCE(SUM(si.quantity), 0)
+          FROM sales_items si
+          WHERE si.sales_version_id = sv.id
+            AND si.tenant_id = s.tenant_id
+        ) > 0
         AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
         AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID')
       )
-      OR ($6 = 'DELAYED' AND COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE))
+      OR ($6 = 'DELAYED'
+        AND (
+          SELECT COALESCE(SUM(si.quantity), 0)
+          FROM sales_items si
+          WHERE si.sales_version_id = sv.id
+            AND si.tenant_id = s.tenant_id
+        ) > 0
+        AND COALESCE(BOOL_OR(pd.status = 'PENDING' AND pd.due_date < CURRENT_DATE), FALSE)
+      )
       OR ($6 = 'PENDING'
+        AND (
+          SELECT COALESCE(SUM(si.quantity), 0)
+          FROM sales_items si
+          WHERE si.sales_version_id = sv.id
+            AND si.tenant_id = s.tenant_id
+        ) > 0
         AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
         AND NOT (
           (COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID'))
@@ -309,6 +344,12 @@ func (r *salesRepository) GetSaleById(ctx context.Context, id int64) (domain.Get
 		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status = 'PAID'), 0) AS received_value,
 		COALESCE(SUM(pd.installment_value) FILTER (WHERE pd.status IN ('PENDING','DELAYED')), 0) AS future_revenue,
 		CASE
+			WHEN (
+				SELECT COALESCE(SUM(si.quantity), 0)
+				FROM sales_items si
+				WHERE si.sales_version_id = sv.id
+				  AND si.tenant_id = s.tenant_id
+			) = 0 THEN 'CANCEL'
 			WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = 0 THEN 'CANCEL'
 			WHEN COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) > 0
 			  AND COUNT(pd.id) FILTER (WHERE pd.status IN ('PAID','PENDING','DELAYED')) = COUNT(pd.id) FILTER (WHERE pd.status = 'PAID') THEN 'PAID'
