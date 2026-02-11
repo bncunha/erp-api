@@ -240,9 +240,14 @@ type fakeSalesRepository struct {
 	payments         []domain.SalesPayment
 	paymentDates     [][]domain.SalesPaymentDates
 	createSaleErr    error
+	createSaleVersionErr error
 	createItemsErr   error
 	createPaymentErr error
 	createDatesErr   error
+	createReturnErr error
+	createReturnItemsErr error
+	cancelPaymentDatesErr error
+	updateSaleLastVersionErr error
 	saleByIdForUpdate domain.SaleWithVersionOutput
 	saleByIdForUpdateErr error
 	itemsByVersion []serviceOutput.GetItemsOutput
@@ -262,6 +267,9 @@ func (f *fakeSalesRepository) CreateSale(ctx context.Context, tx *sql.Tx, sale d
 }
 
 func (f *fakeSalesRepository) CreateSaleVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int, date time.Time) (int64, error) {
+	if f.createSaleVersionErr != nil {
+		return 0, f.createSaleVersionErr
+	}
 	return 1001, nil
 }
 
@@ -291,20 +299,32 @@ func (f *fakeSalesRepository) CreateManyPaymentDates(ctx context.Context, tx *sq
 }
 
 func (f *fakeSalesRepository) CreateSalesReturn(ctx context.Context, tx *sql.Tx, saleId int64, fromSalesVersionId int64, toSalesVersionId int64, salesReturn domain.SalesReturn, createdByUserId int64) (int64, error) {
+	if f.createReturnErr != nil {
+		return 0, f.createReturnErr
+	}
 	f.returnCreated = true
 	return 1, nil
 }
 
 func (f *fakeSalesRepository) CreateSalesReturnItems(ctx context.Context, tx *sql.Tx, salesReturnId int64, items []domain.SalesReturnItem) ([]int64, error) {
+	if f.createReturnItemsErr != nil {
+		return nil, f.createReturnItemsErr
+	}
 	return []int64{1}, nil
 }
 
 func (f *fakeSalesRepository) UpdateSaleLastVersion(ctx context.Context, tx *sql.Tx, saleId int64, version int) error {
+	if f.updateSaleLastVersionErr != nil {
+		return f.updateSaleLastVersionErr
+	}
 	f.updateLastVersion = version
 	return nil
 }
 
 func (f *fakeSalesRepository) CancelPaymentDatesBySaleVersionId(ctx context.Context, tx *sql.Tx, saleVersionId int64) error {
+	if f.cancelPaymentDatesErr != nil {
+		return f.cancelPaymentDatesErr
+	}
 	return nil
 }
 
@@ -768,5 +788,191 @@ func TestSalesUseCaseDoReturnValidationError(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected validation error")
+	}
+}
+
+func TestSalesUseCaseDoReturnGetSaleByIdError(t *testing.T) {
+	env := newSaleTestEnv(t)
+	expectedErr := stdErrors.New("sale for update error")
+	env.salesRepo.saleByIdForUpdateErr = expectedErr
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{SaleId: 101, UserId: 1})
+	if err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestSalesUseCaseDoReturnGetItemsByVersionError(t *testing.T) {
+	env := newSaleTestEnv(t)
+	env.salesRepo.saleByIdForUpdate = domain.SaleWithVersionOutput{Id: 101, LastVersion: 1, SalesVersionId: 1001}
+	expectedErr := stdErrors.New("items by version error")
+	env.salesRepo.itemsByVersionErr = expectedErr
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{SaleId: 101, UserId: 1})
+	if err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestSalesUseCaseDoReturnCreateVersionError(t *testing.T) {
+	env := newSaleTestEnv(t)
+	env.salesRepo.saleByIdForUpdate = domain.SaleWithVersionOutput{Id: 101, LastVersion: 1, SalesVersionId: 1001}
+	env.salesRepo.itemsByVersion = []serviceOutput.GetItemsOutput{
+		{Sku: domain.Sku{Id: 3, Price: 10, Product: domain.Product{Name: "Prod"}}, Quantity: 2, UnitPrice: 10},
+	}
+	expectedErr := stdErrors.New("create version error")
+	env.salesRepo.createSaleVersionErr = expectedErr
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{
+		SaleId:                 101,
+		UserId:                 1,
+		InventoryDestinationId: 4,
+		ReturnerName:           "Cliente",
+		Reason:                 "Defeito",
+		Items:                  []DoReturnItemInput{{SkuId: 3, Quantity: 1}},
+	})
+	if err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestSalesUseCaseDoReturnCancelPaymentDatesError(t *testing.T) {
+	env := newSaleTestEnv(t)
+	env.salesRepo.saleByIdForUpdate = domain.SaleWithVersionOutput{Id: 101, LastVersion: 1, SalesVersionId: 1001}
+	env.salesRepo.itemsByVersion = []serviceOutput.GetItemsOutput{
+		{Sku: domain.Sku{Id: 3, Price: 10, Product: domain.Product{Name: "Prod"}}, Quantity: 2, UnitPrice: 10},
+	}
+	env.salesRepo.paymentsByVersion = []serviceOutput.GetSalesPaymentOutput{
+		{PaymentType: domain.PaymentTypeCash, InstallmentNumber: 1, InstallmentValue: 20, DueDate: time.Now(), PaymentStatus: domain.PaymentStatusPaid},
+	}
+	expectedErr := stdErrors.New("cancel dates error")
+	env.salesRepo.cancelPaymentDatesErr = expectedErr
+
+	err := env.useCase.DoReturn(context.Background(), DoReturnInput{
+		SaleId:                 101,
+		UserId:                 1,
+		InventoryDestinationId: 4,
+		ReturnerName:           "Cliente",
+		Reason:                 "Defeito",
+		Items:                  []DoReturnItemInput{{SkuId: 3, Quantity: 1}},
+	})
+	if err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestSplitAmount(t *testing.T) {
+	values := splitAmount(10, 3)
+	if len(values) != 3 {
+		t.Fatalf("expected 3 values, got %d", len(values))
+	}
+	if values[0] != 3.34 || values[1] != 3.33 || values[2] != 3.33 {
+		t.Fatalf("unexpected split values: %v", values)
+	}
+}
+
+func TestSalesUseCaseRecalculatePaymentsCreatesCreditStoreWhenNoPending(t *testing.T) {
+	uc := &salesUseCase{}
+	old := []domain.GetSalesPaymentOutput{
+		{
+			PaymentType:       domain.PaymentTypeCash,
+			InstallmentNumber: 1,
+			InstallmentValue:  10,
+			DueDate:           time.Now(),
+			PaymentStatus:     domain.PaymentStatusPaid,
+		},
+	}
+	newItems := []domain.SalesItem{
+		{Sku: domain.Sku{Price: 30}, Quantity: 1},
+	}
+
+	payments := uc.recalculatePayments(old, newItems)
+	if len(payments) != 2 {
+		t.Fatalf("expected 2 payment groups, got %d", len(payments))
+	}
+	foundCreditStore := false
+	for _, p := range payments {
+		if p.PaymentType == domain.PaymentTypeCreditStore {
+			foundCreditStore = true
+			if len(p.Dates) != 1 || p.Dates[0].InstallmentValue != 20 || p.Dates[0].Status != domain.PaymentStatusPending {
+				t.Fatalf("unexpected credit store dates: %+v", p.Dates)
+			}
+		}
+	}
+	if !foundCreditStore {
+		t.Fatalf("expected credit store payment to be created")
+	}
+}
+
+func TestSalesUseCaseRecalculatePaymentsCreatesReturnWhenOverpaid(t *testing.T) {
+	uc := &salesUseCase{}
+	now := time.Now()
+	old := []domain.GetSalesPaymentOutput{
+		{
+			PaymentType:       domain.PaymentTypeCash,
+			InstallmentNumber: 1,
+			InstallmentValue:  50,
+			DueDate:           now,
+			PaidDate:          &now,
+			PaymentStatus:     domain.PaymentStatusPaid,
+		},
+	}
+	newItems := []domain.SalesItem{
+		{Sku: domain.Sku{Price: 30}, Quantity: 1},
+	}
+
+	payments := uc.recalculatePayments(old, newItems)
+	foundReturn := false
+	for _, p := range payments {
+		if p.PaymentType == domain.PaymentTypeReturn {
+			foundReturn = true
+			if len(p.Dates) != 1 || p.Dates[0].InstallmentValue != -20 || p.Dates[0].Status != domain.PaymentStatusPaid {
+				t.Fatalf("unexpected return payment dates: %+v", p.Dates)
+			}
+		}
+	}
+	if !foundReturn {
+		t.Fatalf("expected return payment to be created")
+	}
+}
+
+func TestSalesUseCaseRecalculatePaymentsDistributesPendingAmounts(t *testing.T) {
+	uc := &salesUseCase{}
+	old := []domain.GetSalesPaymentOutput{
+		{
+			PaymentType:       domain.PaymentTypeCreditCard,
+			InstallmentNumber: 2,
+			InstallmentValue:  0,
+			DueDate:           time.Now().AddDate(0, 0, 2),
+			PaymentStatus:     domain.PaymentStatusPending,
+		},
+		{
+			PaymentType:       domain.PaymentTypeCreditCard,
+			InstallmentNumber: 1,
+			InstallmentValue:  0,
+			DueDate:           time.Now().AddDate(0, 0, 1),
+			PaymentStatus:     domain.PaymentStatusDelayed,
+		},
+		{
+			PaymentType:       domain.PaymentTypeCreditCard,
+			InstallmentNumber: 3,
+			InstallmentValue:  0,
+			DueDate:           time.Now().AddDate(0, 0, 3),
+			PaymentStatus:     domain.PaymentStatusPending,
+		},
+	}
+	newItems := []domain.SalesItem{
+		{Sku: domain.Sku{Price: 10}, Quantity: 1},
+	}
+
+	payments := uc.recalculatePayments(old, newItems)
+	if len(payments) != 1 {
+		t.Fatalf("expected 1 payment group, got %d", len(payments))
+	}
+	if len(payments[0].Dates) != 3 {
+		t.Fatalf("expected 3 payment dates, got %d", len(payments[0].Dates))
+	}
+	if payments[0].Dates[0].InstallmentValue != 3.34 || payments[0].Dates[1].InstallmentValue != 3.33 || payments[0].Dates[2].InstallmentValue != 3.33 {
+		t.Fatalf("unexpected split across pending dates: %+v", payments[0].Dates)
 	}
 }

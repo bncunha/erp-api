@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
@@ -68,6 +69,90 @@ func TestBillingServiceExpiredSubscriptionBlocksWrite(t *testing.T) {
 	}
 	if status.Reason != BillingReasonPaymentOverdue {
 		t.Fatalf("expected reason %s, got %s", BillingReasonPaymentOverdue, status.Reason)
+	}
+}
+
+func TestBillingServiceGetSummarySuccess(t *testing.T) {
+	now := time.Date(2026, 1, 10, 8, 0, 0, 0, time.UTC)
+	lastPayment := now.AddDate(0, 0, -10)
+	subRepo := &stubSubscriptionRepository{
+		subscription: domain.Subscription{
+			Id:               1,
+			CompanyId:        10,
+			PlanId:           2,
+			PlanName:         domain.PlanNameBasic,
+			PlanPrice:        99.9,
+			Status:           domain.SubscriptionStatusActive,
+			CurrentPeriodEnd: now.AddDate(0, 0, 5),
+		},
+	}
+	paymentRepo := &stubBillingPaymentRepository{lastAt: &lastPayment}
+	service := &billingService{
+		subscriptionRepository: subRepo,
+		paymentRepository:      paymentRepo,
+	}
+
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(10))
+	summary, err := service.GetSummary(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if summary.PlanName != domain.PlanNameBasic {
+		t.Fatalf("expected plan name %s, got %s", domain.PlanNameBasic, summary.PlanName)
+	}
+	if summary.PlanPrice != 99.9 {
+		t.Fatalf("expected plan price 99.9, got %v", summary.PlanPrice)
+	}
+	if summary.LastPaymentAt == nil || !summary.LastPaymentAt.Equal(lastPayment) {
+		t.Fatalf("expected last payment at %v, got %v", lastPayment, summary.LastPaymentAt)
+	}
+}
+
+func TestBillingServiceGetSummaryTenantError(t *testing.T) {
+	service := &billingService{}
+	if _, err := service.GetSummary(context.Background()); err == nil {
+		t.Fatalf("expected tenant id error")
+	}
+}
+
+func TestBillingServiceGetPaymentsSuccess(t *testing.T) {
+	now := time.Date(2026, 1, 10, 8, 0, 0, 0, time.UTC)
+	paymentRepo := &stubBillingPaymentRepository{
+		history: []domain.BillingPaymentHistory{
+			{
+				Id:        7,
+				PlanName:  domain.PlanNameBasic,
+				Provider:  domain.BillingPaymentProviderManual,
+				Status:    domain.BillingPaymentStatusPaid,
+				Amount:    129.9,
+				PaidAt:    &now,
+				CreatedAt: now.AddDate(0, 0, -1),
+			},
+		},
+	}
+	service := &billingService{paymentRepository: paymentRepo}
+
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(10))
+	payments, err := service.GetPayments(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(payments) != 1 {
+		t.Fatalf("expected 1 payment, got %d", len(payments))
+	}
+	if payments[0].Id != 7 || payments[0].Status != string(domain.BillingPaymentStatusPaid) {
+		t.Fatalf("unexpected payment output: %+v", payments[0])
+	}
+}
+
+func TestBillingServiceGetPaymentsRepositoryError(t *testing.T) {
+	expectedErr := errors.New("repo error")
+	paymentRepo := &stubBillingPaymentRepository{err: expectedErr}
+	service := &billingService{paymentRepository: paymentRepo}
+	ctx := context.WithValue(context.Background(), constants.TENANT_KEY, int64(10))
+
+	if _, err := service.GetPayments(ctx); err != expectedErr {
+		t.Fatalf("expected error %v, got %v", expectedErr, err)
 	}
 }
 
