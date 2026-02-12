@@ -15,6 +15,7 @@ type Controller struct {
 	CompanyController   *CompanyController
 	DashboardController *DashboardController
 	BillingController   *BillingController
+	NewsController      *NewsController
 }
 
 func NewController(services *service.ApplicationService) *Controller {
@@ -35,4 +36,5 @@ func (c *Controller) SetupControllers() {
 	c.CompanyController = NewCompanyController(c.services.CompanyService)
 	c.DashboardController = NewDashboardController(c.services.DashboardService)
 	c.BillingController = NewBillingController(c.services.BillingService)
+	c.NewsController = NewNewsController(c.services.NewsService)
 }

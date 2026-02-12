@@ -27,6 +27,7 @@ type Repository struct {
 	PlanRepository                 domain.PlanRepository
 	SubscriptionRepository         domain.SubscriptionRepository
 	BillingPaymentRepository       domain.BillingPaymentRepository
+	NewsRepository                 domain.NewsRepository
 }
 
 func NewRepository(db *sql.DB) *Repository {
@@ -52,6 +53,7 @@ func (r *Repository) SetupRepositories() {
 	r.PlanRepository = NewPlanRepository(r.db)
 	r.SubscriptionRepository = NewSubscriptionRepository(r.db)
 	r.BillingPaymentRepository = NewBillingPaymentRepository(r.db)
+	r.NewsRepository = NewNewsRepository(r.db)
 }
 
 func (r *Repository) BeginTx(ctx context.Context) (*sql.Tx, error) {

@@ -128,6 +128,9 @@ func (r *router) setupPrivateRoutes() {
 	billingGroup.GET("", r.controller.BillingController.Summary, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
 	billingGroup.GET("/status", r.controller.BillingController.Status)
 	billingGroup.GET("/payments", r.controller.BillingController.Payments, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+
+	newsGroup := private.Group("/news")
+	newsGroup.GET("/latest", r.controller.NewsController.GetLatest)
 }
 
 func (r *router) Start() {
