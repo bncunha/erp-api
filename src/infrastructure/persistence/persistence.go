@@ -6,7 +6,7 @@ import (
 
 	"github.com/bncunha/erp-api/src/infrastructure/logs"
 	config "github.com/bncunha/erp-api/src/main"
-	_ "github.com/lib/pq"
+	_ "github.com/newrelic/go-agent/v3/integrations/nrpq"
 )
 
 type Persistence struct {
@@ -21,8 +21,8 @@ func NewPersistence(cfg *config.Config) *Persistence {
 
 func (p *Persistence) ConnectDb() (*sql.DB, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", p.cfg.DB_USER, p.cfg.DB_PASS, p.cfg.DB_HOST, p.cfg.DB_NAME)
-	logs.Logger.Infof("Conectando com o banco de dados: %s", connStr)
-	db, err := sql.Open("postgres", connStr)
+	logs.Logger.Infof("Conectando com o banco de dados host=%s db=%s", p.cfg.DB_HOST, p.cfg.DB_NAME)
+	db, err := sql.Open("nrpostgres", connStr)
 	if err != nil {
 		logs.Logger.Errorf("Erro ao conectar:", err)
 		return db, err

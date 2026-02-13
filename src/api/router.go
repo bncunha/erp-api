@@ -9,6 +9,7 @@ import (
 	controller "github.com/bncunha/erp-api/src/api/controllers"
 	"github.com/bncunha/erp-api/src/api/middleware"
 	"github.com/bncunha/erp-api/src/domain"
+	"github.com/bncunha/erp-api/src/infrastructure/observability"
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,8 +18,11 @@ type router struct {
 	echo       *echo.Echo
 }
 
-func NewRouter(controller *controller.Controller) *router {
+func NewRouter(controller *controller.Controller, obs observability.Observability) *router {
 	e := echo.New()
+	if obs != nil {
+		obs.SetEchoMiddleware(e)
+	}
 	router := &router{
 		echo:       e,
 		controller: controller,
@@ -62,6 +66,7 @@ func (r *router) setupPrivateRoutes() {
 	private := r.echo.Group("")
 
 	private.Use(middleware.AuthMiddleware)
+	private.Use(middleware.NewRelicTransactionAttributes())
 	private.Use(middleware.BillingWriteGuard())
 
 	productGroup := private.Group("/products")

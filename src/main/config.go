@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,6 +16,7 @@ type Config struct {
 	DB_NAME        string
 	APP_ENV        string
 	NR_LICENSE_KEY string
+	NR_ENABLED     bool
 	BREVO_API_KEY  string
 	FRONTEND_URL   string
 }
@@ -34,7 +37,21 @@ func LoadConfig() (*Config, error) {
 		DB_NAME:        os.Getenv("DB_NAME"),
 		APP_ENV:        os.Getenv("APP_ENV"),
 		NR_LICENSE_KEY: os.Getenv("NR_LICENSE_KEY"),
+		NR_ENABLED:     getBoolEnv("NR_ENABLED", true),
 		BREVO_API_KEY:  os.Getenv("BREVO_API_KEY"),
 		FRONTEND_URL:   os.Getenv("FRONTEND_URL"),
 	}, nil
+}
+
+func getBoolEnv(key string, defaultValue bool) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
 }

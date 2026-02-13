@@ -13,7 +13,6 @@ import (
 	"github.com/bncunha/erp-api/src/infrastructure/persistence"
 	"github.com/bncunha/erp-api/src/infrastructure/repository"
 	config "github.com/bncunha/erp-api/src/main"
-	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func main() {
@@ -26,10 +25,8 @@ func main() {
 		logs.Logger.Fatalf("Erro buscar variaveis de ambiente", err)
 	}
 
-	observability := observability.NewObservability(observability.NewNewRelicObservability())
-	nrl := observability.GetApp().(*newrelic.Application)
-	logs.Logger.AddHook(logs.NewRelicHook(nrl))
-	err = observability.SetupObservability(config)
+	obs := observability.NewObservability(observability.NewNewRelicObservability())
+	err = obs.SetupObservability(config)
 	if err != nil {
 		logs.Logger.Fatalf("Erro ao configurar observabilidade", err)
 	}
@@ -57,7 +54,7 @@ func main() {
 	controller := controller.NewController(service)
 	controller.SetupControllers()
 
-	r := router.NewRouter(controller)
+	r := router.NewRouter(controller, obs)
 	r.SetupCors(config.APP_ENV)
 	r.SetupRoutes()
 	r.Start()
