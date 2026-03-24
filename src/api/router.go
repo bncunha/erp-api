@@ -118,6 +118,14 @@ func (r *router) setupPrivateRoutes() {
 	salesGroup.GET("/:id", r.controller.SalesController.GetById, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	salesGroup.PUT("/:id/payments/:payment_id", r.controller.SalesController.ChangePaymentStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 
+	quoteGroup := private.Group("/quotes")
+	quoteGroup.POST("", r.controller.QuoteController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	quoteGroup.POST("/:id/duplicate", r.controller.QuoteController.Duplicate, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	quoteGroup.PUT("/:id", r.controller.QuoteController.Update, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	quoteGroup.GET("", r.controller.QuoteController.List, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	quoteGroup.GET("/:id", r.controller.QuoteController.GetByID, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+	quoteGroup.PATCH("/:id/status", r.controller.QuoteController.PatchStatus, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin}))
+
 	customerGroup := private.Group("/customers")
 	customerGroup.POST("", r.controller.CustomerController.Create, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))
 	customerGroup.GET("", r.controller.CustomerController.GetAll, middleware.RoleMiddleware([]domain.Role{domain.UserRoleAdmin, domain.UserRoleReseller}))

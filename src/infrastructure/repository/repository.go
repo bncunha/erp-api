@@ -18,6 +18,7 @@ type Repository struct {
 	InventoryItemRepository        domain.InventoryItemRepository
 	InventoryTransactionRepository domain.InventoryTransactionRepository
 	SalesRepository                domain.SalesRepository
+	QuoteRepository                domain.QuoteRepository
 	CustomerRepository             domain.CustomerRepository
 	CompanyRepository              domain.CompanyRepository
 	AddressRepository              domain.AddressRepository
@@ -44,6 +45,7 @@ func (r *Repository) SetupRepositories() {
 	r.InventoryItemRepository = NewInventoryItemRepository(r.db)
 	r.InventoryTransactionRepository = NewInventoryTransactionRepository(r.db, r.InventoryItemRepository)
 	r.SalesRepository = NewSalesRepository(r.db)
+	r.QuoteRepository = NewQuoteRepository(r.db)
 	r.CustomerRepository = NewCustomerRepository(r.db)
 	r.CompanyRepository = NewCompanyRepository(r.db)
 	r.AddressRepository = NewAddressRepository(r.db)

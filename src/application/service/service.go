@@ -14,6 +14,7 @@ type ApplicationService struct {
 	UserService      UserService
 	InventoryService InventoryService
 	SalesService     SalesService
+	QuoteService     QuoteService
 	CustomerService  CustomerService
 	CompanyService   CompanyService
 	UserTokenService UserTokenService
@@ -46,6 +47,7 @@ func (s *ApplicationService) SetupServices() {
 	s.UserService = NewUserService(s.repositories.UserRepository, s.repositories.InventoryRepository, s.ports.Encrypto, s.UserTokenService, s.useCases.EmailUseCase, s.repositories.UserTokenRepository, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
 	s.InventoryService = NewInventoryService(s.useCases.InventoryUseCase, s.repositories.InventoryItemRepository, s.repositories.InventoryTransactionRepository, s.repositories.InventoryRepository, s.repositories)
 	s.SalesService = NewSalesService(s.useCases.SalesUsecase, s.repositories.SalesRepository, s.repositories.InventoryRepository)
+	s.QuoteService = NewQuoteService(s.repositories.QuoteRepository, s.repositories.CustomerRepository, s.repositories.SkuRepository, s.repositories)
 	s.CustomerService = NewCustomerService(s.repositories.CustomerRepository)
 	s.CompanyService = NewCompanyService(s.repositories.CompanyRepository, s.repositories.AddressRepository, s.repositories.InventoryRepository, s.repositories.UserRepository, s.ports.Encrypto, s.useCases.EmailUseCase, s.repositories.LegalDocumentRepository, s.repositories.LegalAcceptanceRepository, s.repositories)
 	s.DashboardService = NewDashboardService(s.repositories.DashboardRepository, s.repositories.UserRepository)

@@ -11,6 +11,7 @@ type Controller struct {
 	UserController      *UserController
 	InventoryController *InventoryController
 	SalesController     *SalesController
+	QuoteController     *QuoteController
 	CustomerController  *CustomerController
 	CompanyController   *CompanyController
 	DashboardController *DashboardController
@@ -32,6 +33,7 @@ func (c *Controller) SetupControllers() {
 	c.UserController = NewUserController(c.services.UserService)
 	c.InventoryController = NewInventoryController(c.services.InventoryService)
 	c.SalesController = NewSalesController(c.services.SalesService)
+	c.QuoteController = NewQuoteController(c.services.QuoteService)
 	c.CustomerController = NewCustomerController(c.services.CustomerService)
 	c.CompanyController = NewCompanyController(c.services.CompanyService)
 	c.DashboardController = NewDashboardController(c.services.DashboardService)
