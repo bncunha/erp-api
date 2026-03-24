@@ -386,6 +386,8 @@ type stubSkuRepository struct {
 	updateErr       error
 	getById         domain.Sku
 	getByIdErr      error
+	getByMany       []domain.Sku
+	getByManyErr    error
 	getByProduct    []domain.Sku
 	getByProductErr error
 	getAll          []domain.Sku
@@ -427,7 +429,7 @@ func (s *stubSkuRepository) GetById(ctx context.Context, id int64) (domain.Sku, 
 }
 
 func (s *stubSkuRepository) GetByManyIds(ctx context.Context, ids []int64) ([]domain.Sku, error) {
-	return nil, nil
+	return s.getByMany, s.getByManyErr
 }
 
 func (s *stubSkuRepository) GetAll(ctx context.Context, in input.GetSkusInput) ([]domain.Sku, error) {
