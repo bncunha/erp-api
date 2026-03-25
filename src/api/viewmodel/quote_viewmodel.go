@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bncunha/erp-api/src/domain"
 )
@@ -183,12 +184,22 @@ func normalizeShippingDescription(description string) string {
 
 	switch {
 	case strings.HasPrefix(lowered, "frete:"):
-		return strings.TrimSpace(normalized[len("Frete:"):])
+		return capitalizeFirstLetter(strings.TrimSpace(normalized[len("Frete:"):]))
 	case strings.HasPrefix(lowered, "frete "):
-		return strings.TrimSpace(normalized[len("Frete "):])
+		return capitalizeFirstLetter(strings.TrimSpace(normalized[len("Frete "):]))
 	case strings.EqualFold(normalized, "frete"):
 		return ""
 	default:
-		return normalized
+		return capitalizeFirstLetter(normalized)
 	}
+}
+
+func capitalizeFirstLetter(value string) string {
+	runes := []rune(strings.TrimSpace(value))
+	if len(runes) == 0 {
+		return ""
+	}
+
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
