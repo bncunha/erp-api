@@ -28,10 +28,10 @@ const (
 )
 
 var (
-	ErrQuoteItemsRequired           = errors.New("o orçamento deve possuir ao menos um item")
-	ErrQuoteInvalidTransition       = errors.New("transição de status inválida")
-	ErrQuoteShippingRegionRequired  = errors.New("região do frete é obrigatória para FREE_REGION")
-	ErrQuoteShippingMinValueInvalid = errors.New("valor mínimo do frete deve ser maior que zero para FREE_MIN_VALUE")
+	ErrQuoteItemsRequired           = errors.New("o orcamento deve possuir ao menos um item")
+	ErrQuoteInvalidTransition       = errors.New("transicao de status invalida")
+	ErrQuoteShippingRegionRequired  = errors.New("regiao do frete e obrigatoria para FREE_REGION")
+	ErrQuoteShippingMinValueInvalid = errors.New("valor minimo do frete deve ser maior que zero para FREE_MIN_VALUE")
 )
 
 type Quote struct {
@@ -108,19 +108,19 @@ func (q *Quote) RecalculateTotals() error {
 func BuildQuoteShippingDescription(shippingType QuoteShippingType, shippingRegion *string, shippingMinValue *float64) string {
 	switch shippingType {
 	case QuoteShippingTypeFree:
-		return "Frete grátis"
+		return "Grátis"
 	case QuoteShippingTypeFreeRegion:
 		if shippingRegion == nil || strings.TrimSpace(*shippingRegion) == "" {
-			return "Frete grátis para a região"
+			return "Grátis para a regiao"
 		}
-		return fmt.Sprintf("Frete grátis para a região %s", strings.TrimSpace(*shippingRegion))
+		return fmt.Sprintf("Grátis para a regiao %s", strings.TrimSpace(*shippingRegion))
 	case QuoteShippingTypeFreeMin:
 		if shippingMinValue == nil {
-			return "Frete grátis para pedidos a partir de R$ 0,00"
+			return "Grátis para pedidos a partir de R$ 0,00"
 		}
-		return fmt.Sprintf("Frete grátis para pedidos a partir de R$ %.2f", *shippingMinValue)
+		return fmt.Sprintf("Grátis para pedidos a partir de R$ %.2f", *shippingMinValue)
 	default:
-		return "Frete a calcular"
+		return "A calcular"
 	}
 }
 

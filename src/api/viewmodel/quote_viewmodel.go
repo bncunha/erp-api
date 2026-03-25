@@ -2,6 +2,7 @@ package viewmodel
 
 import (
 	"math"
+	"strings"
 	"time"
 
 	"github.com/bncunha/erp-api/src/domain"
@@ -129,7 +130,7 @@ func ToQuoteDetailedViewModel(quote domain.Quote) QuoteDetailedViewModel {
 		ShippingType:          string(quote.ShippingType),
 		ShippingRegion:        quote.ShippingRegion,
 		ShippingMinValue:      quote.ShippingMinValue,
-		ShippingDescription:   quote.ShippingDescription,
+		ShippingDescription:   normalizeShippingDescription(quote.ShippingDescription),
 		Notes:                 quote.Notes,
 		Items:                 items,
 		SubtotalAmount:        quote.SubtotalAmount,
@@ -155,7 +156,7 @@ func ToQuoteListViewModel(output domain.GetQuotesOutput) QuoteListViewModel {
 			TotalAmount:           item.TotalAmount,
 			DownPaymentPercentage: item.DownPaymentPercentage,
 			DownPaymentAmount:     roundMoney(item.TotalAmount * item.DownPaymentPercentage / 100),
-			ShippingDescription:   item.ShippingDescription,
+			ShippingDescription:   normalizeShippingDescription(item.ShippingDescription),
 			CreatedAt:             item.CreatedAt,
 		})
 	}
@@ -174,4 +175,20 @@ func ToQuoteDuplicateViewModel(id int64) QuoteDuplicateViewModel {
 
 func roundMoney(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+func normalizeShippingDescription(description string) string {
+	normalized := strings.TrimSpace(description)
+	lowered := strings.ToLower(normalized)
+
+	switch {
+	case strings.HasPrefix(lowered, "frete:"):
+		return strings.TrimSpace(normalized[len("Frete:"):])
+	case strings.HasPrefix(lowered, "frete "):
+		return strings.TrimSpace(normalized[len("Frete "):])
+	case strings.EqualFold(normalized, "frete"):
+		return ""
+	default:
+		return normalized
+	}
 }
